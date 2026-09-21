@@ -1,0 +1,56 @@
+# Set javac settings from JDT prefs
+
+Bundle-Description					: Framework test cases.
+
+-conditionalpackage					= org.osgi.test.support.*
+-privatepackage						=  \
+	${p}.junit, \
+	${p}.junit.*
+	
+Import-Package: ${-signaturetest}, *
+	
+-includeresource = \
+    fragments.tb4.jar, \
+	fragments.tb6.jar, \
+	fragments.tb10.jar, \
+	fragments.tb20.jar, \
+	fragments.tb21.jar, \
+	fragments.tb22.jar, \
+    launch.tb1.jar, \
+    launch.tb2.jar, \
+    launch.tb3.jar, \
+    launch.tb4.jar, \
+    launch.tb5.jar, \
+    extensions.tb1.jar, \
+    extensions.tb2.jar, \
+    extensions.tb3.jar, \
+    dependency.tb1.v1.jar, \
+    dependency.tb1.v2.jar, \
+    dependency.tb1.v3.jar, \
+    dependency.tb2.v1.jar, \
+    dependency.tb3.v1.jar, \
+    dependency.tb4.v1.jar, \
+    mrjars.tb1.jar
+
+-fixupmessages.host: "Host * for this fragment"
+
+-signaturetest                      = org.osgi.framework.connect , \
+	org.osgi.framework.launch , \
+	org.osgi.service.condition
+
+
+-runframework: none
+-runvm: ${if;${is;-1;${vcompare;${java.specification.version};9}};;--add-opens=java.base/java.lang=ALL-UNNAMED}
+
+p: org.osgi.test.cases.framework.launch
+
+# Maven build: workspace includes replaced inline (from cnf/includes and build.bnd in osgi/osgi)
+# -make.maven, not -make: the key is a map entry and would displace
+# a project-level -make (webcontainer also builds .war recipes this
+# way). bnd merges all -make.* entries.
+-make.maven: (*).(jar); type=bnd; recipe="bnd/$1.bnd"
+
+testcases.junit3: ${classes;EXTENDS;junit.framework.TestCase;CONCRETE}
+testcases.junit4: ${classes;HIERARCHY_ANNOTATED;org.junit.Test;CONCRETE}
+Test-Cases: ${sort;${uniq;${testcases.junit3};${testcases.junit4}}}
+-plugin.signaturetest: SignatureTest

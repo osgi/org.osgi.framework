@@ -1,0 +1,77 @@
+# Set javac settings from JDT prefs
+
+Bundle-Description					: Secure Framework test cases.
+
+-conditionalpackage					= org.osgi.test.support.*
+-privatepackage						=  \
+	${p}.junit.*
+	
+Export-Package						= \
+	${p}.permissions.util, \
+	${p}.lifecycle.servicereferencegetter, \
+	${p}.junit.adaptions.export, \
+	${p}.junit.hooks.weaving.export, \
+	${p}.junit.serviceregistry.export
+
+-includeresource = \
+    adaptAllPerms.jar,\
+    adaptMissingPerms.jar,\
+	classloading.tb1.jar, \
+	classloading.tb6a.jar, \
+	classloading.tb6b.jar, \
+	classloading.tb6c.jar, \
+	classloading.tb6d.jar, \
+	classloading.tb16b.jar, \
+	classloading.tb16d.jar, \
+	fragments.tb2a.jar, \
+	fragments.tb2b.jar, \
+	fragments.tb2c.jar, \
+	fragments.tb2d.jar, \
+	fragments.tb7f.jar, \
+	fragments.tb7g.jar, \
+	lifecycle.tb5.jar, \
+	lifecycle.tb10.jar, \
+	permissions.admin1.jar, \
+	permissions.admin2.jar, \
+	permissions.condition.jar, \
+	permissions.exporter1.jar, \
+	permissions.exporter2.jar, \
+	permissions.get.jar, \
+	permissions.importer1.jar, \
+	permissions.importer2.jar, \
+	permissions.register.jar, \
+	permissions.registerModify.jar, \
+	permissions.registerPlural.jar, \
+	permissions.setPermission.jar, \
+	resolver.tb1.jar, \
+	resolver.tb2.jar, \
+	resolver.tb5.jar, \
+	serviceregistry.tb1.jar, \
+	serviceregistry.tb2.jar, \
+	syncbundlelistener.tb1a.jar, \
+	syncbundlelistener.tb1b.jar, \
+	weaving.tb.woven.jar,\
+	weaving.tb1.jar,\
+	weaving.tb2.jar,\
+	weaving.tb3.jar,\
+	weaving.tb4.jar,\
+	wiring.tb1.jar,\
+	wiring.tb2.jar,\
+	wiring.tb3.jar,\
+	wiring.tb4.jar
+
+-fixupmessages.host: "Host * for this fragment"
+
+p: org.osgi.test.cases.framework.secure
+
+# Maven build: workspace includes replaced inline (from cnf/includes and build.bnd in osgi/osgi)
+# -make.maven, not -make: the key is a map entry and would displace
+# a project-level -make (webcontainer also builds .war recipes this
+# way). bnd merges all -make.* entries.
+-make.maven: (*).(jar); type=bnd; recipe="bnd/$1.bnd"
+
+testcases.junit3: ${classes;EXTENDS;junit.framework.TestCase;CONCRETE}
+testcases.junit4: ${classes;HIERARCHY_ANNOTATED;org.junit.Test;CONCRETE}
+testcases.junit5: ${classes;HIERARCHY_INDIRECTLY_ANNOTATED;org.junit.platform.commons.annotation.Testable;CONCRETE}
+Test-Cases: ${sort;${uniq;${testcases.junit3};${testcases.junit4};${testcases.junit5}}}
+-plugin.signer: aQute.bnd.signing.JartoolSigner;keystore="../keystore";keypass=testtest;storepass=testtest;digestalg=SHA-256
