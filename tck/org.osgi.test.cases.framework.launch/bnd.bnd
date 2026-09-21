@@ -1,5 +1,4 @@
 # Set javac settings from JDT prefs
--include: ${includes}/jdt.bnd, ${includes}/osgi.tck.junit4-runpath.bnd, ${includes}/tck.bnd, ${includes}/core.bnd
 
 Bundle-Description					: Framework test cases.
 
@@ -39,23 +38,19 @@ Import-Package: ${-signaturetest}, *
 	org.osgi.framework.launch , \
 	org.osgi.service.condition
 
--buildpath = \
-    org.osgi.test.support;version=project, \
-    org.osgi.dto;maven-scope=provided;version=latest, \
-    org.osgi.resource;maven-scope=provided;version=latest, \
-    org.osgi.framework;maven-scope=provided;version=latest, \
-	org.osgi.service.condition;maven-scope=provided;version=latest
 
--runbundles:
 -runframework: none
 -runvm: ${if;${is;-1;${vcompare;${java.specification.version};9}};;--add-opens=java.base/java.lang=ALL-UNNAMED}
--runproperties = ${runproperties}, \
-	${p}.storageroot=${target-dir}/${p}.testStorageRoot, \
-	${p}.bundles=, \
-	${p}.java.version.8="java.specification.version=1.8", \
-	${p}.java.version.99="java.specification.version=99", \
-	${p}.java.version.100="java.specification.version=100", \
-	${p}.java.version.101="java.specification.version=101"
 
+p: org.osgi.test.cases.framework.launch
 
+# Maven build: workspace includes replaced inline (from cnf/includes and build.bnd in osgi/osgi)
+# -make.maven, not -make: the key is a map entry and would displace
+# a project-level -make (webcontainer also builds .war recipes this
+# way). bnd merges all -make.* entries.
+-make.maven: (*).(jar); type=bnd; recipe="bnd/$1.bnd"
 
+testcases.junit3: ${classes;EXTENDS;junit.framework.TestCase;CONCRETE}
+testcases.junit4: ${classes;HIERARCHY_ANNOTATED;org.junit.Test;CONCRETE}
+Test-Cases: ${sort;${uniq;${testcases.junit3};${testcases.junit4}}}
+-plugin.signaturetest: SignatureTest
