@@ -11,7 +11,7 @@ corrections are welcome — please open a pull request.
 
 | Project | Link | Notes |
 |---------|------|-------|
-| _none listed yet_ | | |
+| Eclipse Equinox | [GitHub](https://github.com/eclipse-equinox/equinox) | |
 
 ## Build
 
