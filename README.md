@@ -12,6 +12,7 @@ corrections are welcome — please open a pull request.
 | Project | Link | Notes |
 |---------|------|-------|
 | Eclipse Equinox | [GitHub](https://github.com/eclipse-equinox/equinox) | |
+| Apache Felix | [GitHub](https://github.com/apache/felix-dev) | |
 
 ## Build
 
