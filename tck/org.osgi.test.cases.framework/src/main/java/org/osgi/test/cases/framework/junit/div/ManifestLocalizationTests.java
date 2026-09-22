@@ -138,7 +138,7 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * Tests manifest headers localization for a bundle that does not have
 	 * locale file.
 	 * 
-	 * @spec Bundle.getHeaders()
+	 * @osgi.spec Bundle.getHeaders()
 	 */
 	public void testGetHeaders001() throws Exception {
 
@@ -163,7 +163,7 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * locale properties file, as defined by
 	 * Constants.BUNDLE_LOCALIZATION_DEFAULT_BASENAME.
 	 * 
-	 * @spec Bundle.getHeaders()
+	 * @osgi.spec Bundle.getHeaders()
 	 */
 	public void testGetHeaders002() throws Exception {
 
@@ -206,7 +206,7 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * This method tests manifest headers localization for a bundle that has
 	 * specific locale files including the default locale.
 	 * 
-	 * @spec Bundle.getHeaders()
+	 * @osgi.spec Bundle.getHeaders()
 	 */
 	public void testGetHeaders003() throws Exception {
 		// specify default locale
@@ -269,7 +269,7 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * Tests manifest headers localization for a bundle that has specific locale
 	 * files but does not include the default locale.
 	 * 
-	 * @spec Bundle.getHeaders()
+	 * @osgi.spec Bundle.getHeaders()
 	 */
 	public void testGetHeaders004() throws Exception {
 		Locale.setDefault(new Locale("pt", "BR"));
@@ -293,7 +293,7 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * Tests manifest headers localization for a bundle that does not have
 	 * locale file.
 	 * 
-	 * @spec Bundle.getHeaders(String)
+	 * @osgi.spec Bundle.getHeaders(String)
 	 */
 	public void testGetHeaders005() throws Exception {
 		Locale.setDefault(new Locale("en", "US"));
@@ -318,7 +318,7 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * locale file, as defined by
 	 * Constants.BUNDLE_LOCALIZATION_DEFAULT_BASENAME.
 	 * 
-	 * @spec Bundle.getHeaders(String)
+	 * @osgi.spec Bundle.getHeaders(String)
 	 */
 	public void testGetHeaders006() throws Exception {
 		Locale.setDefault(new Locale("en", "US"));
@@ -342,7 +342,7 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * Tests manifest headers localization for a bundle that has specific locale
 	 * files including the default locale.
 	 * 
-	 * @spec Bundle.getHeaders(String)
+	 * @osgi.spec Bundle.getHeaders(String)
 	 */
 	public void testGetHeaders007() throws Exception {
 		Bundle tb9 = getContext().installBundle(getWebServer() + "div.tb9.jar");
@@ -365,7 +365,7 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * Tests manifest headers localization for a bundle that has specific locale
 	 * files but does not include locale requested.
 	 * 
-	 * @spec Bundle.getHeaders(String)
+	 * @osgi.spec Bundle.getHeaders(String)
 	 */
 	public void testGetHeaders008() throws Exception {
 		Locale.setDefault(new Locale("en", "US"));
@@ -389,7 +389,7 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * Tests manifest headers localization for a bundle that has specific locale
 	 * files but does not include the default locale.
 	 * 
-	 * @spec Bundle.getHeaders(String)
+	 * @osgi.spec Bundle.getHeaders(String)
 	 */
 	public void testGetHeaders009() throws Exception {
 		Locale.setDefault(new Locale("pt", "BR"));
@@ -430,7 +430,7 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * Tests manifest localization when bundle is not on default location. Tests
 	 * manifest localization for a fragment bundle.
 	 * 
-	 * @spec Bundle.getHeaders(String)
+	 * @osgi.spec Bundle.getHeaders(String)
 	 */
 	public void testGetHeaders010() throws Exception {
 
@@ -486,7 +486,7 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	/**
 	 * Tests manifest localization for a host bundle.
 	 * 
-	 * @spec Bundle.getHeaders(String)
+	 * @osgi.spec Bundle.getHeaders(String)
 	 */
 	public void testGetHeaders011() throws Exception {
 
@@ -517,7 +517,7 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	/**
 	 * Tests manifest localization for a fragment bundle.
 	 * 
-	 * @spec Bundle.getHeaders(String)
+	 * @osgi.spec Bundle.getHeaders(String)
 	 */
 	public void testGetHeaders012() throws Exception {
 
@@ -555,7 +555,7 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	/**
 	 * Tests manifest localization for a fragment with multiple hosts bundle.
 	 * 
-	 * @spec Bundle.getHeaders(String)
+	 * @osgi.spec Bundle.getHeaders(String)
 	 */
 	public void testGetHeaders013() throws Exception {
 		// default locale should exist in any of the following

@@ -53,7 +53,7 @@ public class TestControl extends DefaultTestBundleControl {
 	 * have BundlePermission[ <bundle symbolic name>,"fragment"].
 	 * 
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testBundlePermission() throws Exception {
 		// Install fragment bundle with normal permissions
@@ -143,7 +143,7 @@ public class TestControl extends DefaultTestBundleControl {
 	 * to the Framework defined value.
 	 * 
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testResourceAccessPermission() throws Exception {
 		// Install bundle that has the resource

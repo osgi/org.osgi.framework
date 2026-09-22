@@ -341,9 +341,9 @@ public class DivTests extends DefaultTestBundleControl {
 	/**
 	 * Tests basic native code invocation.
 	 *
-	 * @spec BundleContext.installBundle(String)
-	 * @spec Bundle.start()
-	 * @spec Bundle.uninstall()
+	 * @osgi.spec BundleContext.installBundle(String)
+	 * @osgi.spec Bundle.start()
+	 * @osgi.spec Bundle.uninstall()
 	 */
 	public void testNativeCode() throws Exception {
 		Bundle tb = getContext().installBundle(getWebServer() + "div.tb2.jar");
@@ -464,9 +464,9 @@ public class DivTests extends DefaultTestBundleControl {
 	 * no native code clause matches the selection filter, since there's an
 	 * optional clause present (*).
 	 *
-	 * @spec BundleContext.installBundle(String)
-	 * @spec Bundle.start()
-	 * @spec Bundle.uninstall()
+	 * @osgi.spec BundleContext.installBundle(String)
+	 * @osgi.spec Bundle.start()
+	 * @osgi.spec Bundle.uninstall()
 	 */
 	public void testNativeCodeFilterOptional() throws Exception {
 		Bundle tb = getContext().installBundle(getWebServer() + "div.tb12.jar");
@@ -484,9 +484,9 @@ public class DivTests extends DefaultTestBundleControl {
 	 * native code clause matches the selection filter, since there's no
 	 * optional clause present (*).
 	 *
-	 * @spec BundleContext.installBundle(String)
-	 * @spec Bundle.start()
-	 * @spec Bundle.uninstall()
+	 * @osgi.spec BundleContext.installBundle(String)
+	 * @osgi.spec Bundle.start()
+	 * @osgi.spec Bundle.uninstall()
 	 */
 	public void testNativeCodeFilterNoOptional() throws Exception {
 		Bundle tb = getContext().installBundle(getWebServer() + "div.tb15.jar");
@@ -510,9 +510,9 @@ public class DivTests extends DefaultTestBundleControl {
 	 * there's no optional clause present (*). This test also checks if the new
 	 * osname alias (win32) matches properly (OSGi R4).
 	 *
-	 * @spec BundleContext.installBundle(String)
-	 * @spec Bundle.start()
-	 * @spec Bundle.uninstall()
+	 * @osgi.spec BundleContext.installBundle(String)
+	 * @osgi.spec Bundle.start()
+	 * @osgi.spec Bundle.uninstall()
 	 */
 	public void testNativeCodeFilterAlias() throws Exception {
 		Bundle tb = getContext().installBundle(getWebServer() + "div.tb16.jar");
@@ -529,9 +529,9 @@ public class DivTests extends DefaultTestBundleControl {
 	 * Tests native code from a fragment bundle. The native code should be
 	 * loaded from a fragment bundle of the host bundle.
 	 *
-	 * @spec BundleContext.installBundle(String)
-	 * @spec Bundle.start()
-	 * @spec Bundle.uninstall()
+	 * @osgi.spec BundleContext.installBundle(String)
+	 * @osgi.spec Bundle.start()
+	 * @osgi.spec Bundle.uninstall()
 	 */
 	public void testNativeCodeFragment() throws Exception {
 		Bundle tbFragment = getContext().installBundle(
@@ -552,9 +552,9 @@ public class DivTests extends DefaultTestBundleControl {
 	 * native code clause matches the os language, since there's no optional
 	 * clause present (*).
 	 *
-	 * @spec BundleContext.installBundle(String)
-	 * @spec Bundle.start()
-	 * @spec Bundle.uninstall()
+	 * @osgi.spec BundleContext.installBundle(String)
+	 * @osgi.spec Bundle.start()
+	 * @osgi.spec Bundle.uninstall()
 	 */
 	public void testNativeCodeLanguage() throws Exception {
 		Bundle tb = getContext().installBundle(getWebServer() + "div.tb19.jar");
@@ -579,9 +579,9 @@ public class DivTests extends DefaultTestBundleControl {
 	 * @see http://ftp.ics.uci.edu/pub/ietf/http/related/iso639.txt for valid
 	 *      language codes.
 	 *
-	 * @spec BundleContext.installBundle(String)
-	 * @spec Bundle.start()
-	 * @spec Bundle.uninstall()
+	 * @osgi.spec BundleContext.installBundle(String)
+	 * @osgi.spec Bundle.start()
+	 * @osgi.spec Bundle.uninstall()
 	 */
 	public void testNativeCodeLanguageSuccess() throws Exception {
 		Bundle tb = getContext().installBundle(getWebServer() + "div.tb20.jar");
@@ -599,9 +599,9 @@ public class DivTests extends DefaultTestBundleControl {
 	 * native code clause matches the os version range, since there's no
 	 * optional clause present (*).
 	 *
-	 * @spec BundleContext.installBundle(String)
-	 * @spec Bundle.start()
-	 * @spec Bundle.uninstall()
+	 * @osgi.spec BundleContext.installBundle(String)
+	 * @osgi.spec Bundle.start()
+	 * @osgi.spec Bundle.uninstall()
 	 */
 	public void testNativeCodeVersion() throws Exception {
 		Bundle tb = getContext().installBundle(getWebServer() + "div.tb21.jar");
@@ -623,9 +623,9 @@ public class DivTests extends DefaultTestBundleControl {
 	 * Tests successful native code os version. The bundle should be loaded
 	 * since the version range should contain all valid os versions.
 	 *
-	 * @spec BundleContext.installBundle(String)
-	 * @spec Bundle.start()
-	 * @spec Bundle.uninstall()
+	 * @osgi.spec BundleContext.installBundle(String)
+	 * @osgi.spec Bundle.start()
+	 * @osgi.spec Bundle.uninstall()
 	 */
 	public void testNativeCodeVersionSuccess() throws Exception {
 		Bundle tb = getContext().installBundle(getWebServer() + "div.tb22.jar");

@@ -116,7 +116,7 @@ public class ExtensionDependencyTests extends LaunchTest {
 	 * <code>true</code>.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testFrameworkExtensionRefresh() throws Exception {
 		if (!isFrameworkExtensionSupported()) {

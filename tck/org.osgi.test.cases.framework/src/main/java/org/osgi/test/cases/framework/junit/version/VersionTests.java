@@ -28,13 +28,13 @@ public class VersionTests extends TestCase {
 	/**
 	 * Test the Version constructor with legal parameters
 	 *
-	 * @spec Version.<init>(int,int,int)
+	 * @osgi.spec Version.<init>(int,int,int)
 	 */
 	public void testConstructors() {
 		/**
 		 * Test the Version constructor with legal parameters
 		 *
-		 * @spec Version.<init>(int,int,int)
+		 * @osgi.spec Version.<init>(int,int,int)
 		 */
 		new Version(0, 0, 0);
 
@@ -55,7 +55,7 @@ public class VersionTests extends TestCase {
 		/**
 		 * Test the Version constructor with illegal parameters
 		 *
-		 * @spec Version.<init>(int,int,int)
+		 * @osgi.spec Version.<init>(int,int,int)
 		 */
 		try {
 			new Version(-1, 2, 3);
@@ -159,7 +159,7 @@ public class VersionTests extends TestCase {
 		/**
 		 * Test the method equals() with the same versions
 		 *
-		 * @spec Version.equals(Object)
+		 * @osgi.spec Version.equals(Object)
 		 */
 
 		version1 = new Version(0, 0, 0, "a");
@@ -177,7 +177,7 @@ public class VersionTests extends TestCase {
 		/**
 		 * Test the method equals() with different versions
 		 *
-		 * @spec Version.equals(Object)
+		 * @osgi.spec Version.equals(Object)
 		 */
 
 		version1 = new Version(0, 0, 0);
@@ -191,7 +191,7 @@ public class VersionTests extends TestCase {
 		/**
 		 * Test the method equals() with different versions
 		 *
-		 * @spec Version.equals(Object)
+		 * @osgi.spec Version.equals(Object)
 		 */
 
 		version1 = new Version(0, 0, 0);
@@ -205,7 +205,7 @@ public class VersionTests extends TestCase {
 		/**
 		 * Test the method equals() with different versions
 		 *
-		 * @spec Version.equals(Object)
+		 * @osgi.spec Version.equals(Object)
 		 */
 
 		version1 = new Version(0, 0, 0);
@@ -219,7 +219,7 @@ public class VersionTests extends TestCase {
 		/**
 		 * Test the method equals() with different versions
 		 *
-		 * @spec Version.equals(Object)
+		 * @osgi.spec Version.equals(Object)
 		 */
 
 		version1 = new Version(0, 0, 0, "a");
@@ -233,7 +233,7 @@ public class VersionTests extends TestCase {
 		/**
 		 * Test the method equals() with different versions
 		 *
-		 * @spec Version.equals(Object)
+		 * @osgi.spec Version.equals(Object)
 		 */
 
 		version1 = new Version(0, 0, 0, "a");
@@ -263,7 +263,7 @@ public class VersionTests extends TestCase {
 	/**
 	 * Test the method hashCode() when the equals() returns true
 	 *
-	 * @spec Version.hashCode();
+	 * @osgi.spec Version.hashCode();
 	 */
 	public void testHashCode() throws Exception {
 		Version version1;
@@ -337,7 +337,7 @@ public class VersionTests extends TestCase {
 	 * Test the method getQualifier() using the constructor
 	 * Version(int,int,int,String)
 	 *
-	 * @spec Version.getQualifier()
+	 * @osgi.spec Version.getQualifier()
 	 */
 	public void testGetQualifier() throws Exception {
 		Version version;
@@ -373,7 +373,7 @@ public class VersionTests extends TestCase {
 		 * Test the method compareTo() with first version number less than
 		 * second version number
 		 *
-		 * @spec Version.compareTo(Version);
+		 * @osgi.spec Version.compareTo(Version);
 		 */
 		Version version1;
 		Version version2;
@@ -392,7 +392,7 @@ public class VersionTests extends TestCase {
 		 * Test the method compareTo() with first version number greater than
 		 * second version number
 		 *
-		 * @spec Version.compareTo(Version);
+		 * @osgi.spec Version.compareTo(Version);
 		 */
 
 		version1 = new Version(2, 1, 1);
@@ -408,7 +408,7 @@ public class VersionTests extends TestCase {
 		/**
 		 * Test the method compareTo() with same version numbers
 		 *
-		 * @spec Version.compareTo(Version);
+		 * @osgi.spec Version.compareTo(Version);
 		 */
 
 		version1 = new Version(1, 1, 1);
@@ -454,7 +454,7 @@ public class VersionTests extends TestCase {
 		/**
 		 * Test the method compareTo() with an incorrect object
 		 *
-		 * @spec Version.compareTo(Version);
+		 * @osgi.spec Version.compareTo(Version);
 		 */
 		Object incorrect = "";
 		version1 = new Version(1, 1, 1);

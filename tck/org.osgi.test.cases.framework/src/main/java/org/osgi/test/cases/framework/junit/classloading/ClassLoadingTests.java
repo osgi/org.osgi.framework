@@ -58,7 +58,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * This test case will check the behavior of method getServiceReference()
 	 * when more than one service is installed.
 	 *
-	 * @spec BundleContext.getServiceReference(String)
+	 * @osgi.spec BundleContext.getServiceReference(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testBundleContextGetReference001() throws Exception {
@@ -108,7 +108,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * This test case will check the behavior of method getServiceReference()
 	 * without any installed services.
 	 *
-	 * @spec BundleContext.getServiceReference(String)
+	 * @osgi.spec BundleContext.getServiceReference(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testBundleContextGetReference002() throws Exception {
@@ -148,7 +148,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * getAllServiceReferences() must returns all services independent of the
 	 * interface wired to the test bundle.
 	 *
-	 * @spec BundleContext.getAllServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getAllServiceReferences(String, String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testBundleContextGetAllServiceReferences001() throws Exception {
@@ -201,7 +201,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * the wired package of the getter bundle (the bundle requesting the
 	 * service) is the same of the registrant bundle.
 	 *
-	 * @spec ServiceReference.isAssignableTo(Bundle, String)
+	 * @osgi.spec ServiceReference.isAssignableTo(Bundle, String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testBundleContextIsAssignableTo001() throws Exception {
@@ -244,7 +244,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * the wired package of the getter bundle (the bundle requesting the
 	 * service) is not the same of the registrant bundle.
 	 *
-	 * @spec ServiceReference.isAssignableTo(Bundle, String)
+	 * @osgi.spec ServiceReference.isAssignableTo(Bundle, String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testBundleContextIsAssignableTo002() throws Exception {
@@ -476,7 +476,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * version of the service interface imported by the module attempting to
 	 * find the interface.
 	 *
-	 * @spec BundleContext.installBundle(String)
+	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testServiceRegistryWithMultipleServices001() throws Exception {
@@ -539,7 +539,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 *
 	 * Tests the case which the event cannot be delivered.
 	 *
-	 * @spec ServiceListener.serviceChanged(ServiceEvent)
+	 * @osgi.spec ServiceListener.serviceChanged(ServiceEvent)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testServiceListener001() throws Exception {
@@ -609,7 +609,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 *
 	 * Tests the case which the event must be delivered.
 	 *
-	 * @spec ServiceListener.serviceChanged(ServiceEvent)
+	 * @osgi.spec ServiceListener.serviceChanged(ServiceEvent)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testServiceListener002() throws Exception {
@@ -676,7 +676,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * class checks on the ServiceReference for the ServiceEvent before
 	 * delivering it to the AllServiceListener.
 	 *
-	 * @spec AllServiceListener.serviceChanged(ServiceEvent)
+	 * @osgi.spec AllServiceListener.serviceChanged(ServiceEvent)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testAllServiceListener001() throws Exception {
@@ -779,7 +779,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * UnfilteredServiceListener. The listener is added with a filter that can
 	 * never match (!(objectClass=*)).
 	 *
-	 * @spec AllServiceListener.serviceChanged(ServiceEvent)
+	 * @osgi.spec AllServiceListener.serviceChanged(ServiceEvent)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testUnfilteredAllServiceListener001() throws Exception {
@@ -883,7 +883,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * packages. But, exporting java.* packages is not allowed by a bundle and
 	 * doing so will result in an error.
 	 * 
-	 * @spec BundleContext.installBundle(String)
+	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testJavaPackageExplicityExportImport001() {
@@ -974,7 +974,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * If the class or resource is a package included in the boot delegation
 	 * list, the request is delegated to the parent classloader.
 	 *
-	 * @spec Bundle.loadClass(String)
+	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testClassLoadingSearchOrder001() throws Exception {
@@ -1038,7 +1038,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * request has failed. The search terminates in this case since imported
 	 * classes are not treated as split.
 	 *
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testClassLoadingSearchOrder002() throws Exception {
@@ -1108,7 +1108,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * from one or more other bundles using Require-Bundle, in which case the
 	 * search terminates and the request fails.
 	 *
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testClassLoadingSearchOrder003() throws Exception {
@@ -1171,7 +1171,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	/**
 	 * Teste if the bundle's own internal class path is searched.
 	 *
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testClassLoadingSearchOrder004() throws Exception {
@@ -1223,7 +1223,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * exporting class loader and the class or resource is not found, then the
 	 * search terminates and the request fails.
 	 *
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testClassLoadingSearchOrder005() throws Exception {
@@ -1279,7 +1279,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * java.* package and it was not found by the parent class loader, then the
 	 * request fails.
 	 *
-	 * @spec Bundle.loadClass(String)
+	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testClassLoadingSearchOrder006() throws Exception {
@@ -1321,7 +1321,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * terminates and the request fails since imported packages are not treated
 	 * as split.
 	 *
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testClassLoadingSearchOrder007() throws Exception {
@@ -1366,7 +1366,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * The bundle's own internal class path is searched. If the class or
 	 * resource is not found, then the search terminates and the request fails.
 	 *
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testClassLoadingSearchOrder008() throws Exception {
@@ -1398,8 +1398,8 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * created for the bundle. However, a bundle archive will not create more
 	 * than one module unless it is modified.
 	 *
-	 * @spec BundleContext.installBundle(String)
-	 * @spec Bundle.update(InputStream)
+	 * @osgi.spec BundleContext.installBundle(String)
+	 * @osgi.spec Bundle.update(InputStream)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testBundleModule001() throws Exception {
@@ -1445,7 +1445,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	/**
 	 * Version 2 bundle manifests must specify the bundle symbolic name.
 	 *
-	 * @spec BundleContext.start(String)
+	 * @osgi.spec BundleContext.start(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testBundleSymbolicName001() throws Exception {
@@ -1473,7 +1473,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * particular, singleton bundles do not affect the resolution of non-
 	 * singleton bundles with the same symbolic name.
 	 *
-	 * @spec Bundle.start()
+	 * @osgi.spec Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testSingletonBundle001() throws Exception {
@@ -1526,7 +1526,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * symbolic name and bundle version as an already installed bundle, then a
 	 * BundleException must be thrown and the install must fail
 	 *
-	 * @spec BundleContext.installBundle(String)
+	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testBundleInstall001() throws Exception {
@@ -1559,7 +1559,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * specified before the parameters. The same package may be exported more
 	 * than once with different parameters.
 	 *
-	 * @spec Bundle.start()
+	 * @osgi.spec Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageExport001() throws Exception {
@@ -1595,8 +1595,8 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * selected and only the dependencies specified (via "uses") for that export
 	 * statement apply to the importer.
 	 *
-	 * @spec Bundle.getResource(String)
-	 * @spec Bundle.loadClass(String)
+	 * @osgi.spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageExport002() throws Exception {
@@ -1667,7 +1667,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * Packages in the list which are neither exported nor imported by the
 	 * current module are ignored and do not create dependencies.
 	 *
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageExport003() throws Exception {
@@ -1780,8 +1780,8 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * declares that P uses Q and Q uses R, then the framework will behave as if
 	 * the bundle also declared that P uses R.
 	 *
-	 * @spec Bundle.getResource(String)
-	 * @spec Bundle.loadClass(String)
+	 * @osgi.spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageExport004() throws Exception {
@@ -1856,7 +1856,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * matching attributes which must be specified by matching Import-Package
 	 * statements.
 	 *
-	 * @spec Bundle.loadClass(String)
+	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageExport005() throws Exception {
@@ -1893,7 +1893,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * matching attributes which must be specified by matching Import-Package
 	 * statements.
 	 *
-	 * @spec Bundle.start()
+	 * @osgi.spec Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageExport006() throws Exception {
@@ -1938,7 +1938,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * Note that the syntax permits zero or more wildcards to occur at arbitrary
 	 * positions.
 	 *
-	 * @spec Bundle.loadClass(String)
+	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageExport007() throws Exception {
@@ -1986,7 +1986,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * identical values. If both are specified but with different values, the
 	 * bundle fails to install.
 	 *
-	 * @spec BundleContext.installBundle(String)
+	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageExport008() throws Exception {
@@ -2026,7 +2026,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * associated with the export statement. The export statement must not
 	 * specify an explicit bundle version.
 	 *
-	 * @spec BundleContext.installBundle(String)
+	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageExport009() throws Exception {
@@ -2051,8 +2051,8 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * syntax permits a list of packages, separated by semicolons, to be
 	 * specified before the parameters.
 	 *
-	 * @spec Bundle.getResource(String)
-	 * @spec Bundle.loadClass(String)
+	 * @osgi.spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageImport001() throws Exception {
@@ -2116,7 +2116,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * importing module does not also export the specified packages, the module
 	 * fails to resolve.
 	 *
-	 * @spec Bundle.start()
+	 * @osgi.spec Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageImport002() throws Exception {
@@ -2180,7 +2180,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * resolved when the module is resolved, the import may not be resolved
 	 * before the module is re-resolved.
 	 *
-	 * @spec Bundle.loadClass(String)
+	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageImport003() throws Exception {
@@ -2241,7 +2241,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * identical values. If both are specified but with different values, the
 	 * bundle fails to install.
 	 *
-	 * @spec BundleContext.installBundle(String)
+	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageImport004() throws Exception {
@@ -2289,7 +2289,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * bundle-version - a version range to select the bundle version of the
 	 * (re-)exporting bundle. The default value is "0.0.0".
 	 *
-	 * @spec Bundle.start()
+	 * @osgi.spec Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageImport005() throws Exception {
@@ -2318,7 +2318,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * A module which imports a given package more than once is in error and
 	 * fails to resolve.
 	 *
-	 * @spec Bundle.start()
+	 * @osgi.spec Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageImport006() throws Exception {
@@ -2352,7 +2352,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * If an import matches exports in more than one module, the module with
 	 * lowest bundle identifier is selected.
 	 *
-	 * @spec Bundle.getBundleId()
+	 * @osgi.spec Bundle.getBundleId()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageImport007() throws Exception {
@@ -2402,7 +2402,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * Dynamic imports are matched to exports (to form package wirings) during
 	 * class loading and do not affect module resolution.
 	 *
-	 * @spec Bundle.start()
+	 * @osgi.spec Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageDynamicImport001() throws Exception {
@@ -2437,8 +2437,8 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * bundle-version - a version range to select the bundle version of the (re-
 	 * )exporting bundle. The default value is "0.0.0".
 	 *
-	 * @spec Bundle.getResource(String)
-	 * @spec Bundle.loadClass(String)
+	 * @osgi.spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageDynamicImport002() throws Exception {
@@ -2483,7 +2483,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * bundle-symbolic-name - the bundle symbolic name of the (re-)exporting
 	 * bundle.
 	 *
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageDynamicImport003() throws Exception {
@@ -2525,7 +2525,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	/**
 	 * Dynamic imports may not be used when the package is exported.
 	 *
-	 * @spec Bundle.loadClass(String)
+	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageDynamicImport004() throws Exception {
@@ -2574,8 +2574,8 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * identical values. If both are specified but with different values, the
 	 * bundle fails to install.
 	 *
-	 * @spec BundleContext.installBundle(String)
-	 * @spec Bundle.loadClass(String)
+	 * @osgi.spec BundleContext.installBundle(String)
+	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageDynamicImport005() throws Exception {
@@ -2629,7 +2629,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * those attributes are exported as required (using the "mandatory"
 	 * directive).
 	 *
-	 * @spec Bundle.loadClass(String)
+	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageDynamicImport006() throws Exception {
@@ -2667,7 +2667,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * those attributes are exported as required (using the "mandatory"
 	 * directive).
 	 *
-	 * @spec Bundle.loadClass(String)
+	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPackageDynamicImport007() throws Exception {
@@ -2711,7 +2711,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * lead to lookup cycles when searching for classes and resources from the
 	 * package.
 	 *
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
 	public void testRequiredBundle001() throws Exception {
@@ -2756,7 +2756,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * only search the packages (re- ) exported by the required bundle. Any
 	 * other packages contained in the required bundle must not be searched.
 	 *
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
 	public void testRequiredBundle002() throws Exception {
@@ -2784,7 +2784,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * any packages that are exported by the required bundle are not made
 	 * visible on the export signature of the requiring bundle.
 	 *
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
 	public void testRequiredBundle004() throws Exception {
@@ -2821,7 +2821,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * bundle may subsequently be resolved until such time as the requiring
 	 * bundle is re-resolved.
 	 *
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
 	public void testRequiredBundle005() throws Exception {
@@ -2853,7 +2853,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * Test bundle-version attribute allows a version-range to select the bundle
 	 * version of the required bundle.
 	 *
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
 	public void testRequiredBundle006() throws Exception {
@@ -2890,7 +2890,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * exported by a required bundle and imported via Import-Package are not
 	 * treated as split
 	 *
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
 	public void testRequiredBundle007() throws Exception {
@@ -2929,8 +2929,8 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * specified (via "uses") for that export statement apply to the requiring
 	 * bundle.
 	 *
-	 * @spec Bundle.getResource(String)
-	 * @spec Bundle.loadClass(String)
+	 * @osgi.spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
 	public void testRequiredBundle008() throws Exception {
@@ -3008,7 +3008,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * the requiring bundle. Any arbitrary matching attributes with which they
 	 * were exported by the required bundle are deleted.
 	 *
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception If any exception occurs or an assert fails
 	 */
 	public void testRequiredBundle009() throws Exception {
@@ -3059,7 +3059,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * on the re-export statement, they are either unspecified or take default
 	 * values where defaults are defined.
 	 *
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
 	public void testRequiredBundle010() throws Exception {
@@ -3099,7 +3099,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * Test that any duplicate attribute or duplicate directive causes a R4
 	 * bundle to fail to install.
 	 *
-	 * @spec BundleContext.installBundle(String)
+	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testInstallingModules001() throws Exception {
@@ -3118,7 +3118,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * Test that mutiple imports of a given package causes a R4 bundle to fail
 	 * to install.
 	 *
-	 * @spec BundleContext.installBundle(String)
+	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testInstallingModules002() throws Exception {
@@ -3138,7 +3138,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * bundle symbolic name, unrecognized directive, unrecognized directive
 	 * value, etc.) causes a R4 bundle to fail to install.
 	 *
-	 * @spec BundleContext.installBundle(String)
+	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testInstallingModules003() throws Exception {
@@ -3166,7 +3166,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * but: Import-Package p;specification-version=1, q;version=2 would not be
 	 * an error.
 	 *
-	 * @spec BundleContext.installBundle(String)
+	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testInstallingModules004() throws Exception {

@@ -54,7 +54,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	/**
 	 * Tests a null filter.
 	 * 
-	 * @spec BundleContext.getServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
 	public void test_framework_filter_m1() throws Exception {
 		testFilter(null, "Testing null filter", new String[]{"a1", "b1", "b2", "c1", "c2", "c25", "d25"});
@@ -63,7 +63,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	/**
 	 * Tests a syntactically invalid expression.
 	 * 
-	 * @spec BundleContext.getServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
 	public void test_framework_filter_m2() throws Exception {
 		try {
@@ -80,7 +80,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	/**
 	 * Tests case insensitivity in attribute names.
 	 * 
-	 * @spec BundleContext.getServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
 	public void test_framework_filter_m3() throws Exception {
 		testFilter("(nAMe=ServiceA)", "Testing case insensitive", new String[] {"a1"});
@@ -90,7 +90,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * Tests basic filter functionality.
 	 * 
 	 * @requirement framework.filter.m4
-	 * @spec BundleContext.getServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
 	public void test_framework_filter_m4() throws Exception {
 		testFilter(
@@ -101,7 +101,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	/**
 	 * Tests String types.
 	 * 
-	 * @spec BundleContext.getServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
 	public void test_framework_filter_m5() throws Exception {
 		testFilter("(name=ServiceA)", "Testing type String", new String[]{"a1"});
@@ -110,7 +110,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	/**
 	 * Tests numeric types.
 	 * 
-	 * @spec BundleContext.getServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
 	public void test_framework_filter_m6() throws Exception {
 		testFilter("(Integer=3)", "Testing type Integer", new String[]{"c25"});
@@ -123,7 +123,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * Test that a value is found in an array of values.
 	 * 
 	 * @requirement framework.filter.m9
-	 * @spec BundleContext.getServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
 	public void test_framework_filter_m9() throws Exception {
 		testFilter("(compatible=1.5)", "Testing array filter", new String[]{"c2"});
@@ -133,7 +133,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * Test that a value is found in a Vector of values.
 	 * 
 	 * @requirement framework.filter.m10
-	 * @spec BundleContext.getServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
 	public void test_framework_filter_m10() throws Exception {
 		testFilter("(compatible=2.1)", "Testing Vector filter", new String[]{"c25"});
@@ -143,7 +143,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * Tests the approximate (~=) operation. Case and white space differences
 	 * should match.
 	 * 
-	 * @spec BundleContext.getServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
 	public void test_framework_filter_s1() throws Exception {
 		testFilter("(name~=servicea)", "Testing approximate equality (case)", new String[]{"a1"});
@@ -154,7 +154,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	/**
 	 * Filter by an object that implements java.lang.Comparable
 	 * 
-	 * @spec BundleContext.getServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
 	public void test_framework_filter_s2() throws Exception {
 		// Always finds the service object when filtering by ObjectA
@@ -166,7 +166,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * Testing = operator with an object that does not implement
 	 * <code>java.lang.Comparable</code> but has a special constructor.
 	 * 
-	 * @spec BundleContext.getServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
 	public void test_framework_filter_s3() throws Exception {
 		testFilter("(ObjectB=4)",
@@ -177,7 +177,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * Testing <= operator with an object that does not implement
 	 * <code>java.lang.Comparable</code> but has a special constructor.
 	 * 
-	 * @spec BundleContext.getServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
 	public void test_framework_filter_s4() throws Exception {
 		testFilter("(ObjectB<=4)",
@@ -188,7 +188,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * Testing >= operator with an object that does not implement
 	 * <code>java.lang.Comparable</code> but has a special constructor.
 	 * 
-	 * @spec BundleContext.getServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
 	public void test_framework_filter_s5() throws Exception {
 		testFilter("(ObjectB>=4)",
@@ -199,7 +199,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * Testing ~= operator with an object that does not implement
 	 * <code>java.lang.Comparable</code> but has a special constructor.
 	 * 
-	 * @spec BundleContext.getServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
 	public void test_framework_filter_s6() throws Exception {
 		testFilter("(ObjectB~=4)",
@@ -210,7 +210,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * Testing < operator with an object that does not implement
 	 * <code>java.lang.Comparable</code> but has a special constructor.
 	 * 
-	 * @spec BundleContext.getServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
 	public void test_framework_filter_s7() throws Exception {
 		String msg;
@@ -227,7 +227,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * Testing with an object that neither implements
 	 * <code>java.lang.Comparable</code> nor has a special constructor.
 	 * 
-	 * @spec BundleContext.getServiceReferences(String, String)
+	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
 	public void test_framework_filter_s9() throws Exception {
 		testFilter(
