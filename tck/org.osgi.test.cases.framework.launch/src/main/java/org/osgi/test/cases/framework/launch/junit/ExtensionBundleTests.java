@@ -60,7 +60,7 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * The installation of the fragment must fail.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testBadExtensionBundle() throws Exception {
 		// installing bad extension bundle
@@ -82,7 +82,7 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * <code>SUPPORTS_FRAMEWORK_EXTENSION</code> equals <code>true</code>.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testFrameworkExtensionBundle() throws Exception {
 		if ("true".equals(framework.getBundleContext().getProperty(
@@ -122,7 +122,7 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * <code>SUPPORTS_FRAMEWORK_EXTENSION</code> equals <code>true</code>.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testFrameworkExtensionBundleLoadClass() throws Exception {
 		String message = "expected class in extension bundle cannot be loaded";
@@ -158,7 +158,7 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * <code>SUPPORTS_FRAMEWORK_EXTENSION</code> equals <code>true</code>.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testFrameworkExtensionDefault() throws Exception {
 		if ("true".equals(framework.getBundleContext().getProperty(
@@ -188,7 +188,7 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * <code>SUPPORTS_FRAMEWORK_EXTENSION</code> equals <code>true</code>.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testFrameworkExtensionNativeCode() throws Exception {
 		if ("true".equals(framework.getBundleContext().getProperty(
@@ -223,7 +223,7 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * equals <code>true</code>.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testFrameworkExtensionRequireBundle() throws Exception {
 		if ("true".equals(framework.getBundleContext().getProperty(

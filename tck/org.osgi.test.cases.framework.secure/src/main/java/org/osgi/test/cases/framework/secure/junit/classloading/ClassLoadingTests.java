@@ -45,7 +45,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * permission being checked to do the instantiation. This is a complication
 	 * for framework implementers; bundle programmers are not affected.
 	 * 
-	 * @spec Bundle.start()
+	 * @osgi.spec Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
 	public void testPermissionChecking001() throws Exception {
@@ -98,7 +98,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * Test that when the resolution directive has a value of "mandatory" the
 	 * required bundle must be resolved if the requiring module is resolved.
 	 * 
-	 * @spec Bundle.start()
+	 * @osgi.spec Bundle.start()
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
 	public void testRequiredBundle003() throws Exception {

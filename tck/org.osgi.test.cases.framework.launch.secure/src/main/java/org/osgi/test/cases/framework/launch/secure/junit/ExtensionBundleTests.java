@@ -61,7 +61,7 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * <code>true</code>.
 	 * 
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testFrameworkExtensionPermission() throws Exception {
 		if ("true".equals(framework.getBundleContext().getProperty(
@@ -97,7 +97,7 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * <code>SUPPORTS_FRAMEWORK_EXTENSION</code> equals <code>true</code>.
 	 * 
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testFrameworkExtensionInvokerPermission() throws Exception {
 		if ("true".equals(framework.getBundleContext().getProperty(
@@ -134,7 +134,7 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * <code>SUPPORTS_FRAMEWORK_EXTENSION</code> equals <code>true</code>.
 	 * 
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testFrameworkExtensionInvokerPermissionOk() throws Exception {
 		if ("true".equals(framework.getBundleContext().getProperty(

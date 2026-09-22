@@ -68,7 +68,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * a fragment bundle cannot be stopped.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.start()
+	 * @osgi.spec Bundle.start()
 	 */
 	public void testFragmentLifecycle() throws Exception {
 		// Install fragment bundle
@@ -100,7 +100,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * loader.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.loadClass(String)
+	 * @osgi.spec Bundle.loadClass(String)
 	 */
 	public void testAppendClasspath01() throws Exception {
 		Class< ? > classObj1;
@@ -147,7 +147,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * bundle id order.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 */
 	public void testAppendClasspath02() throws Exception {
 
@@ -209,7 +209,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * "/myimages/test.gif".
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.getResource(String)
+	 * @osgi.spec Bundle.getResource(String)
 	 */
 	public void testExistingResourceNotReplaced() throws Exception {
 		URL url;
@@ -262,7 +262,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * Tests that a fragment cannot be a host to another fragment.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testFragmentCannotBeHost() throws Exception {
 		// Install fragment bundles
@@ -297,7 +297,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * Tests that a fragment can attach to multiple hosts.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testFragmentMultipleHosts() throws Exception {
 		// Install and start host bundle version 1.0
@@ -342,7 +342,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * fragments are allowed to attach to the host bundle at any time.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testFragmentAttachmentDirective01() throws Exception {
 		// Install and start host bundle
@@ -377,7 +377,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * process of resolving the host bundle.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testFragmentAttachmentDirective02() throws Exception {
 		// Install and start host bundle
@@ -412,7 +412,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * process of resolving the host bundle.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testFragmentAttachmentDirective03() throws Exception {
 		// Install fragment bundle, host not yet resolved
@@ -452,7 +452,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * to one or more host bundles.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testAttachToResolvedHost01() throws Exception {
 		// Install and start host bundle
@@ -483,7 +483,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * required bundles to the host.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testAttachToResolvedHost02() throws Exception {
 		// Install and start host bundle
@@ -523,7 +523,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * in the set must have an UNRESOLVED BundleEvent published.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testFragmentUpdate() throws Exception {
 		// Add BundleEvent listener
@@ -601,7 +601,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * the fragment is not attached to the host bundle.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testConflictingImportPackage() throws Exception {
 		// Install and start bundles that export packages
@@ -647,7 +647,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * fragment is available for import.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testConflictingExportPackage() throws Exception {
 		// Install fragment bundle
@@ -695,7 +695,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * attached to the host bundle.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.installBundle(String)
+	 * @osgi.spec Bundle.installBundle(String)
 	 */
 	public void testConflictingRequireBundle() throws Exception {
 		// Install required bundles
@@ -742,7 +742,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * UNRESOLVED.
 	 *
 	 * @throws Exception if an error occurs or an assertion fails in the test.
-	 * @spec Bundle.uninstall()
+	 * @osgi.spec Bundle.uninstall()
 	 */
 	public void testFragmentBundleDetach() throws Exception {
 		InputStream ins;
