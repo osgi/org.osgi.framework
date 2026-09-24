@@ -2,6 +2,8 @@
 
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/osgi/org.osgi.framework/badge)](https://securityscorecards.dev/viewer/?uri=github.com/osgi/org.osgi.framework)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14810/badge)](https://www.bestpractices.dev/projects/14810)
+[![build](https://github.com/osgi/org.osgi.framework/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/osgi/org.osgi.framework/actions/workflows/build.yml)
+[![Maven Central](https://img.shields.io/maven-central/v/org.osgi/org.osgi.framework)](https://central.sonatype.com/artifact/org.osgi/org.osgi.framework)
 
 OSGi Specification repo for org.osgi.framework
 
