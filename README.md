@@ -1,5 +1,7 @@
 # org.osgi.framework
 
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/osgi/org.osgi.framework/badge)](https://securityscorecards.dev/viewer/?uri=github.com/osgi/org.osgi.framework)
+
 OSGi Specification repo for org.osgi.framework
 
 Part of the [OSGi Specification Project](https://projects.eclipse.org/projects/technology.osgi).
