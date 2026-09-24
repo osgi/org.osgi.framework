@@ -1,6 +1,7 @@
 # org.osgi.framework
 
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/osgi/org.osgi.framework/badge)](https://securityscorecards.dev/viewer/?uri=github.com/osgi/org.osgi.framework)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14810/badge)](https://www.bestpractices.dev/projects/14810)
 
 OSGi Specification repo for org.osgi.framework
 
