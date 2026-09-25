@@ -45,6 +45,7 @@ import org.osgi.test.common.annotation.InjectBundleInstaller;
 import org.osgi.test.common.annotation.InjectEventRecorder;
 import org.osgi.test.common.annotation.InjectInstalledBundle;
 import org.osgi.test.common.event.EventRecorder;
+import org.osgi.test.common.event.EventRecorders;
 import org.osgi.test.common.event.TimedEvent;
 import org.osgi.test.common.install.BundleInstaller;
 
@@ -99,25 +100,28 @@ public class TestControl {
 	 */
 	@Test
 	public void testActivationPolicy01(
+			@InjectBundleContext BundleContext bundleContext,
 			@InjectInstalledBundle(value = "activationpolicy.tblazy1.jar",start =  false) Bundle tblazy1,
 			@InjectInstalledBundle(value = "activationpolicy.tblazy2.jar",start =  false) Bundle tblazy2,
 			@InjectInstalledBundle(value = "activationpolicy.tblazy3.jar",start =  false) Bundle tblazy3,
-			@InjectInstalledBundle(value = "activationpolicy.tblazy4.jar",start =  false) Bundle tblazy4,
-			// listen for STARTED, STOPPED and LAZY_ACTIVATION events
-			// we should not get LAZY_ACTIVATION events because this is not a synchronous listener.
-			@InjectEventRecorder(typeMask = BundleEvent.STARTED | BundleEvent.STOPPED | BundleEvent.LAZY_ACTIVATION) EventRecorder<BundleEvent> events
+			@InjectInstalledBundle(value = "activationpolicy.tblazy4.jar",start =  false) Bundle tblazy4
 			) throws Exception {
 
 		tblazy1.start(Bundle.START_ACTIVATION_POLICY);
 		tblazy2.start(Bundle.START_ACTIVATION_POLICY);
 		tblazy3.start(Bundle.START_ACTIVATION_POLICY);
 		tblazy4.start(Bundle.START_ACTIVATION_POLICY);
+		// listen for STARTED, STOPPED and LAZY_ACTIVATION events
+		// we should not get LAZY_ACTIVATION events because this is not a synchronous listener.
+		try (EventRecorder<BundleEvent> events = EventRecorders.bundleEvents(bundleContext,
+			BundleEvent.STARTED | BundleEvent.STOPPED | BundleEvent.LAZY_ACTIVATION, false)) {
 
-		tblazy1.loadClass("org.osgi.test.cases.framework.activationpolicy.tblazy1.LazySimple").getConstructor()
-				.newInstance();
+			tblazy1.loadClass("org.osgi.test.cases.framework.activationpolicy.tblazy1.LazySimple").getConstructor()
+					.newInstance();
 
-		// The bundle must have been activated now
-		assertThat(events.waitForCount(1, TIMEOUT)).hasEventsExactly(event(BundleEvent.STARTED, tblazy2));
+			// The bundle must have been activated now
+			assertThat(events.waitForCount(1, TIMEOUT)).hasEventsExactly(event(BundleEvent.STARTED, tblazy2));
+		}
 
 	}
 
@@ -126,35 +130,38 @@ public class TestControl {
 	 */
 	@Test
 	public void testActivationPolicy02(
+			@InjectBundleContext BundleContext bundleContext,
 			@InjectInstalledBundle(value = "activationpolicy.tblazy1.jar",start =  false) Bundle tblazy1,
 			@InjectInstalledBundle(value = "activationpolicy.tblazy2.jar",start =  false) Bundle tblazy2,
 			@InjectInstalledBundle(value = "activationpolicy.tblazy3.jar",start =  false) Bundle tblazy3,
-			@InjectInstalledBundle(value = "activationpolicy.tblazy4.jar",start =  false) Bundle tblazy4,
-			// listen for STARTED, STOPPED and LAZY_ACTIVATION evnets
-			// we should not get LAZY_ACTIVATION events because this is not a synchronous listener.
-			@InjectEventRecorder(typeMask = BundleEvent.STARTED | BundleEvent.STOPPED | BundleEvent.LAZY_ACTIVATION) EventRecorder<BundleEvent> events
+			@InjectInstalledBundle(value = "activationpolicy.tblazy4.jar",start =  false) Bundle tblazy4
 			) throws Exception {
 		
 		tblazy1.start(Bundle.START_ACTIVATION_POLICY);
 		tblazy2.start(Bundle.START_ACTIVATION_POLICY);
 		tblazy3.start(Bundle.START_ACTIVATION_POLICY);
 		tblazy4.start(Bundle.START_ACTIVATION_POLICY);
+		// listen for STARTED, STOPPED and LAZY_ACTIVATION evnets
+		// we should not get LAZY_ACTIVATION events because this is not a synchronous listener.
+		try (EventRecorder<BundleEvent> events = EventRecorders.bundleEvents(bundleContext,
+			BundleEvent.STARTED | BundleEvent.STOPPED | BundleEvent.LAZY_ACTIVATION, false)) {
 
-		// First load a class that depends on a class included in an excludes package
-		tblazy1.loadClass(
-				"org.osgi.test.cases.framework.activationpolicy.tblazy1.LazyExclude1")
-				.getConstructor()
-				.newInstance();
-		// this should result in no STARTED event
-		assertThat(events.collectQuiet(0, QUIET, TIMEOUT)).isEmpty();
+			// First load a class that depends on a class included in an excludes package
+			tblazy1.loadClass(
+					"org.osgi.test.cases.framework.activationpolicy.tblazy1.LazyExclude1")
+					.getConstructor()
+					.newInstance();
+			// this should result in no STARTED event
+			assertThat(events.collectQuiet(0, QUIET, TIMEOUT)).isEmpty();
 
-		// Now load a class that was not included in an excludes package
-		tblazy1.loadClass(
-				"org.osgi.test.cases.framework.activationpolicy.tblazy1.LazyExclude2")
-				.getConstructor()
-				.newInstance();
-		// this should result in a STARTED event for tblazy3 bundle
-		assertThat(events.waitForCount(1, TIMEOUT)).hasEventsExactly(event(BundleEvent.STARTED, tblazy3));
+			// Now load a class that was not included in an excludes package
+			tblazy1.loadClass(
+					"org.osgi.test.cases.framework.activationpolicy.tblazy1.LazyExclude2")
+					.getConstructor()
+					.newInstance();
+			// this should result in a STARTED event for tblazy3 bundle
+			assertThat(events.waitForCount(1, TIMEOUT)).hasEventsExactly(event(BundleEvent.STARTED, tblazy3));
+		}
 	}
 
 	/*
@@ -162,35 +169,38 @@ public class TestControl {
 	 */
 	@Test
 	public void testActivationPolicy03(
+			@InjectBundleContext BundleContext bundleContext,
 			@InjectInstalledBundle(value = "activationpolicy.tblazy1.jar",start =  false) Bundle tblazy1,
 			@InjectInstalledBundle(value = "activationpolicy.tblazy2.jar",start =  false) Bundle tblazy2,
 			@InjectInstalledBundle(value = "activationpolicy.tblazy3.jar",start =  false) Bundle tblazy3,
-			@InjectInstalledBundle(value = "activationpolicy.tblazy4.jar",start =  false) Bundle tblazy4,
-			// listen for STARTED, STOPPED and LAZY_ACTIVATION evnets
-			// we should not get LAZY_ACTIVATION events because this is not a synchronous listener.
-			@InjectEventRecorder(typeMask = BundleEvent.STARTED | BundleEvent.STOPPED | BundleEvent.LAZY_ACTIVATION) EventRecorder<BundleEvent> events
+			@InjectInstalledBundle(value = "activationpolicy.tblazy4.jar",start =  false) Bundle tblazy4
 			) throws Exception {
 
 		tblazy1.start(Bundle.START_ACTIVATION_POLICY);
 		tblazy2.start(Bundle.START_ACTIVATION_POLICY);
 		tblazy3.start(Bundle.START_ACTIVATION_POLICY);
 		tblazy4.start(Bundle.START_ACTIVATION_POLICY);
+		// listen for STARTED, STOPPED and LAZY_ACTIVATION evnets
+		// we should not get LAZY_ACTIVATION events because this is not a synchronous listener.
+		try (EventRecorder<BundleEvent> events = EventRecorders.bundleEvents(bundleContext,
+			BundleEvent.STARTED | BundleEvent.STOPPED | BundleEvent.LAZY_ACTIVATION, false)) {
 
-		// first load a class that depends on a class that was not included in an includes package
-		tblazy1.loadClass(
-				"org.osgi.test.cases.framework.activationpolicy.tblazy1.LazyInclude1")
-				.getConstructor()
-				.newInstance();
-		// this should result in no STARTED event
-		assertThat(events.collectQuiet(0, QUIET, TIMEOUT)).isEmpty();
+			// first load a class that depends on a class that was not included in an includes package
+			tblazy1.loadClass(
+					"org.osgi.test.cases.framework.activationpolicy.tblazy1.LazyInclude1")
+					.getConstructor()
+					.newInstance();
+			// this should result in no STARTED event
+			assertThat(events.collectQuiet(0, QUIET, TIMEOUT)).isEmpty();
 
-		// now load a class that depends on a class that is included in an includes package
-		tblazy1.loadClass(
-				"org.osgi.test.cases.framework.activationpolicy.tblazy1.LazyInclude2")
-				.getConstructor()
-				.newInstance();
-		// this should result in a STARTED event
-		assertThat(events.waitForCount(1, TIMEOUT)).hasEventsExactly(event(BundleEvent.STARTED, tblazy4));
+			// now load a class that depends on a class that is included in an includes package
+			tblazy1.loadClass(
+					"org.osgi.test.cases.framework.activationpolicy.tblazy1.LazyInclude2")
+					.getConstructor()
+					.newInstance();
+			// this should result in a STARTED event
+			assertThat(events.waitForCount(1, TIMEOUT)).hasEventsExactly(event(BundleEvent.STARTED, tblazy4));
+		}
 	}
 
 	/*

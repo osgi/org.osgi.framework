@@ -155,25 +155,25 @@
 		<dependency>
 			<groupId>org.osgi</groupId>
 			<artifactId>org.osgi.test.common</artifactId>
-			<version>1.4.0</version>
+			<version>1.4.0-SNAPSHOT</version>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.osgi</groupId>
 			<artifactId>org.osgi.test.assertj.framework</artifactId>
-			<version>1.4.0</version>
+			<version>1.4.0-SNAPSHOT</version>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.osgi</groupId>
 			<artifactId>org.osgi.test.junit5</artifactId>
-			<version>1.4.0</version>
+			<version>1.4.0-SNAPSHOT</version>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.osgi</groupId>
 			<artifactId>org.osgi.test.junit4</artifactId>
-			<version>1.4.0</version>
+			<version>1.4.0-SNAPSHOT</version>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
