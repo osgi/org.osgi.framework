@@ -49,10 +49,10 @@
 	bnd.identity;id='org.awaitility';version='[4.2.0,4.2.1)',\
 	bnd.identity;id='org.apache.servicemix.bundles.junit';version='[4.13.2.1,4.13.2.2)',\
 	bnd.identity;id='org.opentest4j';version='[1.2.0,1.2.1)',\
-	bnd.identity;id='org.osgi.test.common';version='[1.2.0,1.2.1)',\
-	bnd.identity;id='org.osgi.test.assertj.framework';version='[1.2.0,1.2.1)',\
-	bnd.identity;id='org.osgi.test.junit5';version='[1.2.0,1.2.1)',\
-	bnd.identity;id='org.osgi.test.junit4';version='[1.2.0,1.2.1)',\
+	bnd.identity;id='org.osgi.test.common';version='[1.4.0,1.4.1)',\
+	bnd.identity;id='org.osgi.test.assertj.framework';version='[1.4.0,1.4.1)',\
+	bnd.identity;id='org.osgi.test.junit5';version='[1.4.0,1.4.1)',\
+	bnd.identity;id='org.osgi.test.junit4';version='[1.4.0,1.4.1)',\
 	bnd.identity;id='org.mockito.mockito-core';version='[4.6.1,4.6.2)',\
 	bnd.identity;id='net.bytebuddy.byte-buddy';version='[1.12.10,1.12.11)',\
 	bnd.identity;id='net.bytebuddy.byte-buddy-agent';version='[1.12.10,1.12.11)',\
@@ -73,10 +73,10 @@
 	org.awaitility;version='[4.2.0,4.2.1)',\
 	org.apache.servicemix.bundles.junit;version='[4.13.2.1,4.13.2.2)',\
 	org.opentest4j;version='[1.2.0,1.2.1)',\
-	org.osgi.test.common;version='[1.2.0,1.2.1)',\
-	org.osgi.test.assertj.framework;version='[1.2.0,1.2.1)',\
-	org.osgi.test.junit5;version='[1.2.0,1.2.1)',\
-	org.osgi.test.junit4;version='[1.2.0,1.2.1)',\
+	org.osgi.test.common;version='[1.4.0,1.4.1)',\
+	org.osgi.test.assertj.framework;version='[1.4.0,1.4.1)',\
+	org.osgi.test.junit5;version='[1.4.0,1.4.1)',\
+	org.osgi.test.junit4;version='[1.4.0,1.4.1)',\
 	org.mockito.mockito-core;version='[4.6.1,4.6.2)',\
 	net.bytebuddy.byte-buddy;version='[1.12.10,1.12.11)',\
 	net.bytebuddy.byte-buddy-agent;version='[1.12.10,1.12.11)',\
