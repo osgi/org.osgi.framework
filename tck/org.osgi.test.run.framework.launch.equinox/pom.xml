@@ -46,7 +46,7 @@
 		<dependency>
 			<groupId>org.osgi</groupId>
 			<artifactId>org.osgi.resource</artifactId>
-			<version>1.0.1</version>
+			<version>${org.osgi.resource.version}</version>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
