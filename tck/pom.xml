@@ -32,6 +32,7 @@
 		<equinox.version>3.18.100</equinox.version>
 		<osgi-tck-support.version>0.0.1-SNAPSHOT</osgi-tck-support.version>
 		<maven-surefire-report-plugin.version>3.5.2</maven-surefire-report-plugin.version>
+		<org.osgi.resource.version>1.0.1</org.osgi.resource.version>
 	</properties>
 	<modules>
 		<module>org.osgi.test.cases.framework</module>
