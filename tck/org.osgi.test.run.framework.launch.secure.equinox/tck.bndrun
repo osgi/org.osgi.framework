@@ -37,5 +37,8 @@
 # cnf/repo/osgi.tck.junit-platform lib that every TCK run carried
 
 
-# -runbundles is calculated by the bnd-resolver-maven-plugin during the run
--runbundles:
+# -runbundles is committed and verified by the build; after a dependency
+# change update it with: mvn bnd-resolver:resolve
+-runbundles: \
+	org.apache.servicemix.bundles.junit;version='[4.13.2,4.13.3)',\
+	org.osgi.test.cases.framework.launch.secure;version='[1.10.1,1.10.2)'

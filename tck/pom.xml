@@ -12,6 +12,27 @@
 	<artifactId>org.osgi.tck.framework</artifactId>
 	<packaging>pom</packaging>
 
+	<!-- The versions of the TCK test runtime and of the framework under test,
+	     in one place. The names are the ones org.osgi.maven.pom.parent
+	     defines, so its dependencyManagement follows them too, and the
+	     tck.bndrun files read the same properties: a bump here (by hand or
+	     by Dependabot) changes the poms and the runs together. -->
+	<properties>
+		<junit-jupiter.version>5.12.2</junit-jupiter.version>
+		<junit-platform.version>1.12.2</junit-platform.version>
+		<opentest4j.version>1.3.0</opentest4j.version>
+		<assertj.version>3.23.1</assertj.version>
+		<hamcrest.version>2.2</hamcrest.version>
+		<awaitility.version>4.2.0</awaitility.version>
+		<servicemix-junit.version>4.13.2_1</servicemix-junit.version>
+		<mockito.version>4.6.1</mockito.version>
+		<byte-buddy.version>1.12.10</byte-buddy.version>
+		<objenesis.version>3.2</objenesis.version>
+		<osgi-test.version>1.2.0</osgi-test.version>
+		<equinox.version>3.18.100</equinox.version>
+		<osgi-tck-support.version>0.0.1-SNAPSHOT</osgi-tck-support.version>
+		<maven-surefire-report-plugin.version>3.5.2</maven-surefire-report-plugin.version>
+	</properties>
 	<modules>
 		<module>org.osgi.test.cases.framework</module>
 		<module>org.osgi.test.cases.framework.launch</module>
