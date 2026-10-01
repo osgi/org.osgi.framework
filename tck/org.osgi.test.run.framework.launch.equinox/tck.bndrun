@@ -7,7 +7,7 @@
 
 -resolve.effective: active
 
--runvm: ${def;argLine}, -Djava.security.manager=allow, --add-opens=java.base/java.lang=ALL-UNNAMED
+-runvm: ${def;argLine}, -Djava.security.manager=allow, --add-opens=java.base/java.lang=ALL-UNNAMED, --add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED, --add-opens=java.base/java.net=ALL-UNNAMED
 
 -runproperties: \
 	org.osgi.test.cases.framework.launch.storageroot=target/org.osgi.test.cases.framework.launch.testStorageRoot,\
