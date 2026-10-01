@@ -1,0 +1,17 @@
+# OSSF Scorecard maintainer annotations.
+# The format has no field for paths and no free text, so the directories can
+# only be named here in a comment.
+#
+# binary-artifacts: the only binaries in this repository are the JNI stub
+# libraries under
+#   tck/org.osgi.test.cases.framework/src/main/resources/div.tb2/<platform>/
+# They are test fixtures of the framework TCK: the DIV test bundles need them
+# to exercise the Bundle-NativeCode header (clause selection, OS aliases,
+# language and version matching, native code in a fragment). The C source and
+# the Makefile that produce each library sit next to it, and the native
+# function does nothing but count in a loop.
+annotations:
+  - checks:
+      - binary-artifacts
+    reasons:
+      - reason: test-data
