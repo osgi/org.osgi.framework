@@ -1,6 +1,5 @@
 -nouses=true
-Bundle-Name: ${p}.classloading.tb14b
-Bundle-SymbolicName: ${p}.classloading.tb14b;fragment-attachment:="always";fragment-attachment:="never"
-Bundle-Version: 1
-Bundle-Activator: ${p}.classloading.tb14a.Activator
+-nomanifest=true
+-includeresource = {META-INF/MANIFEST.MF=resources/classloading.tb14b/MANIFEST.MF}
 -privatepackage:                         ${p}.classloading.tb14a
+-pom=false
