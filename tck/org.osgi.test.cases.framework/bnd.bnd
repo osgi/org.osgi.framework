@@ -2,7 +2,7 @@
 
 Bundle-Description					: Framework test cases.
 
--conditionalpackage					= org.osgi.test.support.*
+-conditionalpackage					= org.osgi.test.support.*, org.osgi.tck.signature.*
 -privatepackage						=  \
 	${p}.junit.*
 Import-Package: ${-signaturetest}, *
