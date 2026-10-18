@@ -17,6 +17,13 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.junit.div;
 
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.assertj.core.api.Assertions.fail;
+import static org.osgi.test.assertj.bundle.BundleAssert.assertThat;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -25,7 +32,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.URL;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -36,7 +46,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.Constants;
@@ -53,10 +65,14 @@ import org.osgi.framework.wiring.BundleWire;
 import org.osgi.framework.wiring.BundleWiring;
 import org.osgi.resource.Namespace;
 import org.osgi.test.cases.framework.div.tb6.BundleClass;
-import org.osgi.test.support.FrameworkEventCollector;
-import org.osgi.test.support.OSGiTestCaseProperties;
-import org.osgi.test.support.compatibility.DefaultTestBundleControl;
-import org.osgi.test.support.sleep.Sleep;
+import org.osgi.test.cases.framework.junit.tck.TckProperties;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.annotation.InjectInstalledBundle;
+import org.osgi.test.common.event.EventRecorder;
+import org.osgi.test.common.event.EventRecorders;
+import org.osgi.test.common.event.TimedEvent;
+import org.osgi.test.common.install.BundleInstaller;
 
 /**
  * This is the bundle initially installed and started by the TestCase when
@@ -64,7 +80,13 @@ import org.osgi.test.support.sleep.Sleep;
  *
  * @author Ericsson Radio Systems AB
  */
-public class DivTests extends DefaultTestBundleControl {
+public class DivTests {
+
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
 	public static final String	basePath	= "/org/osgi/test/cases/framework/div/";
 	public static final String	basePkg		= "org.osgi.test.cases.framework.div.";
 
@@ -154,80 +176,69 @@ public class DivTests extends DefaultTestBundleControl {
 	/**
 	 * Logs the manifest headers.
 	 */
-	public void testManifestHeaders() throws Exception {
-		Bundle tb = getContext().installBundle(getWebServer() + "div.tb1.jar");
+	@Test
+	public void testManifestHeaders(
+			@InjectInstalledBundle(value = "div.tb1.jar", start = false) Bundle tb
+			) throws Exception {
 		try {
 			tb.start();
 			Dictionary<String,String> h = tb.getHeaders("");
-			assertEquals("numeric first char", h.get("5-"));
-			assertEquals(basePkg + "tb1.CheckManifest", h
-					.get("bundle-activator"));
-			assertEquals("should contain the bundle category", h
-					.get("bundle-category"));
-			assertEquals("., foo/bar/dummy.jar", h.get("bundle-classpath"));
-			assertEquals("info@ericsson.com", h.get("bundle-contactaddress"));
-			assertEquals("should contain the bundle copyright", h
-					.get("bundle-copyright"));
-			assertEquals("Contains the manifest checked by the test case.", h
-					.get("bundle-description"));
-			assertEquals("http://www.ericsson.com", h.get("bundle-docurl"));
-			assertEquals(basePkg + "tb1", h.get("bundle-name"));
-			assertEquals("www.ericsson.se", h.get("bundle-updatelocation"));
-			assertEquals("Ericsson Radio Systems AB", h.get("bundle-vendor"));
-			assertEquals("Improper value for bundle manifest version 2", h
-					.get("bundle-version"));
-			assertEquals("12                          34", h.get("continue"));
-			assertEquals(
-					"org.osgi.dummy1;                         version=\"0.0\", org.osgi.dummy2,org.osgi.dummy3;version=\"19.67.34\"",
-					h.get("export-package"));
-			assertEquals(
-					"should contain the exported services, not used by framework",
-					h.get("export-service"));
-			assertEquals(
-					"This bundle is defined by developer and should be ignored by framework",
-					h.get("fakeheader"));
-			assertEquals(
-					"should contain the imported services, not used by framework",
-					h.get("import-service"));
-			assertEquals("1.0", h.get("manifest-version"));
-			assertEquals(
-					"xxxxxxxxx xxxxxxxxx xxxxxxxxx xxxxxxxxx xxxxxxxxx xxxxxxEND",
-					h.get("max-length"));
-			assertEquals("\u00d0\u00de", h.get("unicode-test"));
+			assertThat(h.get("5-")).isEqualTo("numeric first char");
+			assertThat(h
+					.get("bundle-activator")).isEqualTo(basePkg + "tb1.CheckManifest");
+			assertThat(h
+					.get("bundle-category")).isEqualTo("should contain the bundle category");
+			assertThat(h.get("bundle-classpath")).isEqualTo("., foo/bar/dummy.jar");
+			assertThat(h.get("bundle-contactaddress")).isEqualTo("info@ericsson.com");
+			assertThat(h
+					.get("bundle-copyright")).isEqualTo("should contain the bundle copyright");
+			assertThat(h
+					.get("bundle-description")).isEqualTo("Contains the manifest checked by the test case.");
+			assertThat(h.get("bundle-docurl")).isEqualTo("http://www.ericsson.com");
+			assertThat(h.get("bundle-name")).isEqualTo(basePkg + "tb1");
+			assertThat(h.get("bundle-updatelocation")).isEqualTo("www.ericsson.se");
+			assertThat(h.get("bundle-vendor")).isEqualTo("Ericsson Radio Systems AB");
+			assertThat(h
+					.get("bundle-version")).isEqualTo("Improper value for bundle manifest version 2");
+			assertThat(h.get("continue")).isEqualTo("12                          34");
+			assertThat(h.get("export-package")).isEqualTo("org.osgi.dummy1;                         version=\"0.0\", org.osgi.dummy2,org.osgi.dummy3;version=\"19.67.34\"");
+			assertThat(h.get("export-service")).isEqualTo("should contain the exported services, not used by framework");
+			assertThat(h.get("fakeheader")).isEqualTo("This bundle is defined by developer and should be ignored by framework");
+			assertThat(h.get("import-service")).isEqualTo("should contain the imported services, not used by framework");
+			assertThat(h.get("manifest-version")).isEqualTo("1.0");
+			assertThat(h.get("max-length")).isEqualTo("xxxxxxxxx xxxxxxxxx xxxxxxxxx xxxxxxxxx xxxxxxxxx xxxxxxEND");
+			assertThat(h.get("unicode-test")).isEqualTo("\u00d0\u00de");
 
 			tb.stop();
 		}
 		catch (BundleException e) {
 			fail("Exception in manifest headers", e);
 		}
-		finally {
-			tb.uninstall();
-		}
 	}
 
 	/**
 	 * Tests empty manifest headers.
 	 */
-	public void testMissingManifestHeaders() throws Exception {
-		Bundle tb = getContext().installBundle(getWebServer() + "div.tb5.jar");
+	@Test
+	public void testMissingManifestHeaders(
+			@InjectInstalledBundle(value = "div.tb5.jar", start = false) Bundle tb
+			) throws Exception {
 		try {
 			tb.start();
 			Dictionary<String,String> h = tb.getHeaders();
-			assertEquals(1, h.size());
-			assertEquals("1.0", h.get("manifest-version"));
+			assertThat(h.size()).isOne();
+			assertThat(h.get("manifest-version")).isEqualTo("1.0");
 			tb.stop();
 		}
 		catch (BundleException e) {
 			fail("Exception in testing missing manifest headers", e);
-		}
-		finally {
-			tb.uninstall();
 		}
 	}
 
 	/**
 	 * Tests extended classpath
 	 */
+	@Test
 	public void testBundleClassPath() {
 		// instantiate an object from tbcinner.jar
 		BundleClass dummy = null;
@@ -235,42 +246,43 @@ public class DivTests extends DefaultTestBundleControl {
 			dummy = new BundleClass();
 		}
 		catch (Throwable e) {
-			fail(
-					"We didn't manage to instansiate a class from the extended bundle class path",
-					e);
+			fail("We didn't manage to instansiate a class from the extended bundle class path", e);
 		}
-		assertEquals("different class loader", dummy.getClass()
-				.getClassLoader(), this.getClass().getClassLoader());
+		assertThat(this.getClass().getClassLoader())
+				.as("different class loader")
+				.isEqualTo(dummy.getClass()
+				.getClassLoader());
 	}
 
 	/**
 	 * Tests that location remains the same after an update
 	 */
+	@Test
 	public void testBundleLocation() throws Exception {
-		Bundle tb = getContext().installBundle(getWebServer() + "div.tb5.jar");
-		try {
-			String originalLocation = tb.getLocation();
-			long originalLastModified = tb.getLastModified();
-			Sleep.sleep(250);
-			tb.update();
-			assertEquals("bundle location changed after update.",
-					originalLocation, tb.getLocation());
-			assertFalse("bundle last modified did not change",
-					originalLastModified == tb.getLastModified());
-		}
-		finally {
-			tb.uninstall();
-		}
+		// update() re-reads the location, so install by URL rather than by stream
+		Bundle tb = bundleContext.installBundle(bundleContext.getBundle().getEntry("div.tb5.jar").toExternalForm());
+		String originalLocation = tb.getLocation();
+		long originalLastModified = tb.getLastModified();
+		Thread.sleep(250);
+		tb.update();
+		assertThat(tb.getLocation())
+				.as("bundle location changed after update.")
+				.isEqualTo(originalLocation);
+		assertThat(originalLastModified == tb.getLastModified())
+				.as("bundle last modified did not change")
+				.isFalse();
 	}
 
 	private void assertNativeNamespace(Bundle b, boolean isOptional,
 			boolean isResolved) {
 		BundleRevision revision = b.adapt(BundleRevision.class);
-		assertNotNull("Bundle has no revision", revision);
+		assertThat(revision)
+				.as("Bundle has no revision")
+				.isNotNull();
 		List<BundleRequirement> nativeRequirements = revision
 				.getDeclaredRequirements(NativeNamespace.NATIVE_NAMESPACE);
-		assertEquals("Unexpected number of native requirements", 1,
-				nativeRequirements.size());
+		assertThat(nativeRequirements)
+				.as("Unexpected number of native requirements").hasSize(1);
 		BundleRequirement nativeRequirement = nativeRequirements.get(0);
 
 		// check the optional directive
@@ -279,17 +291,19 @@ public class DivTests extends DefaultTestBundleControl {
 		if (optionalDirective == null) {
 			optionalDirective = Namespace.RESOLUTION_MANDATORY;
 		}
-		assertEquals("Wrong resolution type",
-				isOptional ? Namespace.RESOLUTION_OPTIONAL
-						: Namespace.RESOLUTION_MANDATORY, optionalDirective);
+		assertThat(optionalDirective)
+				.as("Wrong resolution type")
+				.isEqualTo(isOptional ? Namespace.RESOLUTION_OPTIONAL
+						: Namespace.RESOLUTION_MANDATORY);
 		// check for a valid filter directive
 		String filterDirective = nativeRequirement.getDirectives().get(
 				Namespace.REQUIREMENT_FILTER_DIRECTIVE);
-		assertNotNull("Null filter directive: " + nativeRequirement,
-				filterDirective);
+		assertThat(filterDirective)
+				.as("Null filter directive: " + nativeRequirement)
+				.isNotNull();
 		Filter filter = null;
 		try {
-			filter = getContext().createFilter(filterDirective);
+			filter = bundleContext.createFilter(filterDirective);
 		} catch (InvalidSyntaxException e) {
 			fail("Bad filter: " + nativeRequirement, e);
 		}
@@ -297,44 +311,52 @@ public class DivTests extends DefaultTestBundleControl {
 		// check that the filter matches as expected
 		for (Map<String, ?> matchingMap : MATCH_NATIVE_ATTRIBUTES) {
 			if (isResolved) {
-				assertTrue("filter does not match map: " + filter + ".matches("
-						+ matchingMap + ")", filter.matches(matchingMap));
+				assertThat(filter.matches(matchingMap))
+						.as("filter does not match map: " + filter + ".matches("
+						+ matchingMap + ")")
+						.isTrue();
 			} else {
-				assertFalse("filter does match map: " + filter + ".matches("
-						+ matchingMap + ")", filter.matches(matchingMap));
+				assertThat(filter.matches(matchingMap))
+						.as("filter does match map: " + filter + ".matches("
+						+ matchingMap + ")")
+						.isFalse();
 			}
 		}
 
 		if (isResolved) {
 			BundleWiring wiring = b.adapt(BundleWiring.class);
-			assertNotNull("Bundle has no wiring: " + b, wiring);
+			assertThat(wiring)
+					.as("Bundle has no wiring: " + b)
+					.isNotNull();
 			if ((revision.getTypes() & BundleRevision.TYPE_FRAGMENT) != 0) {
 				List<BundleWire> hostWires = wiring
 						.getRequiredWires(HostNamespace.HOST_NAMESPACE);
-				assertEquals("Wrong number of hosts.", 1, hostWires.size());
+				assertThat(hostWires)
+						.as("Wrong number of hosts.").hasSize(1);
 				wiring = hostWires.get(0).getProviderWiring();
 			}
 			List<BundleWire> nativeWires = wiring
 					.getRequiredWires(NativeNamespace.NATIVE_NAMESPACE);
-			assertEquals("Unexpected number of native wires: " + b,
-					isOptional ? 0 : 1,
-					nativeWires.size());
+			assertThat(nativeWires)
+					.as("Unexpected number of native wires: " + b).hasSize(isOptional ? 0 : 1);
 			BundleWire nativeWire = nativeWires.get(0);
-			assertEquals("Found wrong requirement in native wire.",
-					nativeRequirement, nativeWire.getRequirement());
+			assertThat(nativeWire.getRequirement())
+					.as("Found wrong requirement in native wire.")
+					.isEqualTo(nativeRequirement);
 
 			// make sure we are wired to a capability from the system bundle
-			assertEquals("Native provider is not the system bundle", 0,
-					nativeWire.getProvider().getBundle().getBundleId());
+			assertThat(nativeWire.getProvider().getBundle().getBundleId())
+					.as("Native provider is not the system bundle").isZero();
 
 			// this is a bit of a strange test, but it ensures the
 			// capability that is wired to has the arbitrary matching
 			// attributes configured into the framework
 			Map<String, ?> wiredCapAttrs = nativeWire.getCapability()
 					.getAttributes();
-			assertTrue("filter does not match the wired to capability attrs: "
-					+ filter + ".matches(" + wiredCapAttrs + ")",
-					filter.matches(wiredCapAttrs));
+			assertThat(filter.matches(wiredCapAttrs))
+					.as("filter does not match the wired to capability attrs: "
+					+ filter + ".matches(" + wiredCapAttrs + ")")
+					.isTrue();
 		}
 	}
 
@@ -345,8 +367,10 @@ public class DivTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @osgi.spec Bundle.uninstall()
 	 */
-	public void testNativeCode() throws Exception {
-		Bundle tb = getContext().installBundle(getWebServer() + "div.tb2.jar");
+	@Test
+	public void testNativeCode(
+			@InjectInstalledBundle(value = "div.tb2.jar", start = false) Bundle tb
+			) throws Exception {
 		try {
 			tb.start();
 			assertNativeNamespace(tb, false, true);
@@ -354,41 +378,42 @@ public class DivTests extends DefaultTestBundleControl {
 		catch (BundleException be) {
 			fail("Native code not installed. " + reportProcessorOS(), be);
 		}
-		finally {
-			tb.uninstall();
-		}
 	}
 
 
 	/**
 	 * Tests to add a FrameworkListener.
 	 */
+	@Test
 	public void testFrameworkListener() throws Exception {
-		FrameworkEventCollector fec = new FrameworkEventCollector(
-				FrameworkEvent.ERROR);
-		Bundle tb = getContext().installBundle(getWebServer() + "div.tb3.jar");
-		getContext().addFrameworkListener(fec);
-		tb.start();
-		tb.uninstall();
-		List<FrameworkEvent> result = fec.getList(1,
-				10000 * OSGiTestCaseProperties
-				.getScaling());
-		getContext().removeFrameworkListener(fec);
-		assertEquals("No FrameworkEvent received", 1, result.size());
-		FrameworkEvent fe = result.get(0);
-		assertEquals("No FrameworkEvent received", tb, fe.getBundle());
+		Bundle tb = bundleInstaller.installBundle("div.tb3.jar", false);
+		List<TimedEvent<FrameworkEvent>> result;
+		try (EventRecorder<FrameworkEvent> recorder = EventRecorders
+				.frameworkEvents(bundleContext, FrameworkEvent.ERROR)) {
+			tb.start();
+			tb.uninstall();
+			result = recorder.collect(1, Duration.ofMillis(
+					10000 * TckProperties.getScaling()));
+		}
+		assertThat(result)
+				.as("No FrameworkEvent received").hasSize(1);
+		FrameworkEvent fe = result.get(0).event();
+		assertThat(fe.getBundle())
+				.as("No FrameworkEvent received")
+				.isEqualTo(tb);
 		Throwable t = fe.getThrowable();
-		assertNotNull(t);
-		assertTrue(t instanceof BundleException);
+		assertThat(t)
+				.isInstanceOf(BundleException.class);
 	}
 
 	/**
 	 * Tests the file system.
 	 */
+	@Test
 	public void testFileAccess() throws Exception {
-		File file = getContext().getDataFile("testfile");
+		File file = bundleContext.getDataFile("testfile");
 		if (file == null) {
-			log("Framework lacks filesystem support, no error.");
+			System.out.println("Framework lacks filesystem support, no error.");
 			return;
 		}
 		PrintWriter out = new PrintWriter(new FileWriter(file));
@@ -397,43 +422,37 @@ public class DivTests extends DefaultTestBundleControl {
 		out.println("Line 3");
 		out.close();
 		BufferedReader in = new BufferedReader(new FileReader(file));
-		assertEquals("Line 1", in.readLine());
-		assertEquals("Line 2", in.readLine());
-		assertEquals("Line 3", in.readLine());
+		assertThat(in.readLine()).isEqualTo("Line 1");
+		assertThat(in.readLine()).isEqualTo("Line 2");
+		assertThat(in.readLine()).isEqualTo("Line 3");
 		in.close();
-		assertTrue(file.delete());
-		try {
-			in = new BufferedReader(new FileReader(file));
-			fail("File was not gone, Error!");
-		}
-		catch (FileNotFoundException fnfe) {
-			// expected
-		}
+		assertThat(file.delete()).isTrue();
+		assertThatExceptionOfType(FileNotFoundException.class)
+				.as("File was not gone, Error!")
+				.isThrownBy(() -> new BufferedReader(new FileReader(file)));
 	}
 
+	@Test
 	public void testBundleZero() {
 		// Bundle(0).update is tested in permission/tc5
 		try {
-			getContext().getBundle(0).start();
+			bundleContext.getBundle(0).start();
 		}
 		catch (BundleException e) {
 			fail("bundle(0).start threw Exception", e);
 		}
-		try {
-			getContext().getBundle(0).uninstall();
-			fail("bundle(0).uninstall returned without Exception");
-		}
-		catch (BundleException e) {
-			// expected
-		}
+		assertThatExceptionOfType(BundleException.class)
+				.as("bundle(0).uninstall returned without Exception")
+				.isThrownBy(() -> bundleContext.getBundle(0).uninstall());
 	}
 
+	@Test
 	public void testEERequirement() throws Exception {
 		@SuppressWarnings("deprecation")
-		final String ee = getContext()
+		final String ee = bundleContext
 				.getProperty(Constants.FRAMEWORK_EXECUTIONENVIRONMENT);
-		log("EE: " + ee);
-		Bundle tb = getContext().installBundle(getWebServer() + "div.tb7a.jar");
+		System.out.println("EE: " + ee);
+		Bundle tb = bundleInstaller.installBundle("div.tb7a.jar", false);
 		try {
 			tb.start();
 		}
@@ -444,14 +463,15 @@ public class DivTests extends DefaultTestBundleControl {
 			tb.uninstall();
 		}
 
-		tb = getContext().installBundle(getWebServer() + "div.tb7b.jar");
+		tb = bundleInstaller.installBundle("div.tb7b.jar", false);
 		try {
 			tb.start();
 			fail("Required Execution Environment is not available");
 		}
 		catch (BundleException e) {
             // expecting exception, but bundle should not have resolved
-            assertEquals("Bundle should not be resolved!", Bundle.INSTALLED, tb.getState());
+            assertThat(tb)
+            		.as("Bundle should not be resolved!").isInState(Bundle.INSTALLED);
 		}
 		finally {
 			tb.uninstall();
@@ -468,15 +488,12 @@ public class DivTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @osgi.spec Bundle.uninstall()
 	 */
-	public void testNativeCodeFilterOptional() throws Exception {
-		Bundle tb = getContext().installBundle(getWebServer() + "div.tb12.jar");
-		try {
-			tb.start();
-			assertNativeNamespace(tb, true, false);
-		}
-		finally {
-			tb.uninstall();
-		}
+	@Test
+	public void testNativeCodeFilterOptional(
+			@InjectInstalledBundle(value = "div.tb12.jar", start = false) Bundle tb
+			) throws Exception {
+		tb.start();
+		assertNativeNamespace(tb, true, false);
 	}
 
 	/**
@@ -488,19 +505,19 @@ public class DivTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @osgi.spec Bundle.uninstall()
 	 */
-	public void testNativeCodeFilterNoOptional() throws Exception {
-		Bundle tb = getContext().installBundle(getWebServer() + "div.tb15.jar");
+	@Test
+	public void testNativeCodeFilterNoOptional(
+			@InjectInstalledBundle(value = "div.tb15.jar", start = false) Bundle tb
+			) throws Exception {
 		try {
 			tb.start();
 			fail("Bundle should not start!");
 		}
 		catch (BundleException be) {
             // expecting exception, but bundle should not have resolved
-            assertEquals("Bundle should not be resolved!", Bundle.INSTALLED, tb.getState());
+            assertThat(tb)
+            		.as("Bundle should not be resolved!").isInState(Bundle.INSTALLED);
 			assertNativeNamespace(tb, false, false);
-		}
-		finally {
-			tb.uninstall();
 		}
 	}
 
@@ -514,15 +531,12 @@ public class DivTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @osgi.spec Bundle.uninstall()
 	 */
-	public void testNativeCodeFilterAlias() throws Exception {
-		Bundle tb = getContext().installBundle(getWebServer() + "div.tb16.jar");
-		try {
-			tb.start();
-			assertNativeNamespace(tb, false, true);
-		}
-		finally {
-			tb.uninstall();
-		}
+	@Test
+	public void testNativeCodeFilterAlias(
+			@InjectInstalledBundle(value = "div.tb16.jar", start = false) Bundle tb
+			) throws Exception {
+		tb.start();
+		assertNativeNamespace(tb, false, true);
 	}
 
 	/**
@@ -533,18 +547,13 @@ public class DivTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @osgi.spec Bundle.uninstall()
 	 */
-	public void testNativeCodeFragment() throws Exception {
-		Bundle tbFragment = getContext().installBundle(
-				getWebServer() + "div.tb18.jar");
-		Bundle tb = getContext().installBundle(getWebServer() + "div.tb17.jar");
-		try {
-			tb.start();
-			assertNativeNamespace(tbFragment, false, true);
-		}
-		finally {
-			tb.uninstall();
-			tbFragment.uninstall();
-		}
+	@Test
+	public void testNativeCodeFragment(
+			@InjectInstalledBundle(value = "div.tb18.jar", start = false) Bundle tbFragment,
+			@InjectInstalledBundle(value = "div.tb17.jar", start = false) Bundle tb
+			) throws Exception {
+		tb.start();
+		assertNativeNamespace(tbFragment, false, true);
 	}
 
 	/**
@@ -556,19 +565,19 @@ public class DivTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @osgi.spec Bundle.uninstall()
 	 */
-	public void testNativeCodeLanguage() throws Exception {
-		Bundle tb = getContext().installBundle(getWebServer() + "div.tb19.jar");
+	@Test
+	public void testNativeCodeLanguage(
+			@InjectInstalledBundle(value = "div.tb19.jar", start = false) Bundle tb
+			) throws Exception {
 		try {
 			tb.start();
 			fail("Error: Bundle should NOT be loaded: language should not match");
 		}
 		catch (BundleException be) {
             // expecting exception, but bundle should not have resolved
-            assertEquals("Bundle should not be resolved!", Bundle.INSTALLED, tb.getState());
+            assertThat(tb)
+            		.as("Bundle should not be resolved!").isInState(Bundle.INSTALLED);
 			assertNativeNamespace(tb, false, false);
-		}
-		finally {
-			tb.uninstall();
 		}
 	}
 
@@ -583,15 +592,12 @@ public class DivTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @osgi.spec Bundle.uninstall()
 	 */
-	public void testNativeCodeLanguageSuccess() throws Exception {
-		Bundle tb = getContext().installBundle(getWebServer() + "div.tb20.jar");
-		try {
-			tb.start();
-			assertNativeNamespace(tb, false, true);
-		}
-		finally {
-			tb.uninstall();
-		}
+	@Test
+	public void testNativeCodeLanguageSuccess(
+			@InjectInstalledBundle(value = "div.tb20.jar", start = false) Bundle tb
+			) throws Exception {
+		tb.start();
+		assertNativeNamespace(tb, false, true);
 	}
 
 	/**
@@ -603,19 +609,19 @@ public class DivTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @osgi.spec Bundle.uninstall()
 	 */
-	public void testNativeCodeVersion() throws Exception {
-		Bundle tb = getContext().installBundle(getWebServer() + "div.tb21.jar");
+	@Test
+	public void testNativeCodeVersion(
+			@InjectInstalledBundle(value = "div.tb21.jar", start = false) Bundle tb
+			) throws Exception {
 		try {
 			tb.start();
 			fail("Error: Bundle should NOT be loaded: os version out of range");
 		}
 		catch (BundleException be) {
             // expecting exception, but bundle should not have resolved
-            assertEquals("Bundle should not be resolved!", Bundle.INSTALLED, tb.getState());
+            assertThat(tb)
+            		.as("Bundle should not be resolved!").isInState(Bundle.INSTALLED);
 			assertNativeNamespace(tb, false, false);
-		}
-		finally {
-			tb.uninstall();
 		}
 	}
 
@@ -627,15 +633,12 @@ public class DivTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @osgi.spec Bundle.uninstall()
 	 */
-	public void testNativeCodeVersionSuccess() throws Exception {
-		Bundle tb = getContext().installBundle(getWebServer() + "div.tb22.jar");
-		try {
-			tb.start();
-			assertNativeNamespace(tb, false, true);
-		}
-		finally {
-			tb.uninstall();
-		}
+	@Test
+	public void testNativeCodeVersionSuccess(
+			@InjectInstalledBundle(value = "div.tb22.jar", start = false) Bundle tb
+			) throws Exception {
+		tb.start();
+		assertNativeNamespace(tb, false, true);
 	}
 
 	/**
@@ -644,8 +647,10 @@ public class DivTests extends DefaultTestBundleControl {
 	 * 
 	 * @throws BundleException
 	 */
-	public void testNativeCodeNamespaceRequirement() throws BundleException {
-		Bundle tb = getContext().installBundle(getWebServer() + "div.tb26.jar");
+	@Test
+	public void testNativeCodeNamespaceRequirement(
+			@InjectInstalledBundle(value = "div.tb26.jar", start = false) Bundle tb
+			) throws BundleException {
 		try {
 			tb.start();
 			assertNativeNamespace(tb, false, true);
@@ -654,39 +659,36 @@ public class DivTests extends DefaultTestBundleControl {
 		}
 	}
 
+	@Test
 	public void testNativeCodeNamespaceCapability() throws BundleException {
-		Bundle tb = null;
-		try {
-			tb = getContext().installBundle(getWebServer() + "div.tb27.jar");
-			fail("Expected to fail installation of bundle that declares a native capability.");
-		} catch (BundleException e) {
-			// expected, check the error type
-			assertEquals("Wrong error code.", BundleException.MANIFEST_ERROR,
-					e.getType());
-		} finally {
-			if (tb != null) {
-				tb.uninstall();
-			}
-		}
+		// the install must fail; a bundle installed by mistake is removed by osgi-test
+		BundleException e = catchThrowableOfType(
+				() -> bundleInstaller.installBundle("div.tb27.jar", false),
+				BundleException.class);
+		assertThat(e)
+				.as("Expected to fail installation of bundle that declares a native capability.")
+				.isNotNull();
+		assertThat(e.getType())
+				.as("Wrong error code.")
+				.isEqualTo(BundleException.MANIFEST_ERROR);
 	}
 
+	@Test
 	public void testExecutionEnvironmentNamespaceCapability()
 			throws BundleException {
-		Bundle tb = null;
-		try {
-			tb = getContext().installBundle(getWebServer() + "div.tb28.jar");
-			fail("Expected to fail installation of bundle that declares an execution environment capability.");
-		} catch (BundleException e) {
-			// expected, check the error type
-			assertEquals("Wrong error code.", BundleException.MANIFEST_ERROR,
-					e.getType());
-		} finally {
-			if (tb != null) {
-				tb.uninstall();
-			}
-		}
+		// the install must fail; a bundle installed by mistake is removed by osgi-test
+		BundleException e = catchThrowableOfType(
+				() -> bundleInstaller.installBundle("div.tb28.jar", false),
+				BundleException.class);
+		assertThat(e)
+				.as("Expected to fail installation of bundle that declares an execution environment capability.")
+				.isNotNull();
+		assertThat(e.getType())
+				.as("Wrong error code.")
+				.isEqualTo(BundleException.MANIFEST_ERROR);
 	}
 
+	@Test
 	public void testBundleEventConstants() {
 		assertConstant(Integer.valueOf(0x00000001), "INSTALLED", BundleEvent.class);
 		assertConstant(Integer.valueOf(0x00000002), "STARTED", BundleEvent.class);
@@ -702,6 +704,7 @@ public class DivTests extends DefaultTestBundleControl {
 				BundleEvent.class);
 	}
 
+	@Test
 	public void testFrameworkEventConstants() {
 		assertConstant(Integer.valueOf(0x00000001), "STARTED", FrameworkEvent.class);
 		assertConstant(Integer.valueOf(0x00000002), "ERROR", FrameworkEvent.class);
@@ -718,19 +721,21 @@ public class DivTests extends DefaultTestBundleControl {
 				FrameworkEvent.class);
 	}
 
-	public void testBundleGetEntry() throws Exception {
-		Bundle bundle = getContext().installBundle(
-				getWebServer() + "div.tb10.jar");
+	@Test
+	public void testBundleGetEntry(
+			@InjectInstalledBundle(value = "div.tb10.jar", start = false) Bundle bundle
+			) throws Exception {
 		try {
 
 			URL url = bundle.getEntry(basePath + "tb10/Foo.class");
-			assertNotNull(
-					"Testing the method invocation with an existing entry", url);
+			assertThat(url)
+					.as("Testing the method invocation with an existing entry")
+					.isNotNull();
 
 			url = bundle.getEntry(basePath + "tb10/Nonexistent");
-			assertNull(
-					"Testing the method invocation with an nonexistent entries",
-					url);
+			assertThat(url)
+					.as("Testing the method invocation with an nonexistent entries")
+					.isNull();
 
 			bundle.uninstall();
 
@@ -750,6 +755,7 @@ public class DivTests extends DefaultTestBundleControl {
 		}
 	}
 
+	@Test
 	public void testBundleGetEntryPaths() throws Exception {
 		String[] expectedEntryPaths = {
 				"org/osgi/test/cases/framework/div/tb10/Activator.class",
@@ -758,12 +764,13 @@ public class DivTests extends DefaultTestBundleControl {
 				"org/osgi/test/cases/framework/div/tb10/TestService.class",
 				"org/osgi/test/cases/framework/div/tb10/TestServiceImpl.class"};
 
-		Bundle bundle = getContext().installBundle(
-				getWebServer() + "div.tb10.jar");
+		Bundle bundle = bundleInstaller.installBundle("div.tb10.jar", false);
 		try {
 			Enumeration<String> enumeration = bundle
 					.getEntryPaths(basePath + "tb10");
-			assertNotNull("Check if some resource is returned", enumeration);
+			assertThat(enumeration)
+					.as("Check if some resource is returned")
+					.isNotNull();
 
 			int count = 0;
 			while (enumeration.hasMoreElements()) {
@@ -776,13 +783,14 @@ public class DivTests extends DefaultTestBundleControl {
 				}
 			}
 
-			assertEquals("Checking the returned entries",
-					expectedEntryPaths.length, count);
+			assertThat(count)
+					.as("Checking the returned entries")
+					.isEqualTo(expectedEntryPaths.length);
 
 			enumeration = bundle.getEntryPaths(basePath + "tb10/nonexistent");
-			assertNull(
-					"Testing the method invocation with nonexistent entries",
-					enumeration);
+			assertThat(enumeration)
+					.as("Testing the method invocation with nonexistent entries")
+					.isNull();
 
 			bundle.uninstall();
 
@@ -803,26 +811,25 @@ public class DivTests extends DefaultTestBundleControl {
 		}
 	}
 
-	public void testBundleGetResource() throws Exception {
-		Bundle bundle = getContext().installBundle(
-				getWebServer() + "div.tb10.jar");
-		Bundle fragment = getContext().installBundle(
-				getWebServer() + "div.tb13.jar");
-
+	@Test
+	public void testBundleGetResource(
+			@InjectInstalledBundle(value = "div.tb10.jar", start = false) Bundle bundle,
+			@InjectInstalledBundle(value = "div.tb13.jar", start = false) Bundle fragment
+			) throws Exception {
 		try {
 			URL url = bundle.getResource(basePath + "tb10/Foo.class");
-			assertNotNull(
-					"Testing the method invocation with an existing resource (using a absolute path)",
-					url);
+			assertThat(url)
+					.as("Testing the method invocation with an existing resource (using a absolute path)")
+					.isNotNull();
 			url = bundle.getResource(basePath + "tb10/Nonexistent");
-			assertNull(
-					"Testing the method invocation with a nonexistent resource",
-					url);
+			assertThat(url)
+					.as("Testing the method invocation with a nonexistent resource")
+					.isNull();
 
 			url = fragment.getResource(basePath + "tb13/Foo.class");
-			assertNull(
-					"A fragment bundle cannot return a resource using the method getResource()",
-					url);
+			assertThat(url)
+					.as("A fragment bundle cannot return a resource using the method getResource()")
+					.isNull();
 
 			bundle.uninstall();
 
@@ -847,10 +854,12 @@ public class DivTests extends DefaultTestBundleControl {
 		}
 	}
 
+	@Test
 	public void testBundleGetResourcesResolved() {
 		doTestBundleGetResources(true);
 	}
 
+	@Test
 	public void testBundleGetResourcesUnresolved() {
 		doTestBundleGetResources(false);
 	}
@@ -858,33 +867,51 @@ public class DivTests extends DefaultTestBundleControl {
 	private void doTestBundleGetResources(boolean resolved) {
 		Bundle tb25 = null;
 		try {
-			tb25 = install(resolved ? "div.tb25.resolved.jar" : "div.tb25.unresolved.jar");
+			tb25 = bundleInstaller.installBundle(resolved ? "div.tb25.resolved.jar" : "div.tb25.unresolved.jar", false);
 		} catch (Exception e) {
 			fail("Unexpected error installing test bundle.", e);
 		}
 		try {
 			// sanity check for the root resources
 			URL rootEntry = tb25.getEntry("resources/root.txt");
-			assertNotNull("root.txt not found", rootEntry);
-			assertEquals("Wrong resource", "root.txt", getValue(rootEntry));
+			assertThat(rootEntry)
+					.as("root.txt not found")
+					.isNotNull();
+			assertThat(getValue(rootEntry))
+					.as("Wrong resource")
+					.isEqualTo("root.txt");
 			rootEntry = tb25.getEntry("resources/all.txt");
-			assertEquals("Wrong resource", "root.all.txt", getValue(rootEntry));
-			assertNotNull("root.all.txt not found", rootEntry);
+			assertThat(getValue(rootEntry))
+					.as("Wrong resource")
+					.isEqualTo("root.all.txt");
+			assertThat(rootEntry)
+					.as("root.all.txt not found")
+					.isNotNull();
 			// Bundle-ClassPath of div.tb25 does not specify '.'
 			// the root resources must not be found.
 			URL resource = tb25.getResource("resources/root.txt");
-			assertNull("Found unexpected resource.", resource);
+			assertThat(resource)
+					.as("Found unexpected resource.")
+					.isNull();
 
 			// 'a' resources must be found first for duplicate resources
 			resource = tb25.getResource("resources/all.txt");
-			assertNotNull("Did not find resource.", resource);
-			assertEquals("Wrong resource", "a.all.txt", getValue(resource));
+			assertThat(resource)
+					.as("Did not find resource.")
+					.isNotNull();
+			assertThat(getValue(resource))
+					.as("Wrong resource")
+					.isEqualTo("a.all.txt");
 
 			// test non shadowed resources
 			resource = tb25.getResource("resources/a.txt");
-			assertNotNull("Did not find resource.", resource);
+			assertThat(resource)
+					.as("Did not find resource.")
+					.isNotNull();
 			resource = tb25.getResource("resources/b.txt");
-			assertNotNull("Did not find resource.", resource);
+			assertThat(resource)
+					.as("Did not find resource.")
+					.isNotNull();
 
 			// test get resources for shadowed resource
 			// again the root resource must not be found
@@ -894,21 +921,35 @@ public class DivTests extends DefaultTestBundleControl {
 			} catch (IOException e) {
 				fail("Unexpected io exception.", e);
 			}
-			assertNotNull("Did not find resources.", resources);
+			assertThat(resources)
+					.as("Did not find resources.")
+					.isNotNull();
 			// there are only two resources from 'a' and 'b' in that order.
 			try {
 				resource = resources.nextElement();
-				assertNotNull("Did not find resource.", resource);
-				assertEquals("Wrong resource", "a.all.txt", getValue(resource));
+				assertThat(resource)
+						.as("Did not find resource.")
+						.isNotNull();
+				assertThat(getValue(resource))
+						.as("Wrong resource")
+						.isEqualTo("a.all.txt");
 				resource = resources.nextElement();
-				assertNotNull("Did not find resource.", resource);
-				assertEquals("Wrong resource", "b.all.txt", getValue(resource));
-				assertFalse("Expecting no more resources.", resources.hasMoreElements());
+				assertThat(resource)
+						.as("Did not find resource.")
+						.isNotNull();
+				assertThat(getValue(resource))
+						.as("Wrong resource")
+						.isEqualTo("b.all.txt");
+				assertThat(resources.hasMoreElements())
+						.as("Expecting no more resources.")
+						.isFalse();
 			} catch (NoSuchElementException e) {
 				fail("Wrong number of elements.", e);
 			}
 			// after all the getResource calls the bundle must be RESOLVED or INSTALLED depending on resolved param
-			assertEquals("Wrong state for bundle.", resolved ? Bundle.RESOLVED : Bundle.INSTALLED, tb25.getState());
+			assertThat(tb25.getState())
+					.as("Wrong state for bundle.")
+					.isEqualTo(resolved ? Bundle.RESOLVED : Bundle.INSTALLED);
 		} finally {
 			try {
 				tb25.uninstall();
@@ -935,27 +976,26 @@ public class DivTests extends DefaultTestBundleControl {
 		}
 	}
 
-	public void testBundleGetResources() throws Exception {
-		Bundle bundle = getContext().installBundle(
-				getWebServer() + "div.tb10.jar");
-		Bundle fragment = getContext().installBundle(
-				getWebServer() + "div.tb13.jar");
-
+	@Test
+	public void testBundleGetResources(
+			@InjectInstalledBundle(value = "div.tb10.jar", start = false) Bundle bundle,
+			@InjectInstalledBundle(value = "div.tb13.jar", start = false) Bundle fragment
+			) throws Exception {
 		try {
 			Enumeration<URL> enumeration = bundle.getResources(basePath
 					+ "tb10/Foo.class");
-			assertNotNull(
-					"Testing the method invocation with an existing resource (using a absolute path)",
-					enumeration);
+			assertThat(enumeration)
+					.as("Testing the method invocation with an existing resource (using a absolute path)")
+					.isNotNull();
 			enumeration = bundle.getResources(basePath + "tb10/Nonexistent");
-			assertNull(
-					"Testing the method invocation with a nonexistent resource",
-					enumeration);
+			assertThat(enumeration)
+					.as("Testing the method invocation with a nonexistent resource")
+					.isNull();
 
 			enumeration = fragment.getResources(basePath + "tb13/Foo.class");
-			assertNull(
-					"A fragment bundle cannot return a resource using the method getResource()",
-					enumeration);
+			assertThat(enumeration)
+					.as("A fragment bundle cannot return a resource using the method getResource()")
+					.isNull();
 
 			bundle.uninstall();
 
@@ -979,21 +1019,22 @@ public class DivTests extends DefaultTestBundleControl {
 		}
 	}
 
-	public void testBundleGetSymbolicName1() throws Exception {
-		Bundle bundle = getContext().installBundle(
-				getWebServer() + "div.tb10.jar");
+	@Test
+	public void testBundleGetSymbolicName1(
+			@InjectInstalledBundle(value = "div.tb10.jar", start = false) Bundle bundle
+			) throws Exception {
 		try {
 			String bsn = bundle.getSymbolicName();
-			assertEquals(
-					"Testing the method getSymbolicName() with a symbolic name in the manifest",
-					basePkg + "tb10", bsn);
+			assertThat(bsn)
+					.as("Testing the method getSymbolicName() with a symbolic name in the manifest")
+					.isEqualTo(basePkg + "tb10");
 
 			bundle.uninstall();
 			bsn = bundle.getSymbolicName();
 			bundle = null;
-			assertEquals(
-					"Testing the method getSymbolicName() with a symbolic name in the manifest",
-					basePkg + "tb10", bsn);
+			assertThat(bsn)
+					.as("Testing the method getSymbolicName() with a symbolic name in the manifest")
+					.isEqualTo(basePkg + "tb10");
 
 		}
 		finally {
@@ -1003,22 +1044,23 @@ public class DivTests extends DefaultTestBundleControl {
 		}
 	}
 
-	public void testBundleGetSymbolicName2() throws Exception {
-		Bundle bundle = getContext().installBundle(
-				getWebServer() + "div.tb11.jar");
+	@Test
+	public void testBundleGetSymbolicName2(
+			@InjectInstalledBundle(value = "div.tb11.jar", start = false) Bundle bundle
+			) throws Exception {
 		try {
 			String bsn = bundle.getSymbolicName();
-			assertNull(
-					"Testing the method getSymbolicName() without a symbolic name in the manifest",
-					bsn);
+			assertThat(bsn)
+					.as("Testing the method getSymbolicName() without a symbolic name in the manifest")
+					.isNull();
 
 			bundle.uninstall();
 			bsn = bundle.getSymbolicName();
 			bundle = null;
 
-			assertNull(
-					"Testing the method getSymbolicName() after uninstall the bundle (without a symbolic name in the manifest)",
-					bsn);
+			assertThat(bsn)
+					.as("Testing the method getSymbolicName() after uninstall the bundle (without a symbolic name in the manifest)")
+					.isNull();
 		}
 		finally {
 			if (bundle != null) {
@@ -1027,72 +1069,79 @@ public class DivTests extends DefaultTestBundleControl {
 		}
 	}
 
-	public void testBundleGetBundleContext1() throws Exception {
-		Bundle bundle = getContext().installBundle(
-				getWebServer() + "div.tb10.jar");
+	@Test
+	public void testBundleGetBundleContext1(
+			@InjectInstalledBundle(value = "div.tb10.jar", start = false) Bundle bundle
+			) throws Exception {
 		try {
-			assertNull("BundleContext for installed bundle must be null",
-					bundle.getBundleContext());
+			assertThat(bundle.getBundleContext())
+					.as("BundleContext for installed bundle must be null")
+					.isNull();
 
 			bundle.start();
-			assertNotNull("BundleContext for started bundle must not be null",
-					bundle.getBundleContext());
+			assertThat(bundle.getBundleContext())
+					.as("BundleContext for started bundle must not be null")
+					.isNotNull();
 
-			assertEquals("Bundle id via BundleContext must equal original id",
-					bundle.getBundleId(), bundle.getBundleContext().getBundle()
-							.getBundleId());
+			assertThat(bundle.getBundleContext().getBundle()
+							.getBundleId())
+					.as("Bundle id via BundleContext must equal original id")
+					.isEqualTo(bundle.getBundleId());
 
 			bundle.stop();
-			assertNull("BundleContext for stopped bundle must be null", bundle
-					.getBundleContext());
+			assertThat(bundle
+					.getBundleContext())
+					.as("BundleContext for stopped bundle must be null")
+					.isNull();
 		}
 		finally {
-			bundle.uninstall();
-			assertNull("BundleContext for uninstalled bundle must be null",
-					bundle.getBundleContext());
+			assertThat(bundle.getBundleContext())
+					.as("BundleContext for uninstalled bundle must be null")
+					.isNull();
 		}
 
-		bundle = getContext().getBundle(0);
+		bundle = bundleContext.getBundle(0);
 
-		assertNotNull("BundleContext for system bundle must not be null",
-				bundle.getBundleContext());
+		assertThat(bundle.getBundleContext())
+				.as("BundleContext for system bundle must not be null")
+				.isNotNull();
 
-		assertEquals("Bundle id via BundleContext must equal zero", 0L, bundle
-				.getBundleContext().getBundle().getBundleId());
+		assertThat(bundle
+				.getBundleContext().getBundle().getBundleId())
+				.as("Bundle id via BundleContext must equal zero").isZero();
 
-		assertEquals(
-				"BundleContext for test case should match context passed to activator",
-				getContext(), getContext().getBundle().getBundleContext());
+		// the injected context is a proxy: compare the bundles behind both contexts
+		assertThat(bundleContext.getBundle().getBundleContext().getBundle())
+				.as("BundleContext for test case should match context passed to activator")
+				.isEqualTo(bundleContext.getBundle());
 	}
 
-	public void testBundleGetBundleContext2() throws Exception {
-		Bundle host, fragment;
+	@Test
+	public void testBundleGetBundleContext2(
+			@InjectInstalledBundle(value = "div.tb18.jar", start = false) Bundle fragment,
+			@InjectInstalledBundle(value = "div.tb17.jar", start = false) Bundle host
+			) throws Exception {
+		host.start(); // resolve the bundles
+		assertThat(host.getBundleContext())
+				.as("BundleContext for host bundle must not be null")
+				.isNotNull();
+		assertThat(fragment.getBundleContext())
+				.as("BundleContext for fragment bundle must be null")
+				.isNull();
 
-		fragment = getContext().installBundle(getWebServer() + "div.tb18.jar");
-		host = getContext().installBundle(getWebServer() + "div.tb17.jar");
-
-		try {
-			host.start(); // resolve the bundles
-			assertNotNull("BundleContext for host bundle must not be null",
-					host.getBundleContext());
-			assertNull("BundleContext for fragment bundle must be null",
-					fragment.getBundleContext());
-
-			host.stop();
-			assertNull("BundleContext for stopped host bundle must be null",
-					host.getBundleContext());
-			assertNull("BundleContext for fragment bundle must be null",
-					fragment.getBundleContext());
-		}
-		finally {
-			fragment.uninstall();
-			host.uninstall();
-		}
+		host.stop();
+		assertThat(host.getBundleContext())
+				.as("BundleContext for stopped host bundle must be null")
+				.isNull();
+		assertThat(fragment.getBundleContext())
+				.as("BundleContext for fragment bundle must be null")
+				.isNull();
 	}
 
-	public void testBundleLoadClass1() throws Exception {
-		Bundle bundle = getContext().installBundle(
-				getWebServer() + "div.tb10.jar");
+	@Test
+	public void testBundleLoadClass1(
+			@InjectInstalledBundle(value = "div.tb10.jar", start = false) Bundle bundle
+			) throws Exception {
 		try {
 			bundle.start();
 			Class< ? > clazz = null;
@@ -1100,21 +1149,19 @@ public class DivTests extends DefaultTestBundleControl {
 				clazz = bundle.loadClass(basePkg + "tb10.Foo");
 			}
 			catch (ClassNotFoundException ex) {
-				fail(
-						"Testing the method loadClass() with an installed bundle and a existing class",
-						ex);
+				fail("Testing the method loadClass() with an installed bundle and a existing class", ex);
 			}
 
-			ServiceReference< ? > sr = getContext()
+			ServiceReference< ? > sr = bundleContext
 					.getServiceReference(
 					basePkg + "tb10.TestService");
 
-			Object service = getContext().getService(sr);
+			Object service = bundleContext.getService(sr);
 			ClassLoader classLoader = (ClassLoader) service.getClass()
 					.getMethod("getClassLoader", (Class[]) null).invoke(service, (Object[]) null);
-			assertEquals(
-					"Expecting the ClassLoader of the class and the bundle to be the same",
-					clazz.getClassLoader(), classLoader);
+			assertThat(classLoader)
+					.as("Expecting the ClassLoader of the class and the bundle to be the same")
+					.isEqualTo(clazz.getClassLoader());
 
 			try {
 				clazz = bundle
@@ -1142,42 +1189,28 @@ public class DivTests extends DefaultTestBundleControl {
 		}
 	}
 
-	public void testBundleLoadClass2() throws Exception {
-		Bundle bundle = getContext().installBundle(
-				getWebServer() + "div.tb13.jar");
-		try {
-			try {
-				bundle.loadClass(basePkg + "tb13.Foo");
-				fail("Testing the method loadClass() with a fragment bundle");
-			}
-			catch (ClassNotFoundException ex) {
-				// expected
-			}
+	@Test
+	public void testBundleLoadClass2(
+			@InjectInstalledBundle(value = "div.tb13.jar", start = false) Bundle bundle
+			) throws Exception {
+		assertThatExceptionOfType(ClassNotFoundException.class)
+				.as("Testing the method loadClass() with a fragment bundle")
+				.isThrownBy(() -> bundle.loadClass(basePkg + "tb13.Foo"));
 
-			try {
-				bundle.loadClass(basePkg + "tb13.Nonexistent");
-				fail("Testing the method loadClass() with a fragment bundle");
-			}
-			catch (ClassNotFoundException ex) {
-				// expected
-			}
-		}
-		finally {
-			bundle.uninstall();
-		}
+		assertThatExceptionOfType(ClassNotFoundException.class)
+				.as("Testing the method loadClass() with a fragment bundle")
+				.isThrownBy(() -> bundle.loadClass(basePkg + "tb13.Nonexistent"));
 	}
 
 	/**
 	 * Tests service registration.
 	 */
-	public void testBundleContextRegisterService() throws Exception {
-		Bundle tb24a = getContext().installBundle(
-				getWebServer() + "div.tb24a.jar");
-		Bundle tb24b = getContext().installBundle(
-				getWebServer() + "div.tb24b.jar");
-		Bundle tb24c = getContext().installBundle(
-				getWebServer() + "div.tb24c.jar");
-
+	@Test
+	public void testBundleContextRegisterService(
+			@InjectInstalledBundle(value = "div.tb24a.jar", start = false) Bundle tb24a,
+			@InjectInstalledBundle(value = "div.tb24b.jar", start = false) Bundle tb24b,
+			@InjectInstalledBundle(value = "div.tb24c.jar", start = false) Bundle tb24c
+			) throws Exception {
 		tb24a.start();
 		tb24b.start();
 
@@ -1188,19 +1221,11 @@ public class DivTests extends DefaultTestBundleControl {
 		catch (BundleException ex) {
 			fail("A bundle can register a service when the package is shared");
 		}
-		finally {
-			tb24b.stop();
-			tb24a.stop();
-
-			tb24c.uninstall();
-			tb24b.uninstall();
-			tb24a.uninstall();
-		}
 	}
 
 	private String reportProcessorOS() {
-		String os = getContext().getProperty("org.osgi.framework.os.name");
-		String proc = getContext().getProperty("org.osgi.framework.processor");
+		String os = bundleContext.getProperty("org.osgi.framework.os.name");
+		String proc = bundleContext.getProperty("org.osgi.framework.processor");
 		StringBuffer sb = new StringBuffer();
 		sb.append("Current osname=\"").append(os).append("\" processor=\"")
 				.append(proc);
@@ -1209,4 +1234,24 @@ public class DivTests extends DefaultTestBundleControl {
 		return sb.toString();
 	}
 
+	/**
+	 * The field is a public static final constant of the given value.
+	 */
+	private static void assertConstant(Object expected, String fieldName, Class< ? > fieldClass) {
+		Field field;
+		try {
+			field = fieldClass.getField(fieldName);
+		} catch (NoSuchFieldException e) {
+			throw new AssertionError("missing field: " + fieldName, e);
+		}
+		assertThat(field.getModifiers()).as("modifiers of %s", fieldName)
+				.matches(Modifier::isPublic, "public")
+				.matches(Modifier::isStatic, "static")
+				.matches(Modifier::isFinal, "final");
+		try {
+			assertThat(field.get(null)).as(fieldName).isEqualTo(expected);
+		} catch (IllegalAccessException e) {
+			throw new AssertionError("bad field: " + fieldName, e);
+		}
+	}
 }

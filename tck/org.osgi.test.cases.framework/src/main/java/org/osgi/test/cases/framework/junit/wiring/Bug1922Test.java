@@ -17,11 +17,16 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.junit.wiring;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.Constants;
 import org.osgi.framework.Filter;
@@ -62,25 +67,29 @@ public class Bug1922Test extends WiringTest {
 	private BundleRequirement packageRequirement;
 	private BundleRequirement requirement1;
 	private BundleRequirement requirement2;
-	
+
+	@Test
 	public void testRequireCapabilityRequirementAttributes() {
 		assertAttribute("foo", "bar", requirement1);
 		assertAttribute("bar", "foo", requirement1);
 		assertAttribute("foo", "bar", requirement2);
 		assertAttribute("bar", "foo", requirement2);
 	}
-	
+
+	@Test
 	public void testOsgiWiringHostCapabilityAttributes() {
 		assertAttribute("foo", "bar", hostCapability);
 		assertAttribute("bar", "foo", hostCapability);
 	}
-	
+
+	@Test
 	public void testOsgiWiringRequirementAttributes() {
 		assertEmptyAttributes(bundleRequirement.getAttributes());
 		assertEmptyAttributes(hostRequirement.getAttributes());
 		assertEmptyAttributes(packageRequirement.getAttributes());
 	}
-	
+
+	@Test
 	public void testOsgiWiringRequirementFilter() {
 		String filter = bundleRequirement.getDirectives().get(Constants.FILTER_DIRECTIVE);
 		Map<String,Object> attributes = new HashMap<String,Object>();
@@ -100,7 +109,8 @@ public class Bug1922Test extends WiringTest {
 		attributes.put("bundle-symbolic-name", "com.acme.rocket");
 		assertFilter(filter, attributes);
 	}
-	
+
+	@Test
 	public void testRequireCapabilityRequirementDirectives() {
 		String filter = requirement1.getDirectives().get(Constants.FILTER_DIRECTIVE);
 		Map<String,Object> attributes = new HashMap<String,Object>();
@@ -112,7 +122,8 @@ public class Bug1922Test extends WiringTest {
 		assertDirective(Constants.FILTER_DIRECTIVE, null, requirement2);
 		assertDirective("resolution", "optional", requirement2);
 	}
-	
+
+	@Test
 	public void testOsgiWiringRequirementDirectives() {
 		assertDirective("visibility", "reexport", bundleRequirement);
 		assertDirective("resolution", "optional", bundleRequirement);
@@ -121,58 +132,77 @@ public class Bug1922Test extends WiringTest {
 		assertDirective("resolution", "optional", packageRequirement);
 		assertDirective("foo", "bar", packageRequirement);
 	}
-	
-	protected void setUp() throws Exception {
+
+	@BeforeEach
+	public void setUp() throws Exception {
 		super.setUp();
 		Bundle tb1 = install("wiring.1922.jar");
 		Bundle tb1Frag = install("wiring.1922.frag.jar");
-		assertTrue("Bundles should have resolved", frameworkWiring.resolveBundles(Arrays.asList(new Bundle[]{tb1,tb1Frag})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[]{tb1,tb1Frag})))
+				.as("Bundles should have resolved")
+				.isTrue();
 		BundleRevision revision = tb1.adapt(BundleRevision.class);
 		List<BundleCapability> capabilities = revision
 				.getDeclaredCapabilities(HostNamespace.HOST_NAMESPACE);
-		assertEquals("One Fragment-Host capability should exist", 1, capabilities.size());
+		assertThat(capabilities)
+				.as("One Fragment-Host capability should exist").hasSize(1);
 		hostCapability = capabilities.get(0);
 		List<BundleRequirement> requirements = revision
 				.getDeclaredRequirements(BundleNamespace.BUNDLE_NAMESPACE);
-		assertEquals("One Require-Bundle requirement should exist", 1, requirements.size());
+		assertThat(requirements)
+				.as("One Require-Bundle requirement should exist").hasSize(1);
 		bundleRequirement = requirements.get(0);
 		requirements = revision
 				.getDeclaredRequirements(PackageNamespace.PACKAGE_NAMESPACE);
-		assertEquals("One Import-Package requirement should exist", 1, requirements.size());
+		assertThat(requirements)
+				.as("One Import-Package requirement should exist").hasSize(1);
 		packageRequirement = requirements.get(0);
 		requirements = revision.getDeclaredRequirements("com.acme.countdown");
-		assertEquals("One com.acme.countdown requirement should exist", 1, requirements.size());
+		assertThat(requirements)
+				.as("One com.acme.countdown requirement should exist").hasSize(1);
 		requirement1 = requirements.get(0);
 		requirements = revision.getDeclaredRequirements("com.acme.lifesupport");
-		assertEquals("One com.acme.lifesupport requirement should exist", 1, requirements.size());
+		assertThat(requirements)
+				.as("One com.acme.lifesupport requirement should exist").hasSize(1);
 		requirement2 = requirements.get(0);
 		revision = tb1Frag.adapt(BundleRevision.class);
 		requirements = revision
 				.getDeclaredRequirements(HostNamespace.HOST_NAMESPACE);
-		assertEquals("One Fragment-Host requirement should exist", 1, requirements.size());
+		assertThat(requirements)
+				.as("One Fragment-Host requirement should exist").hasSize(1);
 		hostRequirement = requirements.get(0);
 	}
 	
 	private void assertAttribute(String name, String value, BundleCapability capability) {
-		assertEquals("Missing attribute or wrong value", value, capability.getAttributes().get(name));
+		assertThat(capability.getAttributes().get(name))
+				.as("Missing attribute or wrong value")
+				.isEqualTo(value);
 	}
 	
 	private void assertAttribute(String name, String value, BundleRequirement requirement) {
-		assertEquals("Missing attribute or wrong value", value, requirement.getAttributes().get(name));
+		assertThat(requirement.getAttributes().get(name))
+				.as("Missing attribute or wrong value")
+				.isEqualTo(value);
 	}
 	
 	private void assertDirective(String name, String value, BundleRequirement requirement) {
-		assertEquals("Missing directive or wrong value", value, requirement.getDirectives().get(name));
+		// value may be null: the directive must then be absent
+		assertThat(requirement.getDirectives().get(name))
+				.as("Missing directive or wrong value")
+				.isEqualTo(value);
 	}
 	
 	private void assertEmptyAttributes(Map<String, Object> attributes) {
-		assertEquals("Requirement attributes must be empty for osgi.wiring.* namespace", 0, attributes.size());
+		assertThat(attributes)
+				.as("Requirement attributes must be empty for osgi.wiring.* namespace").hasSize(0);
 	}
 	
 	private void assertFilter(String filterStr, Map<String,Object> attributes) {
 		try {
 			Filter filter = FrameworkUtil.createFilter(filterStr);
-			assertTrue("The generated filter must match the attributes", filter.matches(attributes));
+			assertThat(filter.matches(attributes))
+					.as("The generated filter must match the attributes")
+				.isTrue();
 		}
 		catch (InvalidSyntaxException e) {
 			fail("The generated filter string must be valid", e);

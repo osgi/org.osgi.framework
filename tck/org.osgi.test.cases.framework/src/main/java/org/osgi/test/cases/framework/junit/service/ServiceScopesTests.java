@@ -18,6 +18,11 @@
 
 package org.osgi.test.cases.framework.junit.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.fail;
+import static org.osgi.test.assertj.bundle.BundleAssert.assertThat;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -26,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
@@ -34,815 +41,1028 @@ import org.osgi.framework.ServiceFactory;
 import org.osgi.framework.ServiceObjects;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
-import org.osgi.test.support.OSGiTestCase;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.install.BundleInstaller;
 
-public class ServiceScopesTests extends OSGiTestCase {
+public class ServiceScopesTests {
+
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
 
     private BundleContext context;
     private Bundle        self;
 
-	@Override
-	protected void setUp() {
-        context = getContext();
+	@BeforeEach
+	public void setUp() {
+        context = bundleContext.getBundle().getBundleContext(); // the injected context is a proxy
         self = context.getBundle();
     }
 
-    public void testSingletonScope() throws Exception {
+	@Test
+	public void testSingletonScope() throws Exception {
         Hashtable<String, String> properties = new Hashtable<String, String>();
         properties.put("test", "yes");
         properties.put(Constants.SERVICE_SCOPE, Constants.SCOPE_BUNDLE);
         TestService service = new TestServiceImpl(0);
         ServiceRegistration<TestService> registration = context.registerService(TestService.class, service, properties);
-        assertNotNull(registration);
+        assertThat(registration).isNotNull();
         try {
             ServiceReference<TestService> reference = registration.getReference();
-            assertNotNull(reference);
-            assertEquals("service.scope not set correctly", Constants.SCOPE_SINGLETON, reference.getProperty(Constants.SERVICE_SCOPE));
-            assertSame("service object not the same", service, context.getService(reference));
-            assertSame("service object not the same", service, context.getService(reference));
-            assertSame("service object not the same", service, context.getService(reference));
-            assertTrue("service use count wrong", context.ungetService(reference));
-            assertTrue("service use count wrong", context.ungetService(reference));
-            assertTrue("service use count wrong", context.ungetService(reference));
-            assertFalse("service use count wrong", context.ungetService(reference));
-            assertFalse("service use count wrong", context.ungetService(reference));
+            assertThat(reference).isNotNull();
+            assertThat(reference.getProperty(Constants.SERVICE_SCOPE))
+            		.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_SINGLETON);
+            assertThat(context.getService(reference))
+            		.as("service object not the same")
+				.isSameAs(service);
+            assertThat(context.getService(reference))
+            		.as("service object not the same")
+				.isSameAs(service);
+            assertThat(context.getService(reference))
+            		.as("service object not the same")
+				.isSameAs(service);
+            assertThat(context.ungetService(reference))
+            		.as("service use count wrong")
+				.isTrue();
+            assertThat(context.ungetService(reference))
+            		.as("service use count wrong")
+				.isTrue();
+            assertThat(context.ungetService(reference))
+            		.as("service use count wrong")
+				.isTrue();
+            assertThat(context.ungetService(reference))
+            		.as("service use count wrong")
+				.isFalse();
+            assertThat(context.ungetService(reference))
+            		.as("service use count wrong")
+				.isFalse();
         } finally {
             registration.unregister();
         }
     }
 
-    public void testSingletonScopeWithTwoConsumers() throws Exception {
-        Bundle tb1 = install("serviceregistry.tb1.jar");
-        assertNotNull(tb1);
+	@Test
+	public void testSingletonScopeWithTwoConsumers() throws Exception {
+        Bundle tb1 = bundleInstaller.installBundle("serviceregistry.tb1.jar", false);
+        assertThat(tb1).isNotNull();
         try {
             tb1.start();
-            assertTrue((tb1.getState() & Bundle.ACTIVE) != 0);
+			assertThat(tb1).isInState(Bundle.ACTIVE);
             BundleContext tb1Context = tb1.getBundleContext();
-            assertNotNull(tb1Context);
+            assertThat(tb1Context).isNotNull();
             Hashtable<String, String> properties = new Hashtable<String, String>();
             properties.put("test", "yes");
             properties.put(Constants.SERVICE_SCOPE, Constants.SCOPE_BUNDLE);
             TestService service = new TestServiceImpl(0);
             ServiceRegistration<TestService> registration = tb1Context.registerService(TestService.class, service, properties);
-            assertNotNull(registration);
+            assertThat(registration).isNotNull();
             ServiceReference<TestService> reference1 = context.getServiceReference(TestService.class);
-            assertNotNull(reference1);
+            assertThat(reference1).isNotNull();
             ServiceReference<TestService> reference2 = tb1Context.getServiceReference(TestService.class);
-            assertNotNull(reference2);
+            assertThat(reference2).isNotNull();
 
-            assertEquals("service.scope not set correctly", Constants.SCOPE_SINGLETON, reference1.getProperty(Constants.SERVICE_SCOPE));
-            assertEquals("service.scope not set correctly", Constants.SCOPE_SINGLETON, reference2.getProperty(Constants.SERVICE_SCOPE));
+            assertThat(reference1.getProperty(Constants.SERVICE_SCOPE))
+            		.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_SINGLETON);
+            assertThat(reference2.getProperty(Constants.SERVICE_SCOPE))
+            		.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_SINGLETON);
 
-            assertSame("service object not the same", service, context.getService(reference1));
-            assertSame("service object not the same", service, context.getService(reference1));
-            assertSame("service object not the same", service, context.getService(reference1));
-            assertSame("service object not the same", service, tb1Context.getService(reference2));
-            assertSame("service object not the same", service, tb1Context.getService(reference2));
+            assertThat(context.getService(reference1))
+            		.as("service object not the same")
+				.isSameAs(service);
+            assertThat(context.getService(reference1))
+            		.as("service object not the same")
+				.isSameAs(service);
+            assertThat(context.getService(reference1))
+            		.as("service object not the same")
+				.isSameAs(service);
+            assertThat(tb1Context.getService(reference2))
+            		.as("service object not the same")
+				.isSameAs(service);
+            assertThat(tb1Context.getService(reference2))
+            		.as("service object not the same")
+				.isSameAs(service);
 
-            assertTrue("service use count wrong", context.ungetService(reference1));
-            assertTrue("service use count wrong", context.ungetService(reference1));
-            assertTrue("service use count wrong", context.ungetService(reference1));
-            assertFalse("service use count wrong", context.ungetService(reference1));
-            assertFalse("service use count wrong", context.ungetService(reference1));
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isTrue();
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isTrue();
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isTrue();
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isFalse();
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isFalse();
 
-            assertTrue("service use count wrong", tb1Context.ungetService(reference2));
-            assertTrue("service use count wrong", tb1Context.ungetService(reference2));
-            assertFalse("service use count wrong", tb1Context.ungetService(reference2));
-            assertFalse("service use count wrong", tb1Context.ungetService(reference2));
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isTrue();
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isTrue();
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isFalse();
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isFalse();
             registration.unregister();
         } finally {
             tb1.uninstall();
         }
     }
 
-    public void testBundleScope() throws Exception {
+	@Test
+	public void testBundleScope() throws Exception {
         Hashtable<String, String> properties = new Hashtable<String, String>();
         properties.put("test", "yes");
         properties.put(Constants.SERVICE_SCOPE, Constants.SCOPE_SINGLETON);
         TestServiceFactory factory = new TestServiceFactory();
         ServiceRegistration<TestService> registration = context.registerService(TestService.class, factory, properties);
-        assertNotNull(registration);
+        assertThat(registration).isNotNull();
         try {
             ServiceReference<TestService> reference = registration.getReference();
-            assertNotNull(reference);
-            assertEquals("service.scope not set correctly", Constants.SCOPE_BUNDLE, reference.getProperty(Constants.SERVICE_SCOPE));
+            assertThat(reference).isNotNull();
+            assertThat(reference.getProperty(Constants.SERVICE_SCOPE))
+            		.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_BUNDLE);
 
-            assertEquals(0, factory.services.size());
+			assertThat(factory.services).isEmpty();
             TestService service = context.getService(reference);
-            assertNotNull(service);
-            assertEquals(self.getBundleId(), service.getId());
-            assertEquals(1, factory.services.size());
-            assertSame("service object not the same", factory.services.get(self), service);
-            assertSame("service object not the same", service, context.getService(reference));
-            assertEquals(1, factory.services.size());
-            assertSame("service object not the same", service, context.getService(reference));
-            assertEquals(1, factory.services.size());
-            assertTrue("service use count wrong", context.ungetService(reference));
-            assertEquals(1, factory.services.size());
-            assertTrue("service use count wrong", context.ungetService(reference));
-            assertEquals(1, factory.services.size());
-            assertTrue("service use count wrong", context.ungetService(reference));
-            assertEquals(0, factory.services.size());
-            assertFalse("service use count wrong", context.ungetService(reference));
-            assertFalse("service use count wrong", context.ungetService(reference));
+            assertThat(service).isNotNull();
+            assertThat(service.getId()).isEqualTo(self.getBundleId());
+			assertThat(factory.services).hasSize(1);
+            assertThat(service)
+            		.as("service object not the same")
+				.isSameAs(factory.services.get(self));
+            assertThat(context.getService(reference))
+            		.as("service object not the same")
+				.isSameAs(service);
+			assertThat(factory.services).hasSize(1);
+            assertThat(context.getService(reference))
+            		.as("service object not the same")
+				.isSameAs(service);
+			assertThat(factory.services).hasSize(1);
+            assertThat(context.ungetService(reference))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(1);
+            assertThat(context.ungetService(reference))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(1);
+            assertThat(context.ungetService(reference))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).isEmpty();
+            assertThat(context.ungetService(reference))
+            		.as("service use count wrong")
+				.isFalse();
+            assertThat(context.ungetService(reference))
+            		.as("service use count wrong")
+				.isFalse();
         } finally {
             registration.unregister();
         }
     }
 
-    public void testBundleScopeWithTwoConsumers() throws Exception {
-        Bundle tb1 = install("serviceregistry.tb1.jar");
-        assertNotNull(tb1);
+	@Test
+	public void testBundleScopeWithTwoConsumers() throws Exception {
+        Bundle tb1 = bundleInstaller.installBundle("serviceregistry.tb1.jar", false);
+        assertThat(tb1).isNotNull();
         try {
             tb1.start();
-            assertTrue((tb1.getState() & Bundle.ACTIVE) != 0);
+			assertThat(tb1).isInState(Bundle.ACTIVE);
             BundleContext tb1Context = tb1.getBundleContext();
-            assertNotNull(tb1Context);
+            assertThat(tb1Context).isNotNull();
 
             Hashtable<String, String> properties = new Hashtable<String, String>();
             properties.put("test", "yes");
             properties.put(Constants.SERVICE_SCOPE, Constants.SCOPE_SINGLETON);
             TestServiceFactory factory = new TestServiceFactory();
             ServiceRegistration<TestService> registration = tb1Context.registerService(TestService.class, factory, properties);
-            assertNotNull(registration);
+            assertThat(registration).isNotNull();
             ServiceReference<TestService> reference1 = context.getServiceReference(TestService.class);
-            assertNotNull(reference1);
+            assertThat(reference1).isNotNull();
             ServiceReference<TestService> reference2 = tb1Context.getServiceReference(TestService.class);
-            assertNotNull(reference2);
+            assertThat(reference2).isNotNull();
 
-            assertEquals("service.scope not set correctly", Constants.SCOPE_BUNDLE, reference1.getProperty(Constants.SERVICE_SCOPE));
-            assertEquals("service.scope not set correctly", Constants.SCOPE_BUNDLE, reference2.getProperty(Constants.SERVICE_SCOPE));
+            assertThat(reference1.getProperty(Constants.SERVICE_SCOPE))
+            		.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_BUNDLE);
+            assertThat(reference2.getProperty(Constants.SERVICE_SCOPE))
+            		.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_BUNDLE);
 
-            assertEquals(0, factory.services.size());
+			assertThat(factory.services).isEmpty();
 
             TestService service1 = context.getService(reference1);
-            assertNotNull(service1);
-            assertSame("service object not the same", factory.services.get(self), service1);
-            assertEquals(self.getBundleId(), service1.getId());
-            assertEquals(1, factory.services.size());
+            assertThat(service1).isNotNull();
+            assertThat(service1)
+            		.as("service object not the same")
+				.isSameAs(factory.services.get(self));
+            assertThat(service1.getId()).isEqualTo(self.getBundleId());
+			assertThat(factory.services).hasSize(1);
 
             TestService service2 = tb1Context.getService(reference2);
-            assertNotNull(service2);
-            assertSame("service object not the same", factory.services.get(tb1), service2);
-            assertEquals(tb1.getBundleId(), service2.getId());
-            assertEquals(2, factory.services.size());
+            assertThat(service2).isNotNull();
+            assertThat(service2)
+            		.as("service object not the same")
+				.isSameAs(factory.services.get(tb1));
+            assertThat(service2.getId()).isEqualTo(tb1.getBundleId());
+			assertThat(factory.services).hasSize(2);
 
-            assertNotSame(service1, service2);
+            assertThat(service2).isNotSameAs(service1);
 
-            assertSame("service object not the same", service1, context.getService(reference1));
-            assertEquals(2, factory.services.size());
-            assertSame("service object not the same", service1, context.getService(reference1));
-            assertEquals(2, factory.services.size());
-            assertSame("service object not the same", service2, tb1Context.getService(reference2));
-            assertEquals(2, factory.services.size());
+            assertThat(context.getService(reference1))
+            		.as("service object not the same")
+				.isSameAs(service1);
+			assertThat(factory.services).hasSize(2);
+            assertThat(context.getService(reference1))
+            		.as("service object not the same")
+				.isSameAs(service1);
+			assertThat(factory.services).hasSize(2);
+            assertThat(tb1Context.getService(reference2))
+            		.as("service object not the same")
+				.isSameAs(service2);
+			assertThat(factory.services).hasSize(2);
 
-            assertTrue("service use count wrong", context.ungetService(reference1));
-            assertEquals(2, factory.services.size());
-            assertTrue("service use count wrong", context.ungetService(reference1));
-            assertEquals(2, factory.services.size());
-            assertTrue("service use count wrong", context.ungetService(reference1));
-            assertEquals(1, factory.services.size());
-            assertFalse("service use count wrong", context.ungetService(reference1));
-            assertEquals(1, factory.services.size());
-            assertFalse("service use count wrong", context.ungetService(reference1));
-            assertEquals(1, factory.services.size());
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(2);
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(2);
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(1);
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isFalse();
+			assertThat(factory.services).hasSize(1);
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isFalse();
+			assertThat(factory.services).hasSize(1);
 
-            assertTrue("service use count wrong", tb1Context.ungetService(reference2));
-            assertEquals(1, factory.services.size());
-            assertTrue("service use count wrong", tb1Context.ungetService(reference2));
-            assertEquals(0, factory.services.size());
-            assertFalse("service use count wrong", tb1Context.ungetService(reference2));
-            assertEquals(0, factory.services.size());
-            assertFalse("service use count wrong", tb1Context.ungetService(reference2));
-            assertEquals(0, factory.services.size());
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(1);
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).isEmpty();
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isFalse();
+			assertThat(factory.services).isEmpty();
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isFalse();
+			assertThat(factory.services).isEmpty();
             registration.unregister();
         } finally {
             tb1.uninstall();
         }
     }
 
-    public void testPrototypeScope() throws Exception {
+	@Test
+	public void testPrototypeScope() throws Exception {
         Hashtable<String, String> properties = new Hashtable<String, String>();
         properties.put("test", "yes");
         properties.put(Constants.SERVICE_SCOPE, Constants.SCOPE_SINGLETON);
         TestPrototypeServiceFactory factory = new TestPrototypeServiceFactory();
         ServiceRegistration<TestService> registration = context.registerService(TestService.class, factory, properties);
-        assertNotNull(registration);
+        assertThat(registration).isNotNull();
         try {
             ServiceReference<TestService> reference = registration.getReference();
-            assertNotNull(reference);
-            assertEquals("service.scope not set correctly", Constants.SCOPE_PROTOTYPE, reference.getProperty(Constants.SERVICE_SCOPE));
+            assertThat(reference).isNotNull();
+            assertThat(reference.getProperty(Constants.SERVICE_SCOPE))
+            		.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_PROTOTYPE);
 
-            assertEquals(0, factory.services.size());
+			assertThat(factory.services).isEmpty();
             TestService service = context.getService(reference);
-            assertNotNull(service);
-            assertEquals(self.getBundleId(), service.getId());
-            assertEquals(1, factory.services.size());
-            assertEquals(1, factory.services.get(self).size());
-            assertTrue(factory.services.get(self).contains(service));
-            assertSame("service object not the same", service, context.getService(reference));
-            assertEquals(1, factory.services.size());
-            assertEquals(1, factory.services.get(self).size());
-            assertSame("service object not the same", service, context.getService(reference));
-            assertEquals(1, factory.services.size());
-            assertEquals(1, factory.services.get(self).size());
-            assertTrue("service use count wrong", context.ungetService(reference));
-            assertEquals(1, factory.services.size());
-            assertEquals(1, factory.services.get(self).size());
-            assertTrue("service use count wrong", context.ungetService(reference));
-            assertEquals(1, factory.services.size());
-            assertEquals(1, factory.services.get(self).size());
-            assertTrue("service use count wrong", context.ungetService(reference));
-            assertEquals(0, factory.services.size());
-            assertFalse("service use count wrong", context.ungetService(reference));
-            assertFalse("service use count wrong", context.ungetService(reference));
+            assertThat(service).isNotNull();
+            assertThat(service.getId()).isEqualTo(self.getBundleId());
+			assertThat(factory.services).hasSize(1);
+			assertThat(factory.services.get(self)).hasSize(1);
+			assertThat(factory.services.get(self)).contains(service);
+            assertThat(context.getService(reference))
+            		.as("service object not the same")
+				.isSameAs(service);
+			assertThat(factory.services).hasSize(1);
+			assertThat(factory.services.get(self)).hasSize(1);
+            assertThat(context.getService(reference))
+            		.as("service object not the same")
+				.isSameAs(service);
+			assertThat(factory.services).hasSize(1);
+			assertThat(factory.services.get(self)).hasSize(1);
+            assertThat(context.ungetService(reference))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(1);
+			assertThat(factory.services.get(self)).hasSize(1);
+            assertThat(context.ungetService(reference))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(1);
+			assertThat(factory.services.get(self)).hasSize(1);
+            assertThat(context.ungetService(reference))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).isEmpty();
+            assertThat(context.ungetService(reference))
+            		.as("service use count wrong")
+				.isFalse();
+            assertThat(context.ungetService(reference))
+            		.as("service use count wrong")
+				.isFalse();
         } finally {
             registration.unregister();
         }
     }
 
+	@Test
 	public void testMultipleGetsOfServiceObjects() throws Exception {
 		ServiceRegistration<TestService> registration = context.registerService(TestService.class, new TestServiceImpl(42), null);
-		assertNotNull(registration);
+		assertThat(registration).isNotNull();
 		try {
 			ServiceReference<TestService> reference = registration.getReference();
-			assertNotNull(reference);
-			assertEquals("service.scope not set correctly", Constants.SCOPE_SINGLETON, reference.getProperty(Constants.SERVICE_SCOPE));
+			assertThat(reference).isNotNull();
+			assertThat(reference.getProperty(Constants.SERVICE_SCOPE))
+					.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_SINGLETON);
 
 			final ServiceObjects<TestService> so1 = context.getServiceObjects(reference);
-			assertNotNull(so1);
+			assertThat(so1).isNotNull();
 			TestService service = so1.getService();
-			assertNotNull(service);
+			assertThat(service).isNotNull();
 
 			final ServiceObjects<TestService> so2 = context.getServiceObjects(reference);
-			assertNotNull(so2);
+			assertThat(so2).isNotNull();
 			so2.ungetService(service);
 		} finally {
 			registration.unregister();
 		}
 	}
 
-    public void testPrototypeScopeWithTwoConsumers() throws Exception {
-        Bundle tb1 = install("serviceregistry.tb1.jar");
-        assertNotNull(tb1);
+	@Test
+	public void testPrototypeScopeWithTwoConsumers() throws Exception {
+        Bundle tb1 = bundleInstaller.installBundle("serviceregistry.tb1.jar", false);
+        assertThat(tb1).isNotNull();
         try {
             tb1.start();
-            assertTrue((tb1.getState() & Bundle.ACTIVE) != 0);
+			assertThat(tb1).isInState(Bundle.ACTIVE);
             BundleContext tb1Context = tb1.getBundleContext();
-            assertNotNull(tb1Context);
+            assertThat(tb1Context).isNotNull();
 
             Hashtable<String, String> properties = new Hashtable<String, String>();
             properties.put("test", "yes");
             properties.put(Constants.SERVICE_SCOPE, Constants.SCOPE_SINGLETON);
             TestPrototypeServiceFactory factory = new TestPrototypeServiceFactory();
             ServiceRegistration<TestService> registration = tb1Context.registerService(TestService.class, factory, properties);
-            assertNotNull(registration);
+            assertThat(registration).isNotNull();
             ServiceReference<TestService> reference1 = context.getServiceReference(TestService.class);
-            assertNotNull(reference1);
+            assertThat(reference1).isNotNull();
             ServiceReference<TestService> reference2 = tb1Context.getServiceReference(TestService.class);
-            assertNotNull(reference2);
+            assertThat(reference2).isNotNull();
 
-            assertEquals("service.scope not set correctly", Constants.SCOPE_PROTOTYPE, reference1.getProperty(Constants.SERVICE_SCOPE));
-            assertEquals("service.scope not set correctly", Constants.SCOPE_PROTOTYPE, reference2.getProperty(Constants.SERVICE_SCOPE));
+            assertThat(reference1.getProperty(Constants.SERVICE_SCOPE))
+            		.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_PROTOTYPE);
+            assertThat(reference2.getProperty(Constants.SERVICE_SCOPE))
+            		.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_PROTOTYPE);
 
-            assertEquals(0, factory.services.size());
+			assertThat(factory.services).isEmpty();
 
             TestService service1 = context.getService(reference1);
-            assertNotNull(service1);
-            assertEquals(1, factory.services.size());
-            assertEquals(1, factory.services.get(self).size());
-            assertTrue(factory.services.get(self).contains(service1));
-            assertEquals(self.getBundleId(), service1.getId());
+            assertThat(service1).isNotNull();
+			assertThat(factory.services).hasSize(1);
+			assertThat(factory.services.get(self)).hasSize(1);
+			assertThat(factory.services.get(self)).contains(service1);
+            assertThat(service1.getId()).isEqualTo(self.getBundleId());
 
             TestService service2 = tb1Context.getService(reference2);
-            assertNotNull(service2);
-            assertEquals(2, factory.services.size());
-            assertEquals(1, factory.services.get(tb1).size());
-            assertTrue(factory.services.get(tb1).contains(service2));
-            assertEquals(tb1.getBundleId(), service2.getId());
+            assertThat(service2).isNotNull();
+            assertThat(factory.services.size()).isEqualTo(2);
+            assertThat(factory.services.get(tb1).size()).isEqualTo(1);
+            assertThat(factory.services.get(tb1).contains(service2)).isTrue();
+            assertThat(service2.getId()).isEqualTo(tb1.getBundleId());
 
-            assertNotSame(service1, service2);
+            assertThat(service2).isNotSameAs(service1);
 
-            assertSame("service object not the same", service1, context.getService(reference1));
-            assertEquals(2, factory.services.size());
-            assertEquals(1, factory.services.get(self).size());
-            assertSame("service object not the same", service1, context.getService(reference1));
-            assertEquals(2, factory.services.size());
-            assertEquals(1, factory.services.get(self).size());
-            assertSame("service object not the same", service2, tb1Context.getService(reference2));
-            assertEquals(2, factory.services.size());
-            assertEquals(1, factory.services.get(tb1).size());
+            assertThat(context.getService(reference1))
+            		.as("service object not the same")
+				.isSameAs(service1);
+			assertThat(factory.services).hasSize(2);
+			assertThat(factory.services.get(self)).hasSize(1);
+            assertThat(context.getService(reference1))
+            		.as("service object not the same")
+				.isSameAs(service1);
+			assertThat(factory.services).hasSize(2);
+			assertThat(factory.services.get(self)).hasSize(1);
+            assertThat(tb1Context.getService(reference2))
+            		.as("service object not the same")
+				.isSameAs(service2);
+			assertThat(factory.services).hasSize(2);
+			assertThat(factory.services.get(tb1)).hasSize(1);
 
-            assertTrue("service use count wrong", context.ungetService(reference1));
-            assertEquals(2, factory.services.size());
-            assertEquals(1, factory.services.get(self).size());
-            assertTrue("service use count wrong", context.ungetService(reference1));
-            assertEquals(2, factory.services.size());
-            assertEquals(1, factory.services.get(self).size());
-            assertTrue("service use count wrong", context.ungetService(reference1));
-            assertEquals(1, factory.services.size());
-            assertNull(factory.services.get(self));
-            assertFalse("service use count wrong", context.ungetService(reference1));
-            assertEquals(1, factory.services.size());
-            assertNull(factory.services.get(self));
-            assertFalse("service use count wrong", context.ungetService(reference1));
-            assertEquals(1, factory.services.size());
-            assertNull(factory.services.get(self));
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(2);
+			assertThat(factory.services.get(self)).hasSize(1);
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(2);
+			assertThat(factory.services.get(self)).hasSize(1);
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(1);
+            assertThat(factory.services.get(self)).isNull();
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isFalse();
+			assertThat(factory.services).hasSize(1);
+            assertThat(factory.services.get(self)).isNull();
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isFalse();
+			assertThat(factory.services).hasSize(1);
+            assertThat(factory.services.get(self)).isNull();
 
-            assertTrue("service use count wrong", tb1Context.ungetService(reference2));
-            assertEquals(1, factory.services.size());
-            assertEquals(1, factory.services.get(tb1).size());
-            assertTrue("service use count wrong", tb1Context.ungetService(reference2));
-            assertEquals(0, factory.services.size());
-            assertFalse("service use count wrong", tb1Context.ungetService(reference2));
-            assertEquals(0, factory.services.size());
-            assertFalse("service use count wrong", tb1Context.ungetService(reference2));
-            assertEquals(0, factory.services.size());
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(1);
+			assertThat(factory.services.get(tb1)).hasSize(1);
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).isEmpty();
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isFalse();
+			assertThat(factory.services).isEmpty();
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isFalse();
+			assertThat(factory.services).isEmpty();
             registration.unregister();
         } finally {
             tb1.uninstall();
         }
     }
 
-    public void testPrototypeConsumerWithSingletonScope() throws Exception {
-        Bundle tb1 = install("serviceregistry.tb1.jar");
-        assertNotNull(tb1);
+	@Test
+	public void testPrototypeConsumerWithSingletonScope() throws Exception {
+        Bundle tb1 = bundleInstaller.installBundle("serviceregistry.tb1.jar", false);
+        assertThat(tb1).isNotNull();
         try {
             tb1.start();
-            assertTrue((tb1.getState() & Bundle.ACTIVE) != 0);
+			assertThat(tb1).isInState(Bundle.ACTIVE);
             BundleContext tb1Context = tb1.getBundleContext();
-            assertNotNull(tb1Context);
+            assertThat(tb1Context).isNotNull();
 
             Hashtable<String, String> properties = new Hashtable<String, String>();
             properties.put("test", "yes");
             properties.put(Constants.SERVICE_SCOPE, Constants.SCOPE_BUNDLE);
             TestService service = new TestServiceImpl(0);
             ServiceRegistration<TestService> registration = tb1Context.registerService(TestService.class, service, properties);
-            assertNotNull(registration);
+            assertThat(registration).isNotNull();
             ServiceReference<TestService> reference = registration.getReference();
-            assertNotNull(reference);
-            assertEquals("service.scope not set correctly", Constants.SCOPE_SINGLETON, reference.getProperty(Constants.SERVICE_SCOPE));
+            assertThat(reference).isNotNull();
+            assertThat(reference.getProperty(Constants.SERVICE_SCOPE))
+            		.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_SINGLETON);
 
             ServiceObjects<TestService> objects = tb1Context.getServiceObjects(reference);
-            assertNotNull(objects);
-            assertEquals(reference, objects.getServiceReference());
+            assertThat(objects).isNotNull();
+            assertThat(objects.getServiceReference()).isEqualTo(reference);
 
-            assertSame("service object not the same", service, tb1Context.getService(reference));
-            assertSame("service object not the same", service, tb1Context.getService(reference));
-            assertSame("service object not the same", service, tb1Context.getService(reference));
-            assertSame("service object not the same", service, objects.getService());
-            assertSame("service object not the same", service, objects.getService());
-            assertSame("service object not the same", service, objects.getService());
-            assertTrue("service use count wrong", tb1Context.ungetService(reference));
-            assertTrue("service use count wrong", tb1Context.ungetService(reference));
-            assertTrue("service use count wrong", tb1Context.ungetService(reference));
+            assertThat(tb1Context.getService(reference))
+            		.as("service object not the same")
+				.isSameAs(service);
+            assertThat(tb1Context.getService(reference))
+            		.as("service object not the same")
+				.isSameAs(service);
+            assertThat(tb1Context.getService(reference))
+            		.as("service object not the same")
+				.isSameAs(service);
+            assertThat(objects.getService())
+            		.as("service object not the same")
+				.isSameAs(service);
+            assertThat(objects.getService())
+            		.as("service object not the same")
+				.isSameAs(service);
+            assertThat(objects.getService())
+            		.as("service object not the same")
+				.isSameAs(service);
+            assertThat(tb1Context.ungetService(reference))
+            		.as("service use count wrong")
+				.isTrue();
+            assertThat(tb1Context.ungetService(reference))
+            		.as("service use count wrong")
+				.isTrue();
+            assertThat(tb1Context.ungetService(reference))
+            		.as("service use count wrong")
+				.isTrue();
             objects.ungetService(service);
             objects.ungetService(service);
             objects.ungetService(service);
-            assertFalse("service use count wrong", tb1Context.ungetService(reference));
-            assertFalse("service use count wrong", tb1Context.ungetService(reference));
+            assertThat(tb1Context.ungetService(reference))
+            		.as("service use count wrong")
+				.isFalse();
+            assertThat(tb1Context.ungetService(reference))
+            		.as("service use count wrong")
+				.isFalse();
             registration.unregister();
-            assertNull(tb1Context.getServiceObjects(reference));
+            assertThat(tb1Context.getServiceObjects(reference)).isNull();
             tb1.stop();
-            try {
-                tb1Context.getServiceObjects(reference);
-                fail("expected exception");
-            } catch (IllegalStateException e) {
-                // expected
-            }
+            assertThatExceptionOfType(IllegalStateException.class).as("expected exception")
+            		.isThrownBy(() -> tb1Context.getServiceObjects(reference));
         } finally {
             tb1.uninstall();
         }
     }
 
-    public void testPrototypeConsumerWithBundleScope() throws Exception {
-        Bundle tb1 = install("serviceregistry.tb1.jar");
-        assertNotNull(tb1);
+	@Test
+	public void testPrototypeConsumerWithBundleScope() throws Exception {
+        Bundle tb1 = bundleInstaller.installBundle("serviceregistry.tb1.jar", false);
+        assertThat(tb1).isNotNull();
         try {
             tb1.start();
-            assertTrue((tb1.getState() & Bundle.ACTIVE) != 0);
+			assertThat(tb1).isInState(Bundle.ACTIVE);
             BundleContext tb1Context = tb1.getBundleContext();
-            assertNotNull(tb1Context);
+            assertThat(tb1Context).isNotNull();
 
             Hashtable<String, String> properties = new Hashtable<String, String>();
             properties.put("test", "yes");
             properties.put(Constants.SERVICE_SCOPE, Constants.SCOPE_SINGLETON);
             TestServiceFactory factory = new TestServiceFactory();
             ServiceRegistration<TestService> registration = tb1Context.registerService(TestService.class, factory, properties);
-            assertNotNull(registration);
+            assertThat(registration).isNotNull();
             ServiceReference<TestService> reference1 = context.getServiceReference(TestService.class);
             ServiceReference<TestService> reference2 = tb1Context.getServiceReference(TestService.class);
-            assertNotNull(reference1);
-            assertNotNull(reference2);
+            assertThat(reference1).isNotNull();
+            assertThat(reference2).isNotNull();
 
-            assertEquals("service.scope not set correctly", Constants.SCOPE_BUNDLE, reference1.getProperty(Constants.SERVICE_SCOPE));
-            assertEquals("service.scope not set correctly", Constants.SCOPE_BUNDLE, reference2.getProperty(Constants.SERVICE_SCOPE));
+            assertThat(reference1.getProperty(Constants.SERVICE_SCOPE))
+            		.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_BUNDLE);
+            assertThat(reference2.getProperty(Constants.SERVICE_SCOPE))
+            		.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_BUNDLE);
 
             ServiceObjects<TestService> objects1 = context.getServiceObjects(reference1);
-            assertNotNull(objects1);
-            assertEquals(reference1, objects1.getServiceReference());
+            assertThat(objects1).isNotNull();
+            assertThat(objects1.getServiceReference()).isEqualTo(reference1);
             ServiceObjects<TestService> objects2 = tb1Context.getServiceObjects(reference2);
-            assertNotNull(objects2);
-            assertEquals(reference2, objects2.getServiceReference());
+            assertThat(objects2).isNotNull();
+            assertThat(objects2.getServiceReference()).isEqualTo(reference2);
 
-            assertEquals(0, factory.services.size());
+			assertThat(factory.services).isEmpty();
 
             TestService service1 = objects1.getService();
-            assertNotNull(service1);
-            assertSame("service object not the same", factory.services.get(self), service1);
-            assertEquals(self.getBundleId(), service1.getId());
-            assertEquals(1, factory.services.size());
+            assertThat(service1).isNotNull();
+            assertThat(service1)
+            		.as("service object not the same")
+				.isSameAs(factory.services.get(self));
+            assertThat(service1.getId()).isEqualTo(self.getBundleId());
+			assertThat(factory.services).hasSize(1);
 
             TestService service2 = objects2.getService();
-            assertNotNull(service2);
-            assertSame("service object not the same", factory.services.get(tb1), service2);
-            assertEquals(tb1.getBundleId(), service2.getId());
-            assertEquals(2, factory.services.size());
+            assertThat(service2).isNotNull();
+            assertThat(service2)
+            		.as("service object not the same")
+				.isSameAs(factory.services.get(tb1));
+            assertThat(service2.getId()).isEqualTo(tb1.getBundleId());
+			assertThat(factory.services).hasSize(2);
 
-            assertNotSame(service1, service2);
+            assertThat(service2).isNotSameAs(service1);
 
-            assertSame("service object not the same", service1, objects1.getService());
-            assertEquals(2, factory.services.size());
-            assertSame("service object not the same", service1, context.getService(reference1));
-            assertEquals(2, factory.services.size());
-            assertSame("service object not the same", service2, tb1Context.getService(reference2));
-            assertEquals(2, factory.services.size());
+            assertThat(objects1.getService())
+            		.as("service object not the same")
+				.isSameAs(service1);
+			assertThat(factory.services).hasSize(2);
+            assertThat(context.getService(reference1))
+            		.as("service object not the same")
+				.isSameAs(service1);
+			assertThat(factory.services).hasSize(2);
+            assertThat(tb1Context.getService(reference2))
+            		.as("service object not the same")
+				.isSameAs(service2);
+			assertThat(factory.services).hasSize(2);
 
-            try {
-                objects1.ungetService(service2);
-                fail("expected exception");
-            } catch (IllegalArgumentException e) {
-                // expected
-            }
-            try {
-                objects2.ungetService(service1);
-                fail("expected exception");
-            } catch (IllegalArgumentException e) {
-                // expected
-            }
+            assertThatExceptionOfType(IllegalArgumentException.class).as("expected exception")
+            		.isThrownBy(() -> objects1.ungetService(service2));
+            assertThatExceptionOfType(IllegalArgumentException.class).as("expected exception")
+            		.isThrownBy(() -> objects2.ungetService(service1));
 
             objects1.ungetService(service1);
-            assertEquals(2, factory.services.size());
+			assertThat(factory.services).hasSize(2);
             objects1.ungetService(service1);
-            assertEquals(2, factory.services.size());
-            assertTrue("service use count wrong", context.ungetService(reference1));
-            assertEquals(1, factory.services.size());
-            assertFalse("service use count wrong", context.ungetService(reference1));
-            assertEquals(1, factory.services.size());
-            assertFalse("service use count wrong", context.ungetService(reference1));
-            assertEquals(1, factory.services.size());
+			assertThat(factory.services).hasSize(2);
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(1);
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isFalse();
+			assertThat(factory.services).hasSize(1);
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isFalse();
+			assertThat(factory.services).hasSize(1);
 
             objects2.ungetService(service2);
-            assertEquals(1, factory.services.size());
-            assertTrue("service use count wrong", tb1Context.ungetService(reference2));
-            assertEquals(0, factory.services.size());
-            assertFalse("service use count wrong", tb1Context.ungetService(reference2));
-            assertEquals(0, factory.services.size());
-            assertFalse("service use count wrong", tb1Context.ungetService(reference2));
-            assertEquals(0, factory.services.size());
+			assertThat(factory.services).hasSize(1);
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).isEmpty();
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isFalse();
+			assertThat(factory.services).isEmpty();
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isFalse();
+			assertThat(factory.services).isEmpty();
             registration.unregister();
-            assertNull(tb1Context.getServiceObjects(reference1));
+            assertThat(tb1Context.getServiceObjects(reference1)).isNull();
             tb1.stop();
-            try {
-                tb1Context.getServiceObjects(reference1);
-                fail("expected exception");
-            } catch (IllegalStateException e) {
-                // expected
-            }
-            assertEquals(reference1, objects1.getServiceReference());
+            assertThatExceptionOfType(IllegalStateException.class).as("expected exception")
+            		.isThrownBy(() -> tb1Context.getServiceObjects(reference1));
+            assertThat(objects1.getServiceReference()).isEqualTo(reference1);
         } finally {
             tb1.uninstall();
         }
     }
 
-    public void testPrototypeConsumerWithPrototypeScope() throws Exception {
-        Bundle tb1 = install("serviceregistry.tb1.jar");
-        assertNotNull(tb1);
+	@Test
+	public void testPrototypeConsumerWithPrototypeScope() throws Exception {
+        Bundle tb1 = bundleInstaller.installBundle("serviceregistry.tb1.jar", false);
+        assertThat(tb1).isNotNull();
         try {
             tb1.start();
-            assertTrue((tb1.getState() & Bundle.ACTIVE) != 0);
+			assertThat(tb1).isInState(Bundle.ACTIVE);
             BundleContext tb1Context = tb1.getBundleContext();
-            assertNotNull(tb1Context);
+            assertThat(tb1Context).isNotNull();
 
             Hashtable<String, String> properties = new Hashtable<String, String>();
             properties.put("test", "yes");
             properties.put(Constants.SERVICE_SCOPE, Constants.SCOPE_SINGLETON);
             TestPrototypeServiceFactory factory = new TestPrototypeServiceFactory();
             ServiceRegistration<TestService> registration = tb1Context.registerService(TestService.class, factory, properties);
-            assertNotNull(registration);
+            assertThat(registration).isNotNull();
             ServiceReference<TestService> reference1 = context.getServiceReference(TestService.class);
-            assertNotNull(reference1);
+            assertThat(reference1).isNotNull();
             ServiceReference<TestService> reference2 = tb1Context.getServiceReference(TestService.class);
-            assertNotNull(reference2);
+            assertThat(reference2).isNotNull();
 
-            assertEquals("service.scope not set correctly", Constants.SCOPE_PROTOTYPE, reference1.getProperty(Constants.SERVICE_SCOPE));
-            assertEquals("service.scope not set correctly", Constants.SCOPE_PROTOTYPE, reference2.getProperty(Constants.SERVICE_SCOPE));
+            assertThat(reference1.getProperty(Constants.SERVICE_SCOPE))
+            		.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_PROTOTYPE);
+            assertThat(reference2.getProperty(Constants.SERVICE_SCOPE))
+            		.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_PROTOTYPE);
 
             ServiceObjects<TestService> objects1 = context.getServiceObjects(reference1);
-            assertNotNull(objects1);
-            assertEquals(reference1, objects1.getServiceReference());
+            assertThat(objects1).isNotNull();
+            assertThat(objects1.getServiceReference()).isEqualTo(reference1);
             ServiceObjects<TestService> objects2 = tb1Context.getServiceObjects(reference2);
-            assertNotNull(objects2);
-            assertEquals(reference2, objects2.getServiceReference());
+            assertThat(objects2).isNotNull();
+            assertThat(objects2.getServiceReference()).isEqualTo(reference2);
 
-            assertEquals(0, factory.services.size());
+			assertThat(factory.services).isEmpty();
 
             TestService service1 = context.getService(reference1);
-            assertNotNull(service1);
-            assertEquals(1, factory.services.size());
-            assertEquals(1, factory.services.get(self).size());
-            assertTrue(factory.services.get(self).contains(service1));
-            assertEquals(self.getBundleId(), service1.getId());
+            assertThat(service1).isNotNull();
+			assertThat(factory.services).hasSize(1);
+			assertThat(factory.services.get(self)).hasSize(1);
+			assertThat(factory.services.get(self)).contains(service1);
+            assertThat(service1.getId()).isEqualTo(self.getBundleId());
 
             TestService service2 = tb1Context.getService(reference2);
-            assertNotNull(service2);
-            assertEquals(2, factory.services.size());
-            assertEquals(1, factory.services.get(tb1).size());
-            assertTrue(factory.services.get(tb1).contains(service2));
-            assertEquals(tb1.getBundleId(), service2.getId());
+            assertThat(service2).isNotNull();
+            assertThat(factory.services.size()).isEqualTo(2);
+            assertThat(factory.services.get(tb1).size()).isEqualTo(1);
+            assertThat(factory.services.get(tb1).contains(service2)).isTrue();
+            assertThat(service2.getId()).isEqualTo(tb1.getBundleId());
 
-            assertNotSame(service1, service2);
+            assertThat(service2).isNotSameAs(service1);
 
-            assertSame("service object not the same", service1, context.getService(reference1));
-            assertEquals(2, factory.services.size());
-            assertEquals(1, factory.services.get(self).size());
+            assertThat(context.getService(reference1))
+            		.as("service object not the same")
+				.isSameAs(service1);
+			assertThat(factory.services).hasSize(2);
+			assertThat(factory.services.get(self)).hasSize(1);
             TestService service11 = objects1.getService();
-            assertNotSame("service object the same", service1, service11);
-            assertEquals(2, factory.services.size());
-            assertEquals(2, factory.services.get(self).size());
+            assertThat(service11)
+            		.as("service object the same")
+				.isNotSameAs(service1);
+			assertThat(factory.services).hasSize(2);
+			assertThat(factory.services.get(self)).hasSize(2);
             TestService service12 = objects1.getService();
-            assertNotSame("service object the same", service1, service12);
-            assertNotSame("service object the same", service11, service12);
-            assertEquals(2, factory.services.size());
-            assertEquals(3, factory.services.get(self).size());
+            assertThat(service12)
+            		.as("service object the same")
+				.isNotSameAs(service1);
+            assertThat(service12)
+            		.as("service object the same")
+				.isNotSameAs(service11);
+			assertThat(factory.services).hasSize(2);
+			assertThat(factory.services.get(self)).hasSize(3);
 
-            assertSame("service object not the same", service2, tb1Context.getService(reference2));
-            assertEquals(2, factory.services.size());
-            assertEquals(1, factory.services.get(tb1).size());
+            assertThat(tb1Context.getService(reference2))
+            		.as("service object not the same")
+				.isSameAs(service2);
+			assertThat(factory.services).hasSize(2);
+			assertThat(factory.services.get(tb1)).hasSize(1);
             TestService service21 = objects2.getService();
-            assertNotSame("service object the same", service2, service21);
-            assertEquals(2, factory.services.size());
-            assertEquals(2, factory.services.get(tb1).size());
+            assertThat(service21)
+            		.as("service object the same")
+				.isNotSameAs(service2);
+			assertThat(factory.services).hasSize(2);
+			assertThat(factory.services.get(tb1)).hasSize(2);
             TestService service22 = objects2.getService();
-            assertNotSame("service object the same", service2, service22);
-            assertNotSame("service object the same", service21, service22);
-            assertEquals(2, factory.services.size());
-            assertEquals(3, factory.services.get(tb1).size());
+            assertThat(service22)
+            		.as("service object the same")
+				.isNotSameAs(service2);
+            assertThat(service22)
+            		.as("service object the same")
+				.isNotSameAs(service21);
+			assertThat(factory.services).hasSize(2);
+			assertThat(factory.services.get(tb1)).hasSize(3);
 
-            try {
-                objects1.ungetService(service1);
-                fail("expected exception");
-            } catch (IllegalArgumentException e) {
-                // expected
-            }
-            try {
-                objects2.ungetService(service2);
-                fail("expected exception");
-            } catch (IllegalArgumentException e) {
-                // expected
-            }
+            assertThatExceptionOfType(IllegalArgumentException.class).as("expected exception")
+            		.isThrownBy(() -> objects1.ungetService(service1));
+            assertThatExceptionOfType(IllegalArgumentException.class).as("expected exception")
+            		.isThrownBy(() -> objects2.ungetService(service2));
 
-            assertTrue("service use count wrong", context.ungetService(reference1));
-            assertEquals(2, factory.services.size());
-            assertEquals(3, factory.services.get(self).size());
-            assertTrue("service use count wrong", context.ungetService(reference1));
-            assertEquals(2, factory.services.size());
-            assertEquals(2, factory.services.get(self).size());
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(2);
+			assertThat(factory.services.get(self)).hasSize(3);
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(2);
+			assertThat(factory.services.get(self)).hasSize(2);
 
-            assertFalse("service use count wrong", context.ungetService(reference1));
-            assertEquals(2, factory.services.size());
-            assertEquals(2, factory.services.get(self).size());
-            assertFalse("service use count wrong", context.ungetService(reference1));
-            assertEquals(2, factory.services.size());
-            assertEquals(2, factory.services.get(self).size());
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isFalse();
+			assertThat(factory.services).hasSize(2);
+			assertThat(factory.services.get(self)).hasSize(2);
+            assertThat(context.ungetService(reference1))
+            		.as("service use count wrong")
+				.isFalse();
+			assertThat(factory.services).hasSize(2);
+			assertThat(factory.services.get(self)).hasSize(2);
 
             objects1.ungetService(service11);
-            assertEquals(2, factory.services.size());
-            assertEquals(1, factory.services.get(self).size());
-            try {
-                objects1.ungetService(service11);
-                fail("expected exception");
-            } catch (IllegalArgumentException e) {
-                // expected
-            }
+			assertThat(factory.services).hasSize(2);
+			assertThat(factory.services.get(self)).hasSize(1);
+            assertThatExceptionOfType(IllegalArgumentException.class).as("expected exception")
+            		.isThrownBy(() -> objects1.ungetService(service11));
             objects1.ungetService(service12);
-            assertEquals(1, factory.services.size());
-            assertNull(factory.services.get(self));
-            try {
-                objects1.ungetService(service12);
-                fail("expected exception");
-            } catch (IllegalArgumentException e) {
-                // expected
-            }
+			assertThat(factory.services).hasSize(1);
+            assertThat(factory.services.get(self)).isNull();
+            assertThatExceptionOfType(IllegalArgumentException.class).as("expected exception")
+            		.isThrownBy(() -> objects1.ungetService(service12));
 
-            assertTrue("service use count wrong", tb1Context.ungetService(reference2));
-            assertEquals(1, factory.services.size());
-            assertEquals(3, factory.services.get(tb1).size());
-            assertTrue("service use count wrong", tb1Context.ungetService(reference2));
-            assertEquals(1, factory.services.size());
-            assertEquals(2, factory.services.get(tb1).size());
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(1);
+			assertThat(factory.services.get(tb1)).hasSize(3);
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isTrue();
+			assertThat(factory.services).hasSize(1);
+			assertThat(factory.services.get(tb1)).hasSize(2);
 
-            assertFalse("service use count wrong", tb1Context.ungetService(reference2));
-            assertEquals(1, factory.services.size());
-            assertEquals(2, factory.services.get(tb1).size());
-            assertFalse("service use count wrong", tb1Context.ungetService(reference2));
-            assertEquals(1, factory.services.size());
-            assertEquals(2, factory.services.get(tb1).size());
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isFalse();
+			assertThat(factory.services).hasSize(1);
+			assertThat(factory.services.get(tb1)).hasSize(2);
+            assertThat(tb1Context.ungetService(reference2))
+            		.as("service use count wrong")
+				.isFalse();
+			assertThat(factory.services).hasSize(1);
+			assertThat(factory.services.get(tb1)).hasSize(2);
 
             objects2.ungetService(service21);
-            assertEquals(1, factory.services.size());
-            assertEquals(1, factory.services.get(tb1).size());
-            try {
-                objects2.ungetService(service21);
-                fail("expected exception");
-            } catch (IllegalArgumentException e) {
-                // expected
-            }
+			assertThat(factory.services).hasSize(1);
+			assertThat(factory.services.get(tb1)).hasSize(1);
+            assertThatExceptionOfType(IllegalArgumentException.class).as("expected exception")
+            		.isThrownBy(() -> objects2.ungetService(service21));
             objects2.ungetService(service22);
-            assertEquals(0, factory.services.size());
-            try {
-                objects2.ungetService(service22);
-                fail("expected exception");
-            } catch (IllegalArgumentException e) {
-                // expected
-            }
+			assertThat(factory.services).isEmpty();
+            assertThatExceptionOfType(IllegalArgumentException.class).as("expected exception")
+            		.isThrownBy(() -> objects2.ungetService(service22));
 
             registration.unregister();
-            assertNull(tb1Context.getServiceObjects(reference1));
+            assertThat(tb1Context.getServiceObjects(reference1)).isNull();
             tb1.stop();
-            try {
-                tb1Context.getServiceObjects(reference1);
-                fail("expected exception");
-            } catch (IllegalStateException e) {
-                // expected
-            }
+            assertThatExceptionOfType(IllegalStateException.class).as("expected exception")
+            		.isThrownBy(() -> tb1Context.getServiceObjects(reference1));
 
         } finally {
             tb1.uninstall();
         }
     }
 
+	@Test
 	public void testPrototypeConsumerWithPrototypeScopeOneService()
 			throws Exception {
-		Bundle tb1 = install("serviceregistry.tb1.jar");
-		assertNotNull(tb1);
+		Bundle tb1 = bundleInstaller.installBundle("serviceregistry.tb1.jar", false);
+		assertThat(tb1).isNotNull();
 		try {
 			tb1.start();
-			assertTrue((tb1.getState() & Bundle.ACTIVE) != 0);
+			assertThat(tb1).isInState(Bundle.ACTIVE);
 			BundleContext tb1Context = tb1.getBundleContext();
-			assertNotNull(tb1Context);
+			assertThat(tb1Context).isNotNull();
 
 			Hashtable<String,String> properties = new Hashtable<String,String>();
 			properties.put("test", "yes");
 			TestPrototypeServiceFactoryOneObject factory = new TestPrototypeServiceFactoryOneObject();
 			ServiceRegistration<TestService> registration = tb1Context
 					.registerService(TestService.class, factory, properties);
-			assertNotNull(registration);
+			assertThat(registration).isNotNull();
 			ServiceReference<TestService> reference1 = context
 					.getServiceReference(TestService.class);
-			assertNotNull(reference1);
+			assertThat(reference1).isNotNull();
 			ServiceReference<TestService> reference2 = tb1Context
 					.getServiceReference(TestService.class);
-			assertNotNull(reference2);
+			assertThat(reference2).isNotNull();
 
 			ServiceObjects<TestService> objects1 = context
 					.getServiceObjects(reference1);
-			assertNotNull(objects1);
-			assertEquals(reference1, objects1.getServiceReference());
+			assertThat(objects1).isNotNull();
+			assertThat(objects1.getServiceReference()).isEqualTo(reference1);
 			ServiceObjects<TestService> objects2 = tb1Context
 					.getServiceObjects(reference2);
-			assertNotNull(objects2);
-			assertEquals(reference2, objects2.getServiceReference());
+			assertThat(objects2).isNotNull();
+			assertThat(objects2.getServiceReference()).isEqualTo(reference2);
 
-			assertEquals(0, factory.services.size());
+			assertThat(factory.services).isEmpty();
 
 			TestService service1 = objects1.getService();
-			assertNotNull(service1);
-			assertEquals(1, factory.services.size());
-			assertEquals(factory.services.get(self), service1);
-			assertEquals(self.getBundleId(), service1.getId());
+			assertThat(service1).isNotNull();
+			assertThat(factory.services).hasSize(1);
+			assertThat(service1).isEqualTo(factory.services.get(self));
+			assertThat(service1.getId()).isEqualTo(self.getBundleId());
 
 			TestService service2 = objects2.getService();
-			assertNotNull(service2);
-			assertEquals(2, factory.services.size());
-			assertEquals(factory.services.get(tb1), service2);
-			assertEquals(tb1.getBundleId(), service2.getId());
+			assertThat(service2).isNotNull();
+			assertThat(factory.services).hasSize(2);
+			assertThat(service2).isEqualTo(factory.services.get(tb1));
+			assertThat(service2.getId()).isEqualTo(tb1.getBundleId());
 
-			assertNotSame(service1, service2);
-			assertEquals(1, service1.getCount().get());
-			assertEquals(1, service2.getCount().get());
+			assertThat(service2).isNotSameAs(service1);
+			assertThat(service1.getCount().get()).isOne();
+			assertThat(service2.getCount().get()).isOne();
 
 			TestService service11 = objects1.getService();
-			assertSame("service object not same", service1, service11);
-			assertEquals(2, service1.getCount().get());
+			assertThat(service11)
+					.as("service object not same")
+				.isSameAs(service1);
+			assertThat(service1.getCount().get()).isEqualTo(2);
 			TestService service12 = objects1.getService();
-			assertSame("service object not same", service1, service12);
-			assertEquals(3, service1.getCount().get());
-			assertSame("service object not same", service11, service12);
+			assertThat(service12)
+					.as("service object not same")
+				.isSameAs(service1);
+			assertThat(service1.getCount().get()).isEqualTo(3);
+			assertThat(service12)
+					.as("service object not same")
+				.isSameAs(service11);
 
 			TestService service21 = objects2.getService();
-			assertSame("service object not same", service2, service21);
-			assertEquals(2, service2.getCount().get());
+			assertThat(service21)
+					.as("service object not same")
+				.isSameAs(service2);
+			assertThat(service2.getCount().get()).isEqualTo(2);
 			TestService service22 = objects2.getService();
-			assertSame("service object not same", service2, service22);
-			assertEquals(3, service2.getCount().get());
-			assertSame("service object not same", service21, service22);
-
+			assertThat(service22)
+					.as("service object not same")
+				.isSameAs(service2);
+			assertThat(service2.getCount().get()).isEqualTo(3);
+			assertThat(service22)
+					.as("service object not same")
+				.isSameAs(service21);
 
 			objects1.ungetService(service1);
-			assertEquals(factory.services.get(self), service1);
-			assertEquals(3, service1.getCount().get());
+			assertThat(service1).isEqualTo(factory.services.get(self));
+			assertThat(service1.getCount().get()).isEqualTo(3);
 			objects1.ungetService(service1);
-			assertEquals(factory.services.get(self), service1);
-			assertEquals(3, service1.getCount().get());
+			assertThat(service1).isEqualTo(factory.services.get(self));
+			assertThat(service1.getCount().get()).isEqualTo(3);
 			objects1.ungetService(service1);
-			assertNull(factory.services.get(self));
-			try {
-				objects1.ungetService(service1);
-				fail("expected exception");
-			} catch (IllegalArgumentException e) {
-				// expected
-			}
+			assertThat(factory.services.get(self)).isNull();
+			assertThatExceptionOfType(IllegalArgumentException.class).as("expected exception")
+					.isThrownBy(() -> objects1.ungetService(service1));
 
 			objects2.ungetService(service2);
-			assertEquals(factory.services.get(tb1), service2);
-			assertEquals(3, service2.getCount().get());
+			assertThat(service2).isEqualTo(factory.services.get(tb1));
+			assertThat(service2.getCount().get()).isEqualTo(3);
 			objects2.ungetService(service2);
-			assertEquals(factory.services.get(tb1), service2);
-			assertEquals(3, service2.getCount().get());
+			assertThat(service2).isEqualTo(factory.services.get(tb1));
+			assertThat(service2.getCount().get()).isEqualTo(3);
 			objects2.ungetService(service2);
-			assertNull(factory.services.get(tb1));
-			try {
-				objects2.ungetService(service2);
-				fail("expected exception");
-			} catch (IllegalArgumentException e) {
-				// expected
-			}
+			assertThat(factory.services.get(tb1)).isNull();
+			assertThatExceptionOfType(IllegalArgumentException.class).as("expected exception")
+					.isThrownBy(() -> objects2.ungetService(service2));
 
 			registration.unregister();
-			assertNull(tb1Context.getServiceObjects(reference1));
+			assertThat(tb1Context.getServiceObjects(reference1)).isNull();
 			tb1.stop();
-			try {
-				tb1Context.getServiceObjects(reference1);
-				fail("expected exception");
-			} catch (IllegalStateException e) {
-				// expected
-			}
+			assertThatExceptionOfType(IllegalStateException.class).as("expected exception")
+					.isThrownBy(() -> tb1Context.getServiceObjects(reference1));
 
 		} finally {
 			tb1.uninstall();
 		}
 	}
 
-    public void testPrototypeScopeCleanup() throws Exception {
-        Bundle tb1 = install("serviceregistry.tb1.jar");
-        assertNotNull(tb1);
+	@Test
+	public void testPrototypeScopeCleanup() throws Exception {
+        Bundle tb1 = bundleInstaller.installBundle("serviceregistry.tb1.jar", false);
+        assertThat(tb1).isNotNull();
         try {
             tb1.start();
-            assertTrue((tb1.getState() & Bundle.ACTIVE) != 0);
+			assertThat(tb1).isInState(Bundle.ACTIVE);
             BundleContext tb1Context = tb1.getBundleContext();
-            assertNotNull(tb1Context);
+            assertThat(tb1Context).isNotNull();
 
             Hashtable<String, String> properties = new Hashtable<String, String>();
             properties.put("test", "yes");
             properties.put(Constants.SERVICE_SCOPE, Constants.SCOPE_SINGLETON);
             TestPrototypeServiceFactory factory = new TestPrototypeServiceFactory();
             ServiceRegistration<TestService> registration = context.registerService(TestService.class, factory, properties);
-            assertNotNull(registration);
+            assertThat(registration).isNotNull();
             try {
                 ServiceReference<TestService> reference = tb1Context.getServiceReference(TestService.class);
-                assertNotNull(reference);
+                assertThat(reference).isNotNull();
 
-                assertEquals("service.scope not set correctly", Constants.SCOPE_PROTOTYPE, reference.getProperty(Constants.SERVICE_SCOPE));
+                assertThat(reference.getProperty(Constants.SERVICE_SCOPE))
+                		.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_PROTOTYPE);
 
                 ServiceObjects<TestService> objects = tb1Context.getServiceObjects(reference);
-                assertNotNull(objects);
-                assertEquals(reference, objects.getServiceReference());
+                assertThat(objects).isNotNull();
+                assertThat(objects.getServiceReference()).isEqualTo(reference);
 
-                assertEquals(0, factory.services.size());
+				assertThat(factory.services).isEmpty();
 
                 TestService service1 = tb1Context.getService(reference);
-                assertNotNull(service1);
-                assertEquals(1, factory.services.size());
-                assertEquals(1, factory.services.get(tb1).size());
-                assertTrue(factory.services.get(tb1).contains(service1));
-                assertEquals(tb1.getBundleId(), service1.getId());
+                assertThat(service1).isNotNull();
+				assertThat(factory.services).hasSize(1);
+				assertThat(factory.services.get(tb1)).hasSize(1);
+				assertThat(factory.services.get(tb1)).contains(service1);
+                assertThat(service1.getId()).isEqualTo(tb1.getBundleId());
 
                 TestService service2 = objects.getService();
-                assertNotSame("service object the same", service1, service2);
-                assertEquals(1, factory.services.size());
-                assertEquals(2, factory.services.get(tb1).size());
-                assertTrue(factory.services.get(tb1).contains(service2));
+                assertThat(service2)
+                		.as("service object the same")
+				.isNotSameAs(service1);
+                assertThat(factory.services.size()).isEqualTo(1);
+                assertThat(factory.services.get(tb1).size()).isEqualTo(2);
+                assertThat(factory.services.get(tb1).contains(service2)).isTrue();
 
                 TestService service3 = objects.getService();
-                assertNotSame("service object the same", service2, service3);
-                assertEquals(1, factory.services.size());
-                assertEquals(3, factory.services.get(tb1).size());
-                assertTrue(factory.services.get(tb1).contains(service3));
+                assertThat(service3)
+                		.as("service object the same")
+				.isNotSameAs(service2);
+				assertThat(factory.services).hasSize(1);
+				assertThat(factory.services.get(tb1)).hasSize(3);
+				assertThat(factory.services.get(tb1)).contains(service3);
 
                 tb1.stop();
-                assertEquals(0, factory.services.size());
-                assertEquals(reference, objects.getServiceReference());
+				assertThat(factory.services).isEmpty();
+                assertThat(objects.getServiceReference()).isEqualTo(reference);
             } finally {
                 registration.unregister();
             }
@@ -851,48 +1071,55 @@ public class ServiceScopesTests extends OSGiTestCase {
         }
     }
 
+	@Test
 	public void testPrototypeScopeCleanupOnUnregister() throws Exception {
-		Bundle tb1 = install("serviceregistry.tb1.jar");
-		assertNotNull(tb1);
+		Bundle tb1 = bundleInstaller.installBundle("serviceregistry.tb1.jar", false);
+		assertThat(tb1).isNotNull();
 		try {
 			tb1.start();
-			assertTrue((tb1.getState() & Bundle.ACTIVE) != 0);
+			assertThat(tb1).isInState(Bundle.ACTIVE);
 			BundleContext tb1Context = tb1.getBundleContext();
-			assertNotNull(tb1Context);
+			assertThat(tb1Context).isNotNull();
 
 			Hashtable<String, String> properties = new Hashtable<String, String>();
 			properties.put("test", "yes");
 			TestPrototypeServiceFactory factory = new TestPrototypeServiceFactory();
 			ServiceRegistration<TestService> registration = context.registerService(TestService.class, factory, properties);
-			assertNotNull(registration);
+			assertThat(registration).isNotNull();
 			try {
 				ServiceReference<TestService> reference = tb1Context.getServiceReference(TestService.class);
-				assertNotNull(reference);
+				assertThat(reference).isNotNull();
 
-				assertEquals("service.scope not set correctly", Constants.SCOPE_PROTOTYPE, reference.getProperty(Constants.SERVICE_SCOPE));
+				assertThat(reference.getProperty(Constants.SERVICE_SCOPE))
+						.as("service.scope not set correctly")
+				.isEqualTo(Constants.SCOPE_PROTOTYPE);
 
 				ServiceObjects<TestService> objects = tb1Context.getServiceObjects(reference);
-				assertNotNull(objects);
-				assertEquals(reference, objects.getServiceReference());
+				assertThat(objects).isNotNull();
+				assertThat(objects.getServiceReference()).isEqualTo(reference);
 
-				assertEquals(0, factory.services.size());
+				assertThat(factory.services).isEmpty();
 
 				TestService service1 = tb1Context.getService(reference);
-				assertNotNull(service1);
+				assertThat(service1).isNotNull();
 
 				TestService service2 = objects.getService();
-				assertNotSame("service object the same", service1, service2);
+				assertThat(service2)
+						.as("service object the same")
+				.isNotSameAs(service1);
 
 				TestService service3 = objects.getService();
-				assertNotSame("service object the same", service2, service3);
+				assertThat(service3)
+						.as("service object the same")
+				.isNotSameAs(service2);
 
-				assertEquals(1, factory.services.size());
-				assertEquals(3, factory.services.get(tb1).size());
+				assertThat(factory.services).hasSize(1);
+				assertThat(factory.services.get(tb1)).hasSize(3);
 			} finally {
 				registration.unregister();
 			}
 			// test clean up on unregister now;
-			assertEquals(0, factory.services.size());
+			assertThat(factory.services).isEmpty();
 		} finally {
 			tb1.uninstall();
 		}
@@ -931,7 +1158,7 @@ public class ServiceScopesTests extends OSGiTestCase {
 		public TestService getService(Bundle bundle,
 				ServiceRegistration<TestService> registration) {
             TestService service = new TestServiceImpl(bundle.getBundleId());
-            assertNull(services.get(bundle));
+            assertThat(services.get(bundle)).isNull();
             services.put(bundle, service);
             return service;
         }
@@ -940,8 +1167,8 @@ public class ServiceScopesTests extends OSGiTestCase {
 		public void ungetService(Bundle bundle,
 				ServiceRegistration<TestService> registration,
 				TestService service) {
-            assertEquals(services.get(bundle), service);
-            assertEquals(bundle.getBundleId(), service.getId());
+            assertThat(service).isEqualTo(services.get(bundle));
+            assertThat(service.getId()).isEqualTo(bundle.getBundleId());
             services.remove(bundle);
         }
     }
@@ -967,9 +1194,9 @@ public class ServiceScopesTests extends OSGiTestCase {
 				ServiceRegistration<TestService> registration,
 				TestService service) {
             List<TestService> bundleServices = services.get(bundle);
-            assertNotNull(bundleServices);
-            assertTrue(bundleServices.contains(service));
-            assertEquals(bundle.getBundleId(), service.getId());
+            assertThat(bundleServices).isNotNull();
+            assertThat(bundleServices.contains(service)).isTrue();
+            assertThat(service.getId()).isEqualTo(bundle.getBundleId());
             bundleServices.remove(service);
             if (bundleServices.isEmpty()) {
                 services.remove(bundle);
@@ -1002,9 +1229,9 @@ public class ServiceScopesTests extends OSGiTestCase {
 				ServiceRegistration<TestService> registration,
 				TestService service) {
 			TestService bundleService = services.get(bundle);
-			assertNotNull(bundleService);
-			assertSame(bundleService, service);
-			assertEquals(bundle.getBundleId(), service.getId());
+			assertThat(bundleService).isNotNull();
+			assertThat(service).isSameAs(bundleService);
+			assertThat(service.getId()).isEqualTo(bundle.getBundleId());
 			services.remove(bundle);
 		}
 	}

@@ -18,6 +18,10 @@
 		<tck.keystore>${project.basedir}/../keystore</tck.keystore>
 	</properties>
 
+	<!--
+		Pin JUnit to the versions the launch test cases compile against (the
+		parent POM sets 5.12.2); Surefire runs them with exactly these jars.
+	-->
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -53,17 +57,6 @@
 			<groupId>org.eclipse.platform</groupId>
 			<artifactId>org.eclipse.osgi</artifactId>
 			<version>${equinox.version}</version>
-			<scope>runtime</scope>
-		</dependency>
-		<!--
-			The classic tester used by the launch suites: they start the
-			framework themselves (-runframework none), so the tester lives on
-			the class path instead of being a bundle inside the framework.
-		-->
-		<dependency>
-			<groupId>biz.aQute.bnd</groupId>
-			<artifactId>biz.aQute.junit</artifactId>
-			<version>${bnd.version}</version>
 			<scope>runtime</scope>
 		</dependency>
 		<!--
@@ -115,30 +108,6 @@
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.junit.vintage</groupId>
-			<artifactId>junit-vintage-engine</artifactId>
-			<version>${junit-jupiter.version}</version>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.hamcrest</groupId>
-			<artifactId>hamcrest</artifactId>
-			<version>${hamcrest.version}</version>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.awaitility</groupId>
-			<artifactId>awaitility</artifactId>
-			<version>${awaitility.version}</version>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.servicemix.bundles</groupId>
-			<artifactId>org.apache.servicemix.bundles.junit</artifactId>
-			<version>${servicemix-junit.version}</version>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.opentest4j</groupId>
 			<artifactId>opentest4j</artifactId>
 			<version>${opentest4j.version}</version>
@@ -163,48 +132,44 @@
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.osgi</groupId>
-			<artifactId>org.osgi.test.junit4</artifactId>
-			<version>${osgi-test.version}</version>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-core</artifactId>
-			<version>${mockito.version}</version>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
 			<groupId>net.bytebuddy</groupId>
 			<artifactId>byte-buddy</artifactId>
 			<version>${byte-buddy.version}</version>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>net.bytebuddy</groupId>
-			<artifactId>byte-buddy-agent</artifactId>
-			<version>${byte-buddy.version}</version>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.objenesis</groupId>
-			<artifactId>objenesis</artifactId>
-			<version>${objenesis.version}</version>
 			<scope>runtime</scope>
 		</dependency>
 	</dependencies>
 
 	<build>
 		<plugins>
+			<!--
+				The launch suites do not need a hosting OSGi framework: every test
+				starts its own framework from the class path. They run as plain
+				JUnit 5 tests with Surefire, taken from the test cases jar, with
+				the same system properties the bndrun used to pass.
+			-->
 			<plugin>
-				<groupId>biz.aQute.bnd</groupId>
-				<artifactId>bnd-resolver-maven-plugin</artifactId>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<dependenciesToScan>
+						<dependency>org.osgi.tck:org.osgi.test.cases.framework.launch.secure</dependency>
+					</dependenciesToScan>
+					<!-- LaunchTest builds the class loader of the launched framework
+					     from java.class.path, so the full class path must be there. -->
+					<useManifestOnlyJar>false</useManifestOnlyJar>
+					<useModulePath>false</useModulePath>
+					<!-- The suites install a security manager in the launched frameworks; the
+					     policy grants the forked test VM everything (as the secure framework
+					     run does), otherwise Surefire may not even exit the fork. -->
+					<argLine>-Djava.security.manager=allow -Djava.security.policy=${project.basedir}/all.policy</argLine>
+					<systemPropertyVariables>
+						<org.osgi.test.cases.framework.launch.secure.storageroot>${project.build.directory}/org.osgi.test.cases.framework.launch.secure.testStorageRoot</org.osgi.test.cases.framework.launch.secure.storageroot>
+						<org.osgi.test.cases.framework.launch.secure.trust.repositories>${tck.keystore}</org.osgi.test.cases.framework.launch.secure.trust.repositories>
+					</systemPropertyVariables>
+					<reportsDirectory>${project.build.directory}/test-reports/tck</reportsDirectory>
+				</configuration>
 			</plugin>
-			<plugin>
-				<groupId>biz.aQute.bnd</groupId>
-				<artifactId>bnd-testing-maven-plugin</artifactId>
-			</plugin>
-			<!-- Renders the bnd-testing JUnit XML into a readable HTML report:
+			<!-- Renders the JUnit XML into a readable HTML report:
 			     mvn surefire-report:report-only -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

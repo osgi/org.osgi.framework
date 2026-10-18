@@ -18,23 +18,33 @@
 
 package org.osgi.test.cases.framework.junit.context;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-import org.osgi.test.support.OSGiTestCase;
+import org.osgi.test.common.annotation.InjectBundleContext;
 
-public class GetBundleByIdTests extends OSGiTestCase {
+public class GetBundleByIdTests {
+
+	@InjectBundleContext
+	BundleContext bundleContext;
+	@Test
 	public void testId1() throws Exception {
-		BundleContext context = getContext();
+		BundleContext context = bundleContext;
 
 		Bundle bundle = context.getBundle();
-		assertSame("wrong bundle", bundle,
-				context.getBundle(bundle.getBundleId()));
+		assertThat(context.getBundle(bundle.getBundleId()))
+				.as("wrong bundle")
+				.isSameAs(bundle);
 	}
 
+	@Test
 	public void testSystemBundleId1() throws Exception {
-		BundleContext context = getContext();
+		BundleContext context = bundleContext;
 
 		Bundle bundle = context.getBundle(0);
-		assertEquals("wrong bundle", 0, bundle.getBundleId());
+		assertThat(bundle.getBundleId())
+				.as("wrong bundle").isZero();
 	}
 }

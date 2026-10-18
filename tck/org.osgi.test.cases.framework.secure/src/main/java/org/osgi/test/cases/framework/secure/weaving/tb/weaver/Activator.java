@@ -17,6 +17,9 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.secure.weaving.tb.weaver;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.util.Dictionary;
 import java.util.Hashtable;
 
@@ -26,9 +29,6 @@ import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.framework.hooks.weaving.WeavingHook;
 import org.osgi.test.cases.framework.secure.junit.hooks.weaving.export.TestConstants;
-import org.osgi.test.support.OSGiTestCase;
-
-import junit.framework.TestCase;
 
 public class Activator implements BundleActivator {
 	public void start(BundleContext context) throws Exception {
@@ -43,9 +43,9 @@ public class Activator implements BundleActivator {
 			catch (Throwable t) {
 				if (!TestConstants.isRethrowingSecurityException() &&
 						!TestConstants.isInvalidSetBytes())
-					OSGiTestCase.fail("Class should have loaded", t);
+					fail("Class should have loaded: " + t.getMessage(), t);
 			}
-			TestCase.assertTrue("Failed to call weaving hook", hook.isCalled());
+			assertTrue(hook.isCalled(), "Failed to call weaving hook");
 			if (hook.getError() != null)
 				throw hook.getError();
 		}

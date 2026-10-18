@@ -18,43 +18,53 @@
 
 package org.osgi.test.cases.framework.junit.dto;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.dto.DTO;
 import org.osgi.framework.Version;
 
-import junit.framework.TestCase;
-
-public class DTOTestCase extends TestCase {
+public class DTOTestCase {
 	private TestDTO dto;
 
-	@Override
-	protected void setUp() {
+	@BeforeEach
+	public void setUp() {
 		dto = new TestDTO();
 		dto.stringField = "stringValue";
 		dto.versionField = Version.valueOf("1.2.3.qual");
 		dto.enumField = TestEnum.TWO;
 	}
 
+	@Test
 	public void testDTOtoString() throws Exception {
         String result = dto.toString();
 		System.out.println(result);
-		assertTrue("toString does not include stringField name",
-				result.indexOf("stringField") >= 0);
-		assertTrue("toString does not include stringField value",
-				result.indexOf("\"stringValue\"") >= 0);
-		assertTrue("toString does not include versionField name",
-				result.indexOf("versionField") >= 0);
-		assertTrue("toString does not include versionField value",
-				result.indexOf("\"1.2.3.qual\"") >= 0);
-		assertTrue("toString does not include enumField name",
-				result.indexOf("enumField") >= 0);
-		assertTrue("toString does not include enumField value",
-				result.indexOf("\"TWO\"") >= 0);
+		assertThat(result.indexOf("stringField") >= 0)
+				.as("toString does not include stringField name")
+				.isTrue();
+		assertThat(result.indexOf("\"stringValue\"") >= 0)
+				.as("toString does not include stringField value")
+				.isTrue();
+		assertThat(result.indexOf("versionField") >= 0)
+				.as("toString does not include versionField name")
+				.isTrue();
+		assertThat(result.indexOf("\"1.2.3.qual\"") >= 0)
+				.as("toString does not include versionField value")
+				.isTrue();
+		assertThat(result.indexOf("enumField") >= 0)
+				.as("toString does not include enumField name")
+				.isTrue();
+		assertThat(result.indexOf("\"TWO\"") >= 0)
+				.as("toString does not include enumField value")
+				.isTrue();
 	}
 
+	@Test
 	public void testDTOEnum() throws Exception {
 		for (Field field : dto.getClass().getFields()) {
 			if (Modifier.isStatic(field.getModifiers())) {
@@ -67,10 +77,11 @@ public class DTOTestCase extends TestCase {
 			System.out.printf("%s is an enum of type %s\n", field.getName(), c);
 			Object o = field.get(dto);
 			Method m = c.getMethod("valueOf", String.class);
-			assertSame(o, m.invoke(null, ((Enum< ? >) o).name()));
+			assertThat(m.invoke(null, ((Enum< ? >) o).name())).isSameAs(o);
 		}
     }
 
+	@Test
 	public void testDTOVersion() throws Exception {
 		for (Field field : dto.getClass().getFields()) {
 			if (Modifier.isStatic(field.getModifiers())) {
@@ -84,7 +95,7 @@ public class DTOTestCase extends TestCase {
 					c);
 			Object o = field.get(dto);
 			Method m = c.getMethod("valueOf", String.class);
-			assertEquals(o, m.invoke(null, o.toString()));
+			assertThat(m.invoke(null, o.toString())).isEqualTo(o);
 		}
 	}
 

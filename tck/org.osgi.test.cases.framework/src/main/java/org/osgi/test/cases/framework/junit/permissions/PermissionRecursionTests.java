@@ -18,6 +18,13 @@
 
 package org.osgi.test.cases.framework.junit.permissions;
 
+import static org.osgi.test.cases.framework.junit.permissions.PermissionMocks.newMockBundle;
+import static org.osgi.test.cases.framework.junit.permissions.PermissionMocks.newMockServiceReference;
+import static org.assertj.core.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.AdditionalAnswers.delegatesTo;
+import static org.osgi.test.assertj.permission.PermissionAssertions.assertThat;
+
 import java.security.AccessControlException;
 import java.security.PermissionCollection;
 import java.security.Permissions;
@@ -27,44 +34,45 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.AdminPermission;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.CapabilityPermission;
 import org.osgi.framework.PackagePermission;
 import org.osgi.framework.ServicePermission;
 import org.osgi.framework.ServiceReference;
-import org.osgi.test.support.PermissionTestCase;
-import org.osgi.test.support.mock.MockFactory;
 
-public class PermissionRecursionTests extends PermissionTestCase {
+public class PermissionRecursionTests {
 
+	@Test
 	public void testAdminPermission() {
 		AdminPermission p1 = new AdminPermission("(location=test.*)", "*");
 		PermissionCollection pc = new Permissions();
 
-		checkEnumeration(pc.elements(), true);
+		assertThat(pc).hasNoElements();
 
-		assertAddPermission(pc, p1);
+		assertThat(pc).accepts(p1);
 
 		Bundle testBundle1 = newMockBundle(1, "test.bsn", "test.location", pc);
 		Bundle testBundle2 = newMockBundle(2, "test.bsn", "test2.location", pc);
-		assertImplies(pc, new AdminPermission(testBundle1, "resolve"));
-		assertImplies(pc, new AdminPermission(testBundle1, "class"));
-		assertImplies(pc, new AdminPermission(testBundle1, "resource"));
-		assertNotImplies(pc, new AdminPermission(testBundle2, "resolve"));
-		assertNotImplies(pc, new AdminPermission(testBundle2, "class"));
-		assertNotImplies(pc, new AdminPermission(testBundle2, "resource"));
-		assertNotImplies(pc, new AdminPermission("*", "resource"));
+		assertThat(pc).implies(new AdminPermission(testBundle1, "resolve"));
+		assertThat(pc).implies(new AdminPermission(testBundle1, "class"));
+		assertThat(pc).implies(new AdminPermission(testBundle1, "resource"));
+		assertThat(pc).doesNotImply(new AdminPermission(testBundle2, "resolve"));
+		assertThat(pc).doesNotImply(new AdminPermission(testBundle2, "class"));
+		assertThat(pc).doesNotImply(new AdminPermission(testBundle2, "resource"));
+		assertThat(pc).doesNotImply(new AdminPermission("*", "resource"));
 	}
 
+	@Test
 	public void testServicePermission() {
 		ServicePermission p1 = new ServicePermission("(location=test.*)", "get");
 		PermissionCollection pc = new Permissions();
 
-		checkEnumeration(pc.elements(), true);
+		assertThat(pc).hasNoElements();
 
-		assertAddPermission(pc, p1);
-		assertAddPermission(pc, new AdminPermission("(location=*.location)",
+		assertThat(pc).accepts(p1);
+		assertThat(pc).accepts(new AdminPermission("(location=*.location)",
 				"*"));
 
 		Bundle b1 = newMockBundle(1, "test.bsn", "test.location", pc);
@@ -78,55 +86,57 @@ public class PermissionRecursionTests extends PermissionTestCase {
 		m2.put("objectClass", new String[] {"com.bar.Service2"});
 		ServiceReference< ? > r2 = newMockServiceReference(b2, m2);
 
-		assertImplies(pc, new ServicePermission(r1, "get"));
-		assertNotImplies(pc, new ServicePermission(r2, "get"));
-		assertNotImplies(pc, new ServicePermission("*", "get"));
+		assertThat(pc).implies(new ServicePermission(r1, "get"));
+		assertThat(pc).doesNotImply(new ServicePermission(r2, "get"));
+		assertThat(pc).doesNotImply(new ServicePermission("*", "get"));
 	}
 
+	@Test
 	public void testPackagePermission() {
 		PackagePermission p1 = new PackagePermission("(location=test.*)",
 				"import");
 		PermissionCollection pc = new Permissions();
 
-		checkEnumeration(pc.elements(), true);
+		assertThat(pc).hasNoElements();
 
-		assertAddPermission(pc, p1);
-		assertAddPermission(pc, new AdminPermission("(location=*.location)",
+		assertThat(pc).accepts(p1);
+		assertThat(pc).accepts(new AdminPermission("(location=*.location)",
 				"*"));
 
 		Bundle b1 = newMockBundle(1, "test.bsn", "test.location", pc);
 		Bundle b2 = newMockBundle(2, "test.bsn", "test2.location", pc);
 
-		assertImplies(pc, new PackagePermission("com.foo", b1, "import"));
-		assertNotImplies(pc, new PackagePermission("com.bar", b2, "import"));
-		assertNotImplies(pc, new PackagePermission("*", "import"));
+		assertThat(pc).implies(new PackagePermission("com.foo", b1, "import"));
+		assertThat(pc).doesNotImply(new PackagePermission("com.bar", b2, "import"));
+		assertThat(pc).doesNotImply(new PackagePermission("*", "import"));
 	}
 
+	@Test
 	public void testCapabilityPermission() {
 		CapabilityPermission p1 = new CapabilityPermission("(location=test.*)",
 				"require");
 		PermissionCollection pc = new Permissions();
 
-		checkEnumeration(pc.elements(), true);
+		assertThat(pc).hasNoElements();
 
-		assertAddPermission(pc, p1);
-		assertAddPermission(pc, new AdminPermission("(location=*.location)",
+		assertThat(pc).accepts(p1);
+		assertThat(pc).accepts(new AdminPermission("(location=*.location)",
 				"*"));
 
 		Bundle b1 = newMockBundle(1, "test.bsn", "test.location", pc);
 		Bundle b2 = newMockBundle(2, "test.bsn", "test2.location", pc);
 
-		assertImplies(pc, new CapabilityPermission("com.foo",
+		assertThat(pc).implies(new CapabilityPermission("com.foo",
 				Collections.<String, Object> emptyMap(), b1, "require"));
-		assertNotImplies(pc, new CapabilityPermission("com.bar",
+		assertThat(pc).doesNotImply(new CapabilityPermission("com.bar",
 				Collections.<String, Object> emptyMap(), b2, "require"));
-		assertNotImplies(pc, new CapabilityPermission("*", "require"));
+		assertThat(pc).doesNotImply(new CapabilityPermission("*", "require"));
 	}
 
 	public static Bundle newMockBundle(long id, String name, String location,
 			PermissionCollection pc) {
 		MockBundle mock = new MockBundle(id, name, location, pc);
-		Bundle bundle = MockFactory.newMock(Bundle.class, mock);
+		Bundle bundle = mock(Bundle.class, delegatesTo(mock));
 		// set the Bundle object into the mocked bundle
 		mock.setBundle(bundle);
 		return bundle;

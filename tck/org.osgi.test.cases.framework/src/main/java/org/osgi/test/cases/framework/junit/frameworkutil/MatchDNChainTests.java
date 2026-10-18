@@ -18,15 +18,18 @@
 
 package org.osgi.test.cases.framework.junit.frameworkutil;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.FrameworkUtil;
 
-import junit.framework.TestCase;
+public class MatchDNChainTests {
 
-public class MatchDNChainTests extends TestCase {
-
+	@Test
 	public void testMatch() {
 		String dn1 = "cn=Bugs Bunny, o=ACME, c=US";
 		String dn2 = "ou = Carrots, cn=Daffy Duck, o=ACME, c=US";
@@ -63,7 +66,6 @@ public class MatchDNChainTests extends TestCase {
         assertMatchDNChain(" -", dn3);
         assertMatchDNChain(" -", chain);
 
-
 		assertMatchDNChain("*, c=US", dn1);
 		assertMatchDNChain("*, c=US", dn2);
 		assertNotMatchDNChain("*, c=US", dn3);
@@ -99,6 +101,7 @@ public class MatchDNChainTests extends TestCase {
 		assertNotMatchDNChain("o=ACME, c=US", dn3);
 	}
 
+	@Test
 	public void testEscape() {
 		String dn = "cn=Bugs Bunny, o=ACME, c=US";
 
@@ -111,6 +114,7 @@ public class MatchDNChainTests extends TestCase {
 		assertNotMatchDNChain("*, o=\"AC;ME\", c=US", dn);
 	}
 
+	@Test
 	public void testInvalidPattern() {
 		String dn = "cn=Bugs Bunny, o=ACME, c=US";
 
@@ -133,6 +137,7 @@ public class MatchDNChainTests extends TestCase {
 	@SuppressWarnings({
 			"rawtypes", "unchecked"
 	})
+	@Test
 	public void testInvalidDNChain() {
 		String pattern = "-";
 
@@ -168,17 +173,21 @@ public class MatchDNChainTests extends TestCase {
 	public static void assertMatchDNChain(String pattern,
 			List<String> dnChain) {
 		List<String> copy = new ArrayList<>(dnChain);
-		assertTrue("did not match", FrameworkUtil.matchDistinguishedNameChain(
-				pattern, dnChain));
-		assertEquals(copy, dnChain);
+		assertThat(FrameworkUtil.matchDistinguishedNameChain(
+				pattern, dnChain))
+				.as("did not match")
+				.isTrue();
+		assertThat(dnChain).isEqualTo(copy); // both may be null
 	}
 
 	public static void assertNotMatchDNChain(String pattern,
 			List<String> dnChain) {
 		List<String> copy = new ArrayList<>(dnChain);
-		assertFalse("did match", FrameworkUtil.matchDistinguishedNameChain(
-				pattern, dnChain));
-		assertEquals(copy, dnChain);
+		assertThat(FrameworkUtil.matchDistinguishedNameChain(
+				pattern, dnChain))
+				.as("did match")
+				.isFalse();
+		assertThat(dnChain).isEqualTo(copy); // both may be null
 	}
 
 	public static void assertInvalidMatch(String pattern, String dn) {
@@ -190,13 +199,9 @@ public class MatchDNChainTests extends TestCase {
 	public static void assertInvalidMatch(String pattern,
 			List<String> dnChain) {
 		List<String> copy = dnChain == null ? null : new ArrayList<>(dnChain);
-		try {
-			FrameworkUtil.matchDistinguishedNameChain(pattern, dnChain);
-			fail("invalid pattern or chain");
-		}
-		catch (IllegalArgumentException e) {
-			// expected
-		}
-		assertEquals(copy, dnChain);
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("invalid pattern or chain")
+				.isThrownBy(() -> FrameworkUtil.matchDistinguishedNameChain(pattern, dnChain));
+		assertThat(dnChain).isEqualTo(copy); // both may be null
 	}
 }

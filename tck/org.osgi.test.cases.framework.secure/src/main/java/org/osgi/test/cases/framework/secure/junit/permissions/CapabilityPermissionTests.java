@@ -18,14 +18,22 @@
 
 package org.osgi.test.cases.framework.secure.junit.permissions;
 
-import java.io.IOException;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+import static org.osgi.test.assertj.bundle.BundleAssert.assertThat;
+
 import java.security.AllPermission;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.CapabilityPermission;
 import org.osgi.framework.FrameworkEvent;
@@ -41,9 +49,24 @@ import org.osgi.service.condpermadmin.ConditionalPermissionAdmin;
 import org.osgi.service.condpermadmin.ConditionalPermissionInfo;
 import org.osgi.service.condpermadmin.ConditionalPermissionUpdate;
 import org.osgi.service.permissionadmin.PermissionInfo;
-import org.osgi.test.support.OSGiTestCase;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.install.BundleInstaller;
 
-public class CapabilityPermissionTests extends OSGiTestCase {
+public class CapabilityPermissionTests {
+
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
+
+	private String testName;
+
+	/** The name of the running test method, as TestCase.getName() gave it. */
+	private String getName() {
+		return testName;
+	}
 	private static final PermissionInfo[] allPermissions = new PermissionInfo[] {new PermissionInfo(AllPermission.class.getName(), "*", "*")};
 	private final List<Bundle>								bundles			= new ArrayList<>();
 	private FrameworkWiring frameworkWiring;
@@ -52,26 +75,25 @@ public class CapabilityPermissionTests extends OSGiTestCase {
 	private String CONDITION_PREFIX;
 
 	public Bundle install(String bundle) {
-		Bundle result = null;
-		try {
-			result = super.install(bundle);
-		} catch (BundleException e) {
-			fail("failed to install bundle: " + bundle, e);
-		} catch (IOException e) {
-			fail("failed to install bundle: " + bundle, e);
-		}
+		Bundle result = bundleInstaller.installBundle(bundle, false);
 		if (!bundles.contains(result))
 			bundles.add(result);
 		return result;
 	}
 
-	protected void setUp() throws Exception {
+	@BeforeEach
+	public void setUp(TestInfo testInfo) throws Exception {
+		testName = testInfo.getTestMethod().get().getName();
 		bundles.clear();
-		frameworkWiring = getContext().getBundle(0).adapt(FrameworkWiring.class);
-		condPermAdminRef = getContext().getServiceReference(ConditionalPermissionAdmin.class);
-		assertNotNull("No ConditionalPermisionAdmin service", condPermAdminRef);
-		condPermAdmin = getContext().getService(condPermAdminRef);
-		assertNotNull("No ConditionalPermisionAdmin service", condPermAdmin);
+		frameworkWiring = bundleContext.getBundle(0).adapt(FrameworkWiring.class);
+		condPermAdminRef = bundleContext.getServiceReference(ConditionalPermissionAdmin.class);
+		assertThat(condPermAdminRef)
+				.as("No ConditionalPermisionAdmin service")
+				.isNotNull();
+		condPermAdmin = bundleContext.getService(condPermAdminRef);
+		assertThat(condPermAdmin)
+				.as("No ConditionalPermisionAdmin service")
+				.isNotNull();
 		CONDITION_PREFIX = getName();
 		ConditionalPermissionUpdate update = condPermAdmin.newConditionalPermissionUpdate();
 		ConditionalPermissionInfo info = condPermAdmin.newConditionalPermissionInfo(CONDITION_PREFIX + ".default", null, allPermissions, ConditionalPermissionInfo.ALLOW);
@@ -81,7 +103,8 @@ public class CapabilityPermissionTests extends OSGiTestCase {
 		update.commit();
 	}
 
-	protected void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() throws Exception {
 		for (Iterator<Bundle> iBundles = bundles.iterator(); iBundles
 				.hasNext();)
 			try {
@@ -107,7 +130,7 @@ public class CapabilityPermissionTests extends OSGiTestCase {
 			condPermAdmin = null;
 		}
 		if (condPermAdminRef != null) {
-			getContext().ungetService(condPermAdminRef);
+			bundleContext.ungetService(condPermAdminRef);
 			condPermAdminRef = null;
 		}
 	}
@@ -138,66 +161,74 @@ public class CapabilityPermissionTests extends OSGiTestCase {
 		}
 	}
 
+	@Test
 	public void testImpliedCapabilityPermission() {
 		// install bundle with osgi.ee requirement
 		Bundle requirer = install("resolver.tb2.jar");
 		List<Bundle> bundles = Arrays.asList(requirer);
-		assertTrue(frameworkWiring.resolveBundles(bundles));
+		assertThat(frameworkWiring.resolveBundles(bundles)).isTrue();
 
 		// set no capability permission
 		setPermissions(requirer.getLocation(), new PermissionInfo(ServicePermission.class.getName(), "*", ServicePermission.GET));
 		refreshBundles(bundles);
 		// should still resolve
-		assertTrue(frameworkWiring.resolveBundles(bundles));
+		assertThat(frameworkWiring.resolveBundles(bundles)).isTrue();
 
 		// set to wrong capability
 		setPermissions(requirer.getLocation(), new PermissionInfo(CapabilityPermission.class.getName(), "wrong.namespace", CapabilityPermission.REQUIRE));
 		refreshBundles(bundles);
 		// should still resolve
-		assertTrue(frameworkWiring.resolveBundles(bundles));
+		assertThat(frameworkWiring.resolveBundles(bundles)).isTrue();
 	}
 
+	@Test
 	public void testCapabilityPermission() {
 		Bundle provider = install("resolver.tb1.jar");
 		Bundle requirer = install("resolver.tb5.jar");
 		List<Bundle> testBundles = Arrays.asList(provider, requirer);
 
 		// simple test with all permissions
-		assertTrue(frameworkWiring.resolveBundles(testBundles));
+		assertThat(frameworkWiring.resolveBundles(testBundles)).isTrue();
 
 		// now grant permission to provide
 		setPermissions(provider.getLocation(), new PermissionInfo(CapabilityPermission.class.getName(), "test", CapabilityPermission.PROVIDE));
 		refreshBundles(Arrays.asList(new Bundle[]{provider}));
-		assertTrue(frameworkWiring.resolveBundles(testBundles));
+		assertThat(frameworkWiring.resolveBundles(testBundles)).isTrue();
 
 		// now grant wrong namespace to provide
 		setPermissions(provider.getLocation(), new PermissionInfo(CapabilityPermission.class.getName(), "wrong.namespace", CapabilityPermission.PROVIDE));
 		refreshBundles(Arrays.asList(new Bundle[]{provider}));
-		assertFalse(frameworkWiring.resolveBundles(testBundles));
-		assertEquals("Wrong state for provider", Bundle.RESOLVED, provider.getState());
-		assertEquals("Wrong state for requirer", Bundle.INSTALLED, requirer.getState());
+		assertThat(frameworkWiring.resolveBundles(testBundles)).isFalse();
+		assertThat(provider)
+				.as("Wrong state for provider").isInState(Bundle.RESOLVED);
+		assertThat(requirer)
+				.as("Wrong state for requirer").isInState(Bundle.INSTALLED);
 		// make sure the wiring does not indicate the capability is provided.
 		BundleWiring providerWiring = provider.adapt(BundleWiring.class);
 		List<BundleCapability> capabilities = providerWiring
 				.getCapabilities("test");
-		assertEquals("Wrong number of capabilities", 0, capabilities.size());
+		assertThat(capabilities)
+				.as("Wrong number of capabilities").hasSize(0);
 
 		// now grant permission to provide all
 		setPermissions(provider.getLocation(), new PermissionInfo(CapabilityPermission.class.getName(), "*", CapabilityPermission.PROVIDE));
 		refreshBundles(Arrays.asList(new Bundle[]{provider}));
-		assertTrue(frameworkWiring.resolveBundles(testBundles));
+		assertThat(frameworkWiring.resolveBundles(testBundles)).isTrue();
 
 		// grant permission to require
 		doRequireTest(provider, requirer, "test", true);
 
 		// now grant wrong permission to require
 		doRequireTest(provider, requirer, "wrong.namespace", false);
-		assertEquals("Wrong state for provider", Bundle.RESOLVED, provider.getState());
-		assertEquals("Wrong state for requirer", Bundle.INSTALLED, requirer.getState());
+		assertThat(provider)
+				.as("Wrong state for provider").isInState(Bundle.RESOLVED);
+		assertThat(requirer)
+				.as("Wrong state for requirer").isInState(Bundle.INSTALLED);
 		// make sure the capability is provided.
 		providerWiring = provider.adapt(BundleWiring.class);
 		capabilities = providerWiring.getCapabilities("test");
-		assertEquals("Wrong number of capabilities", 1, capabilities.size());
+		assertThat(capabilities)
+				.as("Wrong number of capabilities").hasSize(1);
 
 		// grant permission to require all
 		doRequireTest(provider, requirer, "*", true);
@@ -247,9 +278,9 @@ public class CapabilityPermissionTests extends OSGiTestCase {
 		setPermissions(requirer.getLocation(), new PermissionInfo(CapabilityPermission.class.getName(), filter, CapabilityPermission.REQUIRE));
 		refreshBundles(Arrays.asList(new Bundle[]{provider}));
 		if (resolveSucceed)
-			assertTrue(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {provider, requirer})));
+			assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {provider, requirer}))).isTrue();
 		else
-			assertFalse(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {provider, requirer})));
+			assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {provider, requirer}))).isFalse();
 	}
 
 	private void setPermissions(String location, PermissionInfo capabilityPermission) {

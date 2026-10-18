@@ -17,25 +17,38 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.junit.classloading;
 
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.fail;
+
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.StringTokenizer;
 import java.util.function.BiFunction;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceFactory;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
-import org.osgi.test.support.compatibility.DefaultTestBundleControl;
-import org.osgi.test.support.sleep.Sleep;
-import org.osgi.test.support.wiring.Wiring;
+import org.osgi.framework.wiring.FrameworkWiring;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.annotation.InjectInstalledBundle;
+import org.osgi.test.common.install.BundleInstaller;
+import org.osgi.test.common.wiring.FrameworkWirings;
 
 /**
  * This class contains tests related with the framework class loading policies.
@@ -43,10 +56,23 @@ import org.osgi.test.support.wiring.Wiring;
  * @author left
  * @author $Id$
  */
-public class ClassLoadingTests extends DefaultTestBundleControl {
+public class ClassLoadingTests {
 
-	protected void tearDown() {
-		Wiring.synchronousRefreshBundles(getContext());
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
+
+	@BeforeEach
+	public void refreshBeforeTest() {
+		// injected bundles are uninstalled after @AfterEach: refresh before the next test
+		FrameworkWirings.refreshBundles(bundleContext);
+	}
+
+	@AfterEach
+	public void tearDown() {
+		FrameworkWirings.refreshBundles(bundleContext);
 	}
 
 	// Service Registry --------------------------
@@ -61,23 +87,15 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec BundleContext.getServiceReference(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testBundleContextGetReference001() throws Exception {
-		Bundle tb1;
-		Bundle tb1a;
-		Bundle tb1b;
-		Bundle tb4a;
-
-		tb1 = installBundle("classloading.tb1.jar");
-		tb1.start();
-		tb1a = installBundle("classloading.tb1a.jar");
-		tb1a.start();
-		tb1b = installBundle("classloading.tb1b.jar");
-		tb1b.start();
-
-		tb4a = getContext().installBundle(
-				getWebServer() + "classloading.tb4a.jar");
+	@Test
+	public void testBundleContextGetReference001(
+			@InjectInstalledBundle(value = "classloading.tb1.jar", start = true) Bundle tb1,
+			@InjectInstalledBundle(value = "classloading.tb1a.jar", start = true) Bundle tb1a,
+			@InjectInstalledBundle(value = "classloading.tb1b.jar", start = true) Bundle tb1b,
+			@InjectInstalledBundle(value = "classloading.tb4a.jar", start = false) Bundle tb4a
+			) throws Exception {
 		try {
-			trace("Checking the service reference returned by BundleContext.getServiceReference()");
+			System.out.println("Checking the service reference returned by BundleContext.getServiceReference()");
 			tb4a.start();
 			tb4a.stop();
 		}
@@ -88,16 +106,6 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			else {
 				fail(ex.getMessage());
 			}
-		}
-		finally {
-			tb4a.uninstall();
-
-			tb1b.stop();
-			tb1b.uninstall();
-			tb1a.stop();
-			tb1a.uninstall();
-			tb1.stop();
-			tb1.uninstall();
 		}
 	}
 
@@ -111,13 +119,12 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec BundleContext.getServiceReference(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testBundleContextGetReference002() throws Exception {
-		Bundle tb4b;
-
-		tb4b = getContext().installBundle(
-				getWebServer() + "classloading.tb4b.jar");
+	@Test
+	public void testBundleContextGetReference002(
+			@InjectInstalledBundle(value = "classloading.tb4b.jar", start = false) Bundle tb4b
+			) throws Exception {
 		try {
-			trace("Checking the behavior of BundleContext.getServiceReference() when BundleContext.getServiceReferences() returns no references");
+			System.out.println("Checking the behavior of BundleContext.getServiceReference() when BundleContext.getServiceReferences() returns no references");
 			tb4b.start();
 			tb4b.stop();
 		}
@@ -128,9 +135,6 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			else {
 				fail(ex.getMessage());
 			}
-		}
-		finally {
-			tb4b.uninstall();
 		}
 	}
 
@@ -151,26 +155,16 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec BundleContext.getAllServiceReferences(String, String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testBundleContextGetAllServiceReferences001() throws Exception {
-		Bundle tb1;
-		Bundle tb1a;
-		Bundle tb1b;
-		Bundle tb3;
-		Bundle tb4c;
-
-		tb1 = installBundle("classloading.tb1.jar");
-		tb1.start();
-		tb1a = installBundle("classloading.tb1a.jar");
-		tb1a.start();
-		tb1b = installBundle("classloading.tb1b.jar");
-		tb1b.start();
-		tb3 = installBundle("classloading.tb3.jar");
-		tb3.start();
-
-		tb4c = getContext().installBundle(
-				getWebServer() + "classloading.tb4c.jar");
+	@Test
+	public void testBundleContextGetAllServiceReferences001(
+			@InjectInstalledBundle(value = "classloading.tb1.jar", start = true) Bundle tb1,
+			@InjectInstalledBundle(value = "classloading.tb1a.jar", start = true) Bundle tb1a,
+			@InjectInstalledBundle(value = "classloading.tb1b.jar", start = true) Bundle tb1b,
+			@InjectInstalledBundle(value = "classloading.tb3.jar", start = true) Bundle tb3,
+			@InjectInstalledBundle(value = "classloading.tb4c.jar", start = false) Bundle tb4c
+			) throws Exception {
 		try {
-			trace("Checking if the method getAllServiceReferences returns the number of services as expected");
+			System.out.println("Checking if the method getAllServiceReferences returns the number of services as expected");
 			tb4c.start();
 			tb4c.stop();
 		}
@@ -182,18 +176,6 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 				fail(ex.getMessage());
 			}
 		}
-		finally {
-			tb4c.uninstall();
-
-			tb3.stop();
-			tb3.uninstall();
-			tb1b.stop();
-			tb1b.uninstall();
-			tb1a.stop();
-			tb1a.uninstall();
-			tb1.stop();
-			tb1.uninstall();
-		}
 	}
 
 	/**
@@ -204,20 +186,14 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec ServiceReference.isAssignableTo(Bundle, String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testBundleContextIsAssignableTo001() throws Exception {
-		Bundle tb1;
-		Bundle tb1a;
-		Bundle tb4d;
-
-		tb1 = installBundle("classloading.tb1.jar");
-		tb1.start();
-		tb1a = installBundle("classloading.tb1a.jar");
-		tb1a.start();
-
-		tb4d = getContext().installBundle(
-				getWebServer() + "classloading.tb4d.jar");
+	@Test
+	public void testBundleContextIsAssignableTo001(
+			@InjectInstalledBundle(value = "classloading.tb1.jar", start = true) Bundle tb1,
+			@InjectInstalledBundle(value = "classloading.tb1a.jar", start = true) Bundle tb1a,
+			@InjectInstalledBundle(value = "classloading.tb4d.jar", start = false) Bundle tb4d
+			) throws Exception {
 		try {
-			trace("Checking if the method isAssignableTo returns true when the package source of the getter bundle is the same of the registrant bundle");
+			System.out.println("Checking if the method isAssignableTo returns true when the package source of the getter bundle is the same of the registrant bundle");
 			tb4d.start();
 			tb4d.stop();
 		}
@@ -229,14 +205,6 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 				fail(ex.getMessage());
 			}
 		}
-		finally {
-			tb4d.uninstall();
-
-			tb1a.stop();
-			tb1a.uninstall();
-			tb1.stop();
-			tb1.uninstall();
-		}
 	}
 
 	/**
@@ -247,23 +215,15 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec ServiceReference.isAssignableTo(Bundle, String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testBundleContextIsAssignableTo002() throws Exception {
-		Bundle tb1;
-		Bundle tb1a;
-		Bundle tb3;
-		Bundle tb4e;
-
-		tb1 = installBundle("classloading.tb1.jar");
-		tb1.start();
-		tb1a = installBundle("classloading.tb1a.jar");
-		tb1a.start();
-		tb3 = installBundle("classloading.tb3.jar");
-		tb3.start();
-
-		tb4e = getContext().installBundle(
-				getWebServer() + "classloading.tb4e.jar");
+	@Test
+	public void testBundleContextIsAssignableTo002(
+			@InjectInstalledBundle(value = "classloading.tb1.jar", start = true) Bundle tb1,
+			@InjectInstalledBundle(value = "classloading.tb1a.jar", start = true) Bundle tb1a,
+			@InjectInstalledBundle(value = "classloading.tb3.jar", start = true) Bundle tb3,
+			@InjectInstalledBundle(value = "classloading.tb4e.jar", start = false) Bundle tb4e
+			) throws Exception {
 		try {
-			trace("Checking if the method isAssignableTo returns false when the package source of the getter bundle is not the same of the registrant bundle");
+			System.out.println("Checking if the method isAssignableTo returns false when the package source of the getter bundle is not the same of the registrant bundle");
 			tb4e.start();
 			tb4e.stop();
 		}
@@ -274,16 +234,6 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			else {
 				fail(ex.getMessage());
 			}
-		}
-		finally {
-			tb4e.uninstall();
-
-			tb3.stop();
-			tb3.uninstall();
-			tb1a.stop();
-			tb1a.uninstall();
-			tb1.stop();
-			tb1.uninstall();
 		}
 	}
 
@@ -299,6 +249,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * 
 	 * @throws Exception
 	 */
+	@Test
 	public void testBundleContextIsAssignableTo003() throws Exception {
 		BiFunction<Bundle,Object,ServiceReference< ? >> register = (b, s) -> {
 			return b.getBundleContext()
@@ -319,6 +270,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * 
 	 * @throws Exception
 	 */
+	@Test
 	public void testBundleContextIsAssignableTo004() throws Exception {
 		BiFunction<Bundle,Object,ServiceReference< ? >> register = (b, s) -> {
 			return b.getBundleContext()
@@ -339,6 +291,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * 
 	 * @throws Exception
 	 */
+	@Test
 	public void testBundleContextIsAssignableTo005() throws Exception {
 		BiFunction<Bundle,Object,ServiceReference< ? >> register = (b, s) -> {
 			return b.getBundleContext()
@@ -374,6 +327,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * 
 	 * @throws Exception
 	 */
+	@Test
 	public void testBundleContextIsAssignableTo006() throws Exception {
 		BiFunction<Bundle,Object,ServiceReference< ? >> register = (b, s) -> {
 			return b.getBundleContext()
@@ -394,6 +348,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * 
 	 * @throws Exception
 	 */
+	@Test
 	public void testBundleContextIsAssignableTo007() throws Exception {
 		BiFunction<Bundle,Object,ServiceReference< ? >> register = (b, s) -> {
 			return b.getBundleContext()
@@ -419,10 +374,10 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			Bundle exporter2;
 			Bundle registrant;
 			Bundle user;
-			bundles.add(exporter1 = installBundle("classloading.tb1.jar"));
-			bundles.add(exporter2 = installBundle("classloading.tb2.jar"));
-			bundles.add(registrant = installBundle(registrantLoc));
-			bundles.add(user = installBundle(userLoc));
+			bundles.add(exporter1 = bundleInstaller.installBundle("classloading.tb1.jar", true));
+			bundles.add(exporter2 = bundleInstaller.installBundle("classloading.tb2.jar", true));
+			bundles.add(registrant = bundleInstaller.installBundle(registrantLoc, true));
+			bundles.add(user = bundleInstaller.installBundle(userLoc, true));
 			bundles.forEach(b -> {
 				try {
 					b.start();
@@ -448,9 +403,10 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			}
 			ServiceReference< ? > ref = register.apply(registrant,
 					serviceImpl.getConstructor().newInstance());
-			assertEquals("Wrong result from isAssignableTo.", expected,
-					ref.isAssignableTo(user,
-							"org.osgi.test.cases.framework.classloading.exports.service.SomeService"));
+			assertThat(ref.isAssignableTo(user,
+							"org.osgi.test.cases.framework.classloading.exports.service.SomeService"))
+					.as("Wrong result from isAssignableTo.")
+					.isEqualTo(expected);
 
 		} finally {
 			bundles.forEach(b -> {
@@ -479,24 +435,20 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testServiceRegistryWithMultipleServices001() throws Exception {
-		Bundle tb1;
+	@Test
+	public void testServiceRegistryWithMultipleServices001(
+			@InjectInstalledBundle(value = "classloading.tb1.jar", start = true) Bundle tb1,
+			@InjectInstalledBundle(value = "classloading.tb2.jar", start = true) Bundle tb2
+			) throws Exception {
 		Bundle tb1a;
-		Bundle tb2;
 		Bundle tb2a;
 		Bundle tb4f;
 		Bundle tb4g;
 
-		tb1 = installBundle("classloading.tb1.jar");
-		tb1.start();
-		tb2 = installBundle("classloading.tb2.jar");
-		tb2.start();
-
 		try {
-			trace("Checking if the correct service is imported");
-			tb4f = getContext().installBundle(
-					getWebServer() + "classloading.tb4f.jar");
-			tb1a = installBundle("classloading.tb1a.jar");
+			System.out.println("Checking if the correct service is imported");
+			tb4f = bundleInstaller.installBundle("classloading.tb4f.jar", false);
+			tb1a = bundleInstaller.installBundle("classloading.tb1a.jar", true);
 			tb1a.start();
 			tb4f.start();
 			tb4f.stop();
@@ -504,10 +456,9 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			tb1a.uninstall();
 			tb4f.uninstall();
 
-			trace("Checking if the correct service is imported");
-			tb4g = getContext().installBundle(
-					getWebServer() + "classloading.tb4g.jar");
-			tb2a = installBundle("classloading.tb2a.jar");
+			System.out.println("Checking if the correct service is imported");
+			tb4g = bundleInstaller.installBundle("classloading.tb4g.jar", false);
+			tb2a = bundleInstaller.installBundle("classloading.tb2a.jar", true);
 			tb2a.start();
 			tb4g.start();
 			tb4g.stop();
@@ -523,12 +474,6 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 				fail(ex.getMessage());
 			}
 		}
-		finally {
-			tb2.stop();
-			tb2.uninstall();
-			tb1.stop();
-			tb1.uninstall();
-		}
 	}
 
 	// Service Events ----------------------------
@@ -542,6 +487,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec ServiceListener.serviceChanged(ServiceEvent)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testServiceListener001() throws Exception {
 		Bundle tb1;
 		Bundle tb1a;
@@ -552,16 +498,15 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		Object service;
 		ServiceReference< ? > serviceReference;
 
-		tb1 = installBundle("classloading.tb1.jar");
+		tb1 = bundleInstaller.installBundle("classloading.tb1.jar", true);
 		tb1.start();
-		tb1a = installBundle("classloading.tb1a.jar");
-		tb2 = installBundle("classloading.tb2.jar");
+		tb1a = bundleInstaller.installBundle("classloading.tb1a.jar", true);
+		tb2 = bundleInstaller.installBundle("classloading.tb2.jar", true);
 		tb2.start();
-		tb5 = installBundle("classloading.tb5.jar");
+		tb5 = bundleInstaller.installBundle("classloading.tb5.jar", true);
 		tb5.start();
 
-		tb5a = getContext().installBundle(
-				getWebServer() + "classloading.tb5a.jar");
+		tb5a = bundleInstaller.installBundle("classloading.tb5a.jar", false);
 		try {
 			tb5a.start();
 
@@ -569,24 +514,24 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			tb1a.stop();
 
 			try {
-				Sleep.sleep(1000);
+				Thread.sleep(1000);
 			}
 			catch (InterruptedException ex) {
 				// Ignore this exception
 			}
 
 			// Check if the some event is delivered
-			serviceReference = getContext()
+			serviceReference = bundleContext
 					.getServiceReference(
 							"org.osgi.test.cases.framework.classloading.exports.listener.ServiceListenerTester");
-			service = getContext().getService(serviceReference);
+			service = bundleContext.getService(serviceReference);
 			method = service.getClass().getMethod("getServiceEventDelivered",
 					(Class[]) null);
-			assertNull(
-					"Checking if an event is delivered for a bundle which imports a non-assignable service interface",
-					method.invoke(service, (Object[]) null));
+			assertThat(method.invoke(service, (Object[]) null))
+					.as("Checking if an event is delivered for a bundle which imports a non-assignable service interface")
+					.isNull();
 
-			getContext().ungetService(serviceReference);
+			bundleContext.ungetService(serviceReference);
 
 			tb5a.stop();
 		}
@@ -612,6 +557,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec ServiceListener.serviceChanged(ServiceEvent)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testServiceListener002() throws Exception {
 		Bundle tb1;
 		Bundle tb1a;
@@ -621,14 +567,13 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		Object service;
 		ServiceReference< ? > serviceReference;
 
-		tb1 = installBundle("classloading.tb1.jar");
+		tb1 = bundleInstaller.installBundle("classloading.tb1.jar", true);
 		tb1.start();
-		tb1a = installBundle("classloading.tb1a.jar");
-		tb5 = installBundle("classloading.tb5.jar");
+		tb1a = bundleInstaller.installBundle("classloading.tb1a.jar", true);
+		tb5 = bundleInstaller.installBundle("classloading.tb5.jar", true);
 		tb5.start();
 
-		tb5b = getContext().installBundle(
-				getWebServer() + "classloading.tb5b.jar");
+		tb5b = bundleInstaller.installBundle("classloading.tb5b.jar", false);
 		try {
 			tb5b.start();
 
@@ -636,24 +581,24 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			tb1a.stop();
 
 			try {
-				Sleep.sleep(1000);
+				Thread.sleep(1000);
 			}
 			catch (InterruptedException ex) {
 				// Ignore this exception
 			}
 
 			// Check if the some event is delivered
-			serviceReference = getContext()
+			serviceReference = bundleContext
 					.getServiceReference(
 							"org.osgi.test.cases.framework.classloading.exports.listener.ServiceListenerTester");
-			service = getContext().getService(serviceReference);
+			service = bundleContext.getService(serviceReference);
 			method = service.getClass().getMethod("getServiceEventDelivered",
 					(Class[]) null);
-			assertNotNull(
-					"Checking if an event is delivered for a bundle which imports an assignable service interface",
-					method.invoke(service, (Object[]) null));
+			assertThat(method.invoke(service, (Object[]) null))
+					.as("Checking if an event is delivered for a bundle which imports an assignable service interface")
+					.isNotNull();
 
-			getContext().ungetService(serviceReference);
+			bundleContext.ungetService(serviceReference);
 
 			tb5b.stop();
 		}
@@ -679,6 +624,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec AllServiceListener.serviceChanged(ServiceEvent)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testAllServiceListener001() throws Exception {
 		Bundle tb1;
 		Bundle tb1a;
@@ -690,17 +636,16 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		Object service;
 		ServiceReference< ? > serviceReference;
 
-		tb1 = installBundle("classloading.tb1.jar");
+		tb1 = bundleInstaller.installBundle("classloading.tb1.jar", true);
 		tb1.start();
-		tb1a = installBundle("classloading.tb1a.jar");
-		tb2 = installBundle("classloading.tb2.jar");
+		tb1a = bundleInstaller.installBundle("classloading.tb1a.jar", true);
+		tb2 = bundleInstaller.installBundle("classloading.tb2.jar", true);
 		tb2.start();
-		tb2a = installBundle("classloading.tb2a.jar");
-		tb5 = installBundle("classloading.tb5.jar");
+		tb2a = bundleInstaller.installBundle("classloading.tb2a.jar", true);
+		tb5 = bundleInstaller.installBundle("classloading.tb5.jar", true);
 		tb5.start();
 
-		tb5c = getContext().installBundle(
-				getWebServer() + "classloading.tb5c.jar");
+		tb5c = bundleInstaller.installBundle("classloading.tb5c.jar", false);
 		try {
 			tb5c.start();
 
@@ -710,24 +655,24 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			tb1a.stop();
 
 			try {
-				Sleep.sleep(1000);
+				Thread.sleep(1000);
 			}
 			catch (InterruptedException ex) {
 				// Ignore this exception
 			}
 
 			// Check if the some event is delivered
-			serviceReference = getContext()
+			serviceReference = bundleContext
 					.getServiceReference(
 							"org.osgi.test.cases.framework.classloading.exports.listener.AllServiceListenerTester");
-			service = getContext().getService(serviceReference);
+			service = bundleContext.getService(serviceReference);
 			method = service.getClass().getMethod("getServiceEventDelivered",
 					(Class[]) null);
-			assertNotNull(
-					"Checking if an event is delivered for a bundle which imports a assignable service interface",
-					method.invoke(service, (Object[]) null));
+			assertThat(method.invoke(service, (Object[]) null))
+					.as("Checking if an event is delivered for a bundle which imports a assignable service interface")
+					.isNotNull();
 
-			getContext().ungetService(serviceReference);
+			bundleContext.ungetService(serviceReference);
 
 			// This bundle install a service which is not assignable to the
 			// imported interface
@@ -735,24 +680,24 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			tb2a.stop();
 
 			try {
-				Sleep.sleep(1000);
+				Thread.sleep(1000);
 			}
 			catch (InterruptedException ex) {
 				// Ignore this exception
 			}
 
 			// Check if the some event is delivered
-			serviceReference = getContext()
+			serviceReference = bundleContext
 					.getServiceReference(
 							"org.osgi.test.cases.framework.classloading.exports.listener.AllServiceListenerTester");
-			service = getContext().getService(serviceReference);
+			service = bundleContext.getService(serviceReference);
 			method = service.getClass().getMethod("getServiceEventDelivered",
 					(Class[]) null);
-			assertNotNull(
-					"Checking if an event is delivered for a bundle which imports a non-assignable service interface",
-					method.invoke(service, (Object[]) null));
+			assertThat(method.invoke(service, (Object[]) null))
+					.as("Checking if an event is delivered for a bundle which imports a non-assignable service interface")
+					.isNotNull();
 
-			getContext().ungetService(serviceReference);
+			bundleContext.ungetService(serviceReference);
 
 			tb5c.stop();
 		}
@@ -782,6 +727,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec AllServiceListener.serviceChanged(ServiceEvent)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testUnfilteredAllServiceListener001() throws Exception {
 		Bundle tb1;
 		Bundle tb1a;
@@ -793,16 +739,16 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		Object service;
 		ServiceReference< ? > serviceReference;
 
-		tb1 = installBundle("classloading.tb1.jar");
+		tb1 = bundleInstaller.installBundle("classloading.tb1.jar", true);
 		tb1.start();
-		tb1a = installBundle("classloading.tb1a.jar");
-		tb2 = installBundle("classloading.tb2.jar");
+		tb1a = bundleInstaller.installBundle("classloading.tb1a.jar", true);
+		tb2 = bundleInstaller.installBundle("classloading.tb2.jar", true);
 		tb2.start();
-		tb2a = installBundle("classloading.tb2a.jar");
-		tb5 = installBundle("classloading.tb5.jar");
+		tb2a = bundleInstaller.installBundle("classloading.tb2a.jar", true);
+		tb5 = bundleInstaller.installBundle("classloading.tb5.jar", true);
 		tb5.start();
 
-		tb5d = installBundle("classloading.tb5d.jar");
+		tb5d = bundleInstaller.installBundle("classloading.tb5d.jar", true);
 		try {
 			tb5d.start();
 
@@ -812,24 +758,24 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			tb1a.stop();
 
 			try {
-				Sleep.sleep(1000);
+				Thread.sleep(1000);
 			}
 			catch (InterruptedException ex) {
 				// Ignore this exception
 			}
 
 			// Check if the some event is delivered
-			serviceReference = getContext()
+			serviceReference = bundleContext
 					.getServiceReference(
 							"org.osgi.test.cases.framework.classloading.exports.listener.AllServiceListenerTester");
-			service = getContext().getService(serviceReference);
+			service = bundleContext.getService(serviceReference);
 			method = service.getClass().getMethod("getServiceEventDelivered",
 					(Class[]) null);
-			assertNotNull(
-					"Checking if an event is delivered for a bundle which imports a assignable service interface",
-					method.invoke(service, (Object[]) null));
+			assertThat(method.invoke(service, (Object[]) null))
+					.as("Checking if an event is delivered for a bundle which imports a assignable service interface")
+					.isNotNull();
 
-			getContext().ungetService(serviceReference);
+			bundleContext.ungetService(serviceReference);
 
 			// This bundle install a service which is not assignable to the
 			// imported interface
@@ -837,24 +783,24 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			tb2a.stop();
 
 			try {
-				Sleep.sleep(1000);
+				Thread.sleep(1000);
 			}
 			catch (InterruptedException ex) {
 				// Ignore this exception
 			}
 
 			// Check if the some event is delivered
-			serviceReference = getContext()
+			serviceReference = bundleContext
 					.getServiceReference(
 							"org.osgi.test.cases.framework.classloading.exports.listener.AllServiceListenerTester");
-			service = getContext().getService(serviceReference);
+			service = bundleContext.getService(serviceReference);
 			method = service.getClass().getMethod("getServiceEventDelivered",
 					(Class[]) null);
-			assertNotNull(
-					"Checking if an event is delivered for a bundle which imports a non-assignable service interface",
-					method.invoke(service, (Object[]) null));
+			assertThat(method.invoke(service, (Object[]) null))
+					.as("Checking if an event is delivered for a bundle which imports a non-assignable service interface")
+					.isNotNull();
 
-			getContext().ungetService(serviceReference);
+			bundleContext.ungetService(serviceReference);
 
 			tb5d.stop();
 		}
@@ -869,7 +815,6 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		}
 	}
 
-	
 
 	// Permission Checking -----------------------
 
@@ -886,14 +831,14 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testJavaPackageExplicityExportImport001() {
 		Bundle tb7a;
 		Bundle tb7b;
 
 		try {
-			trace("Installing a bundle which declares imports for java.*");
-			tb7a = getContext().installBundle(
-					getWebServer() + "classloading.tb7a.jar");
+			System.out.println("Installing a bundle which declares imports for java.*");
+			tb7a = bundleInstaller.installBundle("classloading.tb7a.jar", false);
 			tb7a.uninstall();
 		}
 		catch (BundleException ex) {
@@ -901,14 +846,15 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		}
 
 		try {
-			trace("Installing a bundle which declares exports for java.*");
-			tb7b = getContext().installBundle(
-					getWebServer() + "classloading.tb7b.jar");
+			System.out.println("Installing a bundle which declares exports for java.*");
+			tb7b = bundleInstaller.installBundle("classloading.tb7b.jar", false);
 			tb7b.uninstall();
 			fail("A bundle which declares exports for java.* packages should fail to install");
 		}
 		catch (BundleException ex) {
-			assertEquals("It should throw a bundle exception of type manifest error", BundleException.MANIFEST_ERROR, ex.getType());
+			assertThat(ex.getType())
+					.as("It should throw a bundle exception of type manifest error")
+					.isEqualTo(BundleException.MANIFEST_ERROR);
 		}
 	}
 
@@ -919,12 +865,12 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @ Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testHiddenPackages001() throws Exception {
 		Bundle tb7c;
 		String bootPackages;
 
-		tb7c = getContext().installBundle(
-				getWebServer() + "classloading.tb7c.jar");
+		tb7c = bundleInstaller.installBundle("classloading.tb7c.jar", false);
 		try {
 			try {
 				ClassLoader.getSystemClassLoader().loadClass(
@@ -934,7 +880,10 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 				fail("A class required by this test cannot be loaded");
 			}
 
-			bootPackages = getProperty(Constants.FRAMEWORK_BOOTDELEGATION, "");
+			bootPackages = bundleContext.getProperty(Constants.FRAMEWORK_BOOTDELEGATION);
+			if (bootPackages == null) {
+				bootPackages = "";
+			}
 			if (bootPackages != null) {
 				StringTokenizer packages = new StringTokenizer(bootPackages, ",");
 				while(packages.hasMoreTokens()) {
@@ -945,7 +894,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 				}
 			}
 
-			trace("Installing a bundle which uses a package accessible using the system class loader");
+			System.out.println("Installing a bundle which uses a package accessible using the system class loader");
 			try {
 				tb7c.start();
 				tb7c.stop();
@@ -977,6 +926,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testClassLoadingSearchOrder001() throws Exception {
 		Bundle tb8a;
 		Bundle tb8b;
@@ -984,17 +934,19 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		Bundle tb8d;
 		Class< ? > clazz;
 
-		tb8a = installBundle("classloading.tb8a.jar");
-		tb8b = installBundle("classloading.tb8b.jar");
-		tb8c = installBundle("classloading.tb8c.jar");
+		tb8a = bundleInstaller.installBundle("classloading.tb8a.jar", true);
+		tb8b = bundleInstaller.installBundle("classloading.tb8b.jar", true);
+		tb8c = bundleInstaller.installBundle("classloading.tb8c.jar", true);
 
 		try {
-			tb8d = installBundle("classloading.tb8d.jar");
+			tb8d = bundleInstaller.installBundle("classloading.tb8d.jar", true);
 
 			// The loading class must be loaded by the parent class loader
 			clazz = tb8d.loadClass("java.lang.Math");
-			assertTrue("Checking the number of class methods", clazz
-					.getMethods().length != 0);
+			assertThat(clazz
+					.getMethods().length != 0)
+					.as("Checking the number of class methods")
+					.isTrue();
 
 			// Loading a class which does not exist when loaded by the parent
 			// class loader
@@ -1041,6 +993,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testClassLoadingSearchOrder002() throws Exception {
 		Bundle tb8a;
 		Bundle tb8b;
@@ -1050,12 +1003,12 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		InputStream inputStream;
 		URL url;
 
-		tb8a = installBundle("classloading.tb8a.jar");
-		tb8b = installBundle("classloading.tb8b.jar");
-		tb8c = installBundle("classloading.tb8c.jar");
+		tb8a = bundleInstaller.installBundle("classloading.tb8a.jar", true);
+		tb8b = bundleInstaller.installBundle("classloading.tb8b.jar", true);
+		tb8c = bundleInstaller.installBundle("classloading.tb8c.jar", true);
 
 		try {
-			tb8d = installBundle("classloading.tb8d.jar");
+			tb8d = bundleInstaller.installBundle("classloading.tb8d.jar", true);
 
 			// This resource must be loaded using the importing bundle
 			url = tb8d.getResource("resources/tb8a-resource.txt");
@@ -1064,9 +1017,10 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			inputStream = url.openStream();
 			reader = new BufferedReader(new InputStreamReader(inputStream));
 			try {
-				assertEquals("Checking the bundle name", "tb8a",
-						reader
-						.readLine());
+				assertThat(reader
+						.readLine())
+						.as("Checking the bundle name")
+						.isEqualTo("tb8a");
 			}
 			finally {
 				reader.close();
@@ -1076,7 +1030,9 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			// This resource cannot be found when loaded with the class
 			// loader of the exporting bundle
 			url = tb8d.getResource("resources/tb8b-resource.txt");
-			assertNull("Checking if the resource is incorrectly found", url);
+			assertThat(url)
+					.as("Checking if the resource is incorrectly found")
+					.isNull();
 
 			tb8d.uninstall();
 		}
@@ -1111,6 +1067,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testClassLoadingSearchOrder003() throws Exception {
 		Bundle tb8b;
 		Bundle tb8c;
@@ -1119,10 +1076,10 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		InputStream inputStream;
 		URL url;
 
-		tb8b = installBundle("classloading.tb8b.jar");
-		tb8c = installBundle("classloading.tb8c.jar");
+		tb8b = bundleInstaller.installBundle("classloading.tb8b.jar", true);
+		tb8c = bundleInstaller.installBundle("classloading.tb8c.jar", true);
 
-		tb8e = installBundle("classloading.tb8e.jar");
+		tb8e = bundleInstaller.installBundle("classloading.tb8e.jar", true);
 		try {
 			// This resource must be loaded using the required bundle class
 			// loader
@@ -1132,9 +1089,10 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			inputStream = url.openStream();
 			reader = new BufferedReader(new InputStreamReader(inputStream));
 			try {
-				assertEquals("Checking the bundle name", "tb8b",
-						reader
-						.readLine());
+				assertThat(reader
+						.readLine())
+						.as("Checking the bundle name")
+						.isEqualTo("tb8b");
 			}
 			finally {
 				reader.close();
@@ -1148,9 +1106,10 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			inputStream = url.openStream();
 			reader = new BufferedReader(new InputStreamReader(inputStream));
 			try {
-				assertEquals("Checking the bundle name", "tb8e",
-						reader
-						.readLine());
+				assertThat(reader
+						.readLine())
+						.as("Checking the bundle name")
+						.isEqualTo("tb8e");
 			}
 			finally {
 				reader.close();
@@ -1159,7 +1118,9 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 
 			// This resource cannot be found
 			url = tb8c.getResource("resources/nonexistent-resource.txt");
-			assertNull("Checking if the resource is incorrectly found", url);
+			assertThat(url)
+					.as("Checking if the resource is incorrectly found")
+					.isNull();
 		}
 		finally {
 			tb8e.uninstall();
@@ -1174,6 +1135,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testClassLoadingSearchOrder004() throws Exception {
 		Bundle tb8b;
 		Bundle tb8c;
@@ -1182,10 +1144,10 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		InputStream inputStream;
 		URL url;
 
-		tb8b = installBundle("classloading.tb8b.jar");
-		tb8c = installBundle("classloading.tb8c.jar");
+		tb8b = bundleInstaller.installBundle("classloading.tb8b.jar", true);
+		tb8c = bundleInstaller.installBundle("classloading.tb8c.jar", true);
 
-		tb8e = installBundle("classloading.tb8e.jar");
+		tb8e = bundleInstaller.installBundle("classloading.tb8e.jar", true);
 		try {
 			// This resource must be loaded using the bundle class loader
 			url = tb8e.getResource("resources/tb8e-resource.txt");
@@ -1194,9 +1156,10 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			inputStream = url.openStream();
 			reader = new BufferedReader(new InputStreamReader(inputStream));
 			try {
-				assertEquals("Checking the bundle name", "tb8e",
-						reader
-						.readLine());
+				assertThat(reader
+						.readLine())
+						.as("Checking the bundle name")
+						.isEqualTo("tb8e");
 			}
 			finally {
 				reader.close();
@@ -1205,7 +1168,9 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 
 			// This resource cannot be found
 			url = tb8c.getResource("resources/nonexistent-resource.txt");
-			assertNull("Checking if the resource is incorrectly found", url);
+			assertThat(url)
+					.as("Checking if the resource is incorrectly found")
+					.isNull();
 		}
 		finally {
 			tb8e.uninstall();
@@ -1226,6 +1191,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testClassLoadingSearchOrder005() throws Exception {
 		Bundle tb8c;
 		Bundle tb8f;
@@ -1233,9 +1199,9 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		InputStream inputStream;
 		URL url;
 
-		tb8c = installBundle("classloading.tb8c.jar");
+		tb8c = bundleInstaller.installBundle("classloading.tb8c.jar", true);
 
-		tb8f = installBundle("classloading.tb8f.jar");
+		tb8f = bundleInstaller.installBundle("classloading.tb8f.jar", true);
 		try {
 			// This resource must be loaded using the dynamic importing bundle
 			url = tb8f.getResource("resources/tb8c-resource.txt");
@@ -1244,9 +1210,10 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			inputStream = url.openStream();
 			reader = new BufferedReader(new InputStreamReader(inputStream));
 			try {
-				assertEquals("Checking the bundle name", "tb8c",
-						reader
-						.readLine());
+				assertThat(reader
+						.readLine())
+						.as("Checking the bundle name")
+						.isEqualTo("tb8c");
 			}
 			finally {
 				reader.close();
@@ -1255,7 +1222,9 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 
 			// This resource cannot be found
 			url = tb8f.getResource("resources/nonexistent-resource.txt");
-			assertNull("Checking if the resource is incorrectly found", url);
+			assertThat(url)
+					.as("Checking if the resource is incorrectly found")
+					.isNull();
 		}
 		finally {
 			tb8f.uninstall();
@@ -1282,19 +1251,22 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testClassLoadingSearchOrder006() throws Exception {
 		Bundle tb9a;
 		Bundle tb9b;
 		Class< ? > clazz;
 
-		tb9a = installBundle("classloading.tb9a.jar");
+		tb9a = bundleInstaller.installBundle("classloading.tb9a.jar", true);
 
-		tb9b = installBundle("classloading.tb9b.jar");
+		tb9b = bundleInstaller.installBundle("classloading.tb9b.jar", true);
 		try {
 			// The loading class must be loaded by the parent class loader
 			clazz = tb9b.loadClass("java.lang.Math");
-			assertTrue("Checking the number of class methods", clazz
-					.getMethods().length != 0);
+			assertThat(clazz
+					.getMethods().length != 0)
+					.as("Checking the number of class methods")
+					.isTrue();
 
 			// Loading a class which does not exist when loaded by the parent
 			// class loader
@@ -1324,6 +1296,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testClassLoadingSearchOrder007() throws Exception {
 		Bundle tb9a;
 		Bundle tb9c;
@@ -1331,9 +1304,9 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		InputStream inputStream;
 		URL url;
 
-		tb9a = installBundle("classloading.tb9a.jar");
+		tb9a = bundleInstaller.installBundle("classloading.tb9a.jar", true);
 
-		tb9c = installBundle("classloading.tb9c.jar");
+		tb9c = bundleInstaller.installBundle("classloading.tb9c.jar", true);
 		try {
 			// This resource must be loaded using the importing bundle class
 			// loader
@@ -1343,9 +1316,10 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			inputStream = url.openStream();
 			reader = new BufferedReader(new InputStreamReader(inputStream));
 			try {
-				assertEquals("Checking the bundle name", "tb9a",
-						reader
-						.readLine());
+				assertThat(reader
+						.readLine())
+						.as("Checking the bundle name")
+						.isEqualTo("tb9a");
 			}
 			finally {
 				reader.close();
@@ -1354,7 +1328,9 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 
 			// This resource cannot be found
 			url = tb9c.getResource("resources/nonexistent-resource.txt");
-			assertNull("Checking if the resource is incorrectly found", url);
+			assertThat(url)
+					.as("Checking if the resource is incorrectly found")
+					.isNull();
 		}
 		finally {
 			tb9c.uninstall();
@@ -1369,19 +1345,24 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testClassLoadingSearchOrder008() throws Exception {
 		Bundle tb9d;
 		URL url;
 
-		tb9d = installBundle("classloading.tb9d.jar");
+		tb9d = bundleInstaller.installBundle("classloading.tb9d.jar", true);
 		try {
 			// This resource must be loaded using the bundle class path
 			url = tb9d.getResource("resources/tb9d-resource.txt");
-			assertNotNull("Checking if the resource is correctly found", url);
+			assertThat(url)
+					.as("Checking if the resource is correctly found")
+					.isNotNull();
 
 			// This resource cannot be found
 			url = tb9d.getResource("resources/nonexistent-resource.txt");
-			assertNull("Checking if the resource is incorrectly found", url);
+			assertThat(url)
+					.as("Checking if the resource is incorrectly found")
+					.isNull();
 		}
 		finally {
 			tb9d.uninstall();
@@ -1402,6 +1383,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.update(InputStream)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testBundleModule001() throws Exception {
 		long bundleId;
 		Bundle tb1;
@@ -1409,31 +1391,32 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		URL url;
 
 		// Install the bundle
-		tb1 = installBundle("classloading.tb1.jar");
+		tb1 = bundleInstaller.installBundle("classloading.tb1.jar", true);
 		bundleId = tb1.getBundleId();
 
 		try {
 			// Update the bundle with the same archive
-			url = new URL(getWebServer() + "classloading.tb1.jar");
+			url = bundleContext.getBundle().getEntry("classloading.tb1.jar");
 			inputStream = url.openStream();
 			tb1.update(inputStream);
 			inputStream.close();
 
 			// Bundle id must not change after update
-			assertTrue("Bundle id must not change after update",
-					bundleId == tb1.getBundleId());
+			assertThat(bundleId == tb1.getBundleId())
+					.as("Bundle id must not change after update")
+					.isTrue();
 		}
 		finally {
 			tb1.uninstall();
 		}
 
-		tb1 = installBundle("classloading.tb10a.jar");
+		tb1 = bundleInstaller.installBundle("classloading.tb10a.jar", true);
 
 		try {
 			// Bundle id must not change after install the new bundle
-			assertTrue(
-					"Bundle id must not change after install the new bundle with the same symbolic name and different version",
-					bundleId != tb1.getBundleId());
+			assertThat(bundleId != tb1.getBundleId())
+					.as("Bundle id must not change after install the new bundle with the same symbolic name and different version")
+					.isTrue();
 		}
 		finally {
 			tb1.uninstall();
@@ -1448,11 +1431,12 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec BundleContext.start(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testBundleSymbolicName001() throws Exception {
 		Bundle tb11a;
 
 		try {
-			tb11a = installBundle("classloading.tb11a.jar");
+			tb11a = bundleInstaller.installBundle("classloading.tb11a.jar", true);
 			tb11a.uninstall();
 			fail("A version 2 bundle manifests must specify the bundle symbolic name");
 		}
@@ -1476,47 +1460,31 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testSingletonBundle001() throws Exception {
-		Bundle tb11b;
-		Bundle tb11c;
-		Bundle tb11d;
-		Bundle tb11e;
+	@Test
+	public void testSingletonBundle001(
+			@InjectInstalledBundle(value = "classloading.tb11b.jar", start = false) Bundle tb11b,
+			@InjectInstalledBundle(value = "classloading.tb11c.jar", start = false) Bundle tb11c,
+			@InjectInstalledBundle(value = "classloading.tb11d.jar", start = false) Bundle tb11d,
+			@InjectInstalledBundle(value = "classloading.tb11e.jar", start = false) Bundle tb11e
+			) throws Exception {
+		bundleContext.getBundle(0).adapt(FrameworkWiring.class).resolveBundles(Arrays.asList(tb11b, tb11c, tb11d, tb11e));
+		if ((tb11b.getState() & Bundle.RESOLVED) != 0)
+			tb11b.start();
+		if ((tb11c.getState() & Bundle.RESOLVED) != 0)
+			tb11c.start();
+		if ((tb11d.getState() & Bundle.RESOLVED) != 0)
+			tb11d.start();
+		if ((tb11e.getState() & Bundle.RESOLVED) != 0)
+			tb11e.start();
 
-		tb11b = getContext().installBundle(
-				getWebServer() + "classloading.tb11b.jar");
-		tb11c = getContext().installBundle(
-				getWebServer() + "classloading.tb11c.jar");
-		tb11d = getContext().installBundle(
-				getWebServer() + "classloading.tb11d.jar");
-		tb11e = getContext().installBundle(
-				getWebServer() + "classloading.tb11e.jar");
-
-		try {
-			Wiring.resolveBundles(getContext(), tb11b, tb11c, tb11d, tb11e);
-			if ((tb11b.getState() & Bundle.RESOLVED) != 0)
-				tb11b.start();
-			if ((tb11c.getState() & Bundle.RESOLVED) != 0)
-				tb11c.start();
-			if ((tb11d.getState() & Bundle.RESOLVED) != 0)
-				tb11d.start();
-			if ((tb11e.getState() & Bundle.RESOLVED) != 0)
-				tb11e.start();
-
-			assertTrue(
-					"Only one singleton bundle may be resolved at the same time",
-					(tb11b.getState() == Bundle.ACTIVE && tb11c.getState() == Bundle.INSTALLED) ||
-					(tb11c.getState() == Bundle.ACTIVE && tb11b.getState() == Bundle.INSTALLED));
-			assertTrue(
-					"More than one non-singleton bundle may be resolved at the same time",
-					tb11d.getState() == Bundle.ACTIVE
-							&& tb11e.getState() == Bundle.ACTIVE);
-		}
-		finally {
-			tb11e.uninstall();
-			tb11d.uninstall();
-			tb11c.uninstall();
-			tb11b.uninstall();
-		}
+		assertThat((tb11b.getState() == Bundle.ACTIVE && tb11c.getState() == Bundle.INSTALLED) ||
+				(tb11c.getState() == Bundle.ACTIVE && tb11b.getState() == Bundle.INSTALLED))
+				.as("Only one singleton bundle may be resolved at the same time")
+				.isTrue();
+		assertThat(tb11d.getState() == Bundle.ACTIVE
+						&& tb11e.getState() == Bundle.ACTIVE)
+				.as("More than one non-singleton bundle may be resolved at the same time")
+				.isTrue();
 	}
 
 	// Installing Bundles ---------------------------------
@@ -1529,25 +1497,20 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testBundleInstall001() throws Exception {
-		Bundle tb12a;
+	@Test
+	public void testBundleInstall001(
+			@InjectInstalledBundle(value = "classloading.tb12a.jar", start = false) Bundle tb12a
+			) throws Exception {
 		Bundle tb12b;
 
-		tb12a = getContext().installBundle(
-				getWebServer() + "classloading.tb12a.jar");
-
 		try {
-			trace("Installing a bundle with the same symbolic name and version of other installed bundle");
-			tb12b = getContext().installBundle(
-					getWebServer() + "classloading.tb12b.jar");
+			System.out.println("Installing a bundle with the same symbolic name and version of other installed bundle");
+			tb12b = bundleInstaller.installBundle("classloading.tb12b.jar", false);
 			tb12b.uninstall();
 			fail("A bundle with the same symbolic name and version of other cannot be installed");
 		}
 		catch (BundleException ex) {
 			// Ignore this exception
-		}
-		finally {
-			tb12a.uninstall();
 		}
 	}
 
@@ -1562,17 +1525,18 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testPackageExport001() throws Exception {
 		Bundle tb13a;
 		Bundle tb13o;
 		Bundle tb13p;
 
 		try {
-			trace("Installing a bundle with correct export syntax");
-			tb13a = installBundle("classloading.tb13a.jar");
+			System.out.println("Installing a bundle with correct export syntax");
+			tb13a = bundleInstaller.installBundle("classloading.tb13a.jar", true);
 
-			tb13o = installBundle("classloading.tb13o.jar");
-			tb13p = installBundle("classloading.tb13p.jar");
+			tb13o = bundleInstaller.installBundle("classloading.tb13o.jar", true);
+			tb13p = bundleInstaller.installBundle("classloading.tb13p.jar", true);
 
 			tb13p.uninstall();
 			tb13o.uninstall();
@@ -1599,6 +1563,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testPackageExport002() throws Exception {
 		Bundle tb8a;
 		Bundle tb8b;
@@ -1608,23 +1573,19 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		InputStream inputStream;
 		URL url;
 
-		tb8a = getContext().installBundle(
-				getWebServer() + "classloading.tb8a.jar");
-		tb8b = getContext().installBundle(
-				getWebServer() + "classloading.tb8b.jar");
+		tb8a = bundleInstaller.installBundle("classloading.tb8a.jar", false);
+		tb8b = bundleInstaller.installBundle("classloading.tb8b.jar", false);
 		tb8a.start();
 		tb8b.start();
 
-		tb13b = getContext().installBundle(
-				getWebServer() + "classloading.tb13b.jar");
-		tb13c = getContext().installBundle(
-				getWebServer() + "classloading.tb13c.jar");
+		tb13b = bundleInstaller.installBundle("classloading.tb13b.jar", false);
+		tb13c = bundleInstaller.installBundle("classloading.tb13c.jar", false);
 
 		try {
 			tb13b.start();
 			tb13c.start();
 
-			trace("Loading a class from the imported package");
+			System.out.println("Loading a class from the imported package");
 			try {
 				tb13c
 						.loadClass("org.osgi.test.cases.framework.classloading.exports.service.SomeService");
@@ -1634,15 +1595,16 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			}
 
 			// Read the resource content to check the loading bundle
-			trace("Loading a resource and checking its loading bundle");
+			System.out.println("Loading a resource and checking its loading bundle");
 			url = tb13c.getResource("/resources/tb8a-resource.txt");
 
 			inputStream = url.openStream();
 			reader = new BufferedReader(new InputStreamReader(inputStream));
 			try {
-				assertEquals("Checking the loading bundle name",
-						"tb8b", reader
-						.readLine());
+				assertThat(reader
+						.readLine())
+						.as("Checking the loading bundle name")
+						.isEqualTo("tb8b");
 			}
 			finally {
 				reader.close();
@@ -1670,6 +1632,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testPackageExport003() throws Exception {
 		Bundle tb8a;
 		Bundle tb8b;
@@ -1679,32 +1642,29 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		InputStream inputStream;
 		URL url;
 
-		tb8a = getContext().installBundle(
-				getWebServer() + "classloading.tb8a.jar");
-		tb8b = getContext().installBundle(
-				getWebServer() + "classloading.tb8b.jar");
+		tb8a = bundleInstaller.installBundle("classloading.tb8a.jar", false);
+		tb8b = bundleInstaller.installBundle("classloading.tb8b.jar", false);
 		tb8a.start();
 		tb8b.start();
 
-		tb13d = getContext().installBundle(
-				getWebServer() + "classloading.tb13d.jar");
-		tb13c = getContext().installBundle(
-				getWebServer() + "classloading.tb13c.jar");
+		tb13d = bundleInstaller.installBundle("classloading.tb13d.jar", false);
+		tb13c = bundleInstaller.installBundle("classloading.tb13c.jar", false);
 
 		try {
 			tb13d.start();
 			tb13c.start();
 
 			// Read the resource content to check the loading bundle
-			trace("Loading a resource and checking its loading bundle");
+			System.out.println("Loading a resource and checking its loading bundle");
 			url = tb13c.getResource("/resources/tb8a-resource.txt");
 
 			inputStream = url.openStream();
 			reader = new BufferedReader(new InputStreamReader(inputStream));
 			try {
-				assertEquals("Checking the loading bundle name",
-						"tb8a", reader
-						.readLine());
+				assertThat(reader
+						.readLine())
+						.as("Checking the loading bundle name")
+						.isEqualTo("tb8a");
 			}
 			finally {
 				reader.close();
@@ -1726,32 +1686,29 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 
 		// Repeat the test changing the order of package exporters
 
-		tb8b = getContext().installBundle(
-				getWebServer() + "classloading.tb8b.jar");
-		tb8a = getContext().installBundle(
-				getWebServer() + "classloading.tb8a.jar");
+		tb8b = bundleInstaller.installBundle("classloading.tb8b.jar", false);
+		tb8a = bundleInstaller.installBundle("classloading.tb8a.jar", false);
 		tb8b.start();
 		tb8a.start();
 
-		tb13d = getContext().installBundle(
-				getWebServer() + "classloading.tb13d.jar");
-		tb13c = getContext().installBundle(
-				getWebServer() + "classloading.tb13c.jar");
+		tb13d = bundleInstaller.installBundle("classloading.tb13d.jar", false);
+		tb13c = bundleInstaller.installBundle("classloading.tb13c.jar", false);
 
 		try {
 			tb13d.start();
 			tb13c.start();
 
 			// Read the resource content to check the loading bundle
-			trace("Loading a resource and checking its loading bundle");
+			System.out.println("Loading a resource and checking its loading bundle");
 			url = tb13c.getResource("/resources/tb8a-resource.txt");
 
 			inputStream = url.openStream();
 			reader = new BufferedReader(new InputStreamReader(inputStream));
 			try {
-				assertEquals("Checking the loading bundle name",
-						"tb8b", reader
-						.readLine());
+				assertThat(reader
+						.readLine())
+						.as("Checking the loading bundle name")
+						.isEqualTo("tb8b");
 			}
 			finally {
 				reader.close();
@@ -1784,6 +1741,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testPackageExport004() throws Exception {
 		Bundle tb8a;
 		Bundle tb8b;
@@ -1793,23 +1751,19 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		InputStream inputStream;
 		URL url;
 
-		tb8a = getContext().installBundle(
-				getWebServer() + "classloading.tb8a.jar");
-		tb8b = getContext().installBundle(
-				getWebServer() + "classloading.tb8b.jar");
+		tb8a = bundleInstaller.installBundle("classloading.tb8a.jar", false);
+		tb8b = bundleInstaller.installBundle("classloading.tb8b.jar", false);
 		tb8a.start();
 		tb8b.start();
 
-		tb13e = getContext().installBundle(
-				getWebServer() + "classloading.tb13e.jar");
-		tb13f = getContext().installBundle(
-				getWebServer() + "classloading.tb13f.jar");
+		tb13e = bundleInstaller.installBundle("classloading.tb13e.jar", false);
+		tb13f = bundleInstaller.installBundle("classloading.tb13f.jar", false);
 
 		try {
 			tb13e.start();
 			tb13f.start();
 
-			trace("Loading a class from the imported package");
+			System.out.println("Loading a class from the imported package");
 			try {
 				tb13f
 						.loadClass("org.osgi.test.cases.framework.classloading.exports.security.SomePermission");
@@ -1819,15 +1773,16 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			}
 
 			// Read the resource content to check the loading bundle
-			trace("Loading a resource and checking its loading bundle");
+			System.out.println("Loading a resource and checking its loading bundle");
 			url = tb13f.getResource("/resources/tb8a-resource.txt");
 
 			inputStream = url.openStream();
 			reader = new BufferedReader(new InputStreamReader(inputStream));
 			try {
-				assertEquals("Checking the loading bundle name",
-						"tb8b", reader
-						.readLine());
+				assertThat(reader
+						.readLine())
+						.as("Checking the loading bundle name")
+						.isEqualTo("tb8b");
 			}
 			finally {
 				reader.close();
@@ -1859,29 +1814,18 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testPackageExport005() throws Exception {
-		Bundle tb13g;
-		Bundle tb13h;
-
-		tb13g = installBundle("classloading.tb13g.jar");
-		tb13h = installBundle("classloading.tb13h.jar");
-
+	@Test
+	public void testPackageExport005(
+			@InjectInstalledBundle(value = "classloading.tb13g.jar", start = true) Bundle tb13g,
+			@InjectInstalledBundle(value = "classloading.tb13h.jar", start = true) Bundle tb13h
+			) throws Exception {
+		System.out.println("Loading a class from the imported package");
 		try {
-			trace("Loading a class from the imported package");
-			try {
-				tb13h
-						.loadClass("org.osgi.test.cases.framework.classloading.exports.listener.ServiceListenerTester");
-			}
-			catch (ClassNotFoundException ex) {
-				fail("The class belongs to an imported package must be found");
-			}
+			tb13h
+					.loadClass("org.osgi.test.cases.framework.classloading.exports.listener.ServiceListenerTester");
 		}
-		finally {
-			tb13h.stop();
-			tb13g.stop();
-
-			tb13h.uninstall();
-			tb13g.uninstall();
+		catch (ClassNotFoundException ex) {
+			fail("The class belongs to an imported package must be found");
 		}
 	}
 
@@ -1896,27 +1840,18 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testPackageExport006() throws Exception {
-		Bundle tb13g;
-		Bundle tb13i;
-
-		tb13g = installBundle("classloading.tb13g.jar");
-		tb13i = getContext().installBundle(
-				getWebServer() + "classloading.tb13i.jar");
-
+	@Test
+	public void testPackageExport006(
+			@InjectInstalledBundle(value = "classloading.tb13g.jar", start = true) Bundle tb13g,
+			@InjectInstalledBundle(value = "classloading.tb13i.jar", start = false) Bundle tb13i
+			) throws Exception {
 		try {
-			trace("Starting a bundle which incorrectly imports a package");
+			System.out.println("Starting a bundle which incorrectly imports a package");
 			tb13i.start();
 			fail("The bundle cannot start without the mandatory attributes required by the exported package");
 		}
 		catch (BundleException ex) {
 			// expected
-		}
-		finally {
-			tb13g.stop();
-
-			tb13i.uninstall();
-			tb13g.uninstall();
 		}
 	}
 
@@ -1941,37 +1876,27 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testPackageExport007() throws Exception {
-		Bundle tb13j;
-		Bundle tb13o;
-
-		tb13j = installBundle("classloading.tb13j.jar");
-		tb13o = installBundle("classloading.tb13o.jar");
-
+	@Test
+	public void testPackageExport007(
+			@InjectInstalledBundle(value = "classloading.tb13j.jar", start = true) Bundle tb13j,
+			@InjectInstalledBundle(value = "classloading.tb13o.jar", start = true) Bundle tb13o
+			) throws Exception {
+		System.out.println("Loading a class which matchs the include list");
 		try {
-			trace("Loading a class which matchs the include list");
-			try {
-				tb13o
-						.loadClass("org.osgi.test.cases.framework.classloading.exports.listener.ServiceListenerTester");
-			}
-			catch (ClassNotFoundException ex) {
-				fail("The class belongs the exported package must be found");
-			}
+			tb13o
+					.loadClass("org.osgi.test.cases.framework.classloading.exports.listener.ServiceListenerTester");
+		}
+		catch (ClassNotFoundException ex) {
+			fail("The class belongs the exported package must be found");
+		}
 
-			trace("Loading a class which matchs the exclude list");
-			try {
-				tb13o
-						.loadClass("org.osgi.test.cases.framework.classloading.exports.listener.AllServiceListenerTester");
-				fail("The class belongs the exported package must not be found");
-			}
-			catch (ClassNotFoundException ex) {
-				// expected
-			}
-		}
-		finally {
-			tb13o.uninstall();
-			tb13j.uninstall();
-		}
+		System.out.println("Loading a class which matchs the exclude list");
+		assertThatExceptionOfType(ClassNotFoundException.class)
+				.as("The class belongs the exported package must not be found")
+				.isThrownBy(() -> {
+					tb13o
+							.loadClass("org.osgi.test.cases.framework.classloading.exports.listener.AllServiceListenerTester");
+				});
 	}
 
 	/**
@@ -1989,14 +1914,14 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testPackageExport008() throws Exception {
 		Bundle tb13k;
 		Bundle tb13l;
 
-		trace("Installing a bundle with an exported package having the same value for version and specification-version attributes");
+		System.out.println("Installing a bundle with an exported package having the same value for version and specification-version attributes");
 		try {
-			tb13k = getContext().installBundle(
-					getWebServer() + "classloading.tb13k.jar");
+			tb13k = bundleInstaller.installBundle("classloading.tb13k.jar", false);
 			tb13k.uninstall();
 		}
 		catch (BundleException ex) {
@@ -2004,9 +1929,8 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		}
 
 		try {
-			trace("Installing a bundle with an exported package having different values for version and specification-version attributes");
-			tb13l = getContext().installBundle(
-					getWebServer() + "classloading.tb13l.jar");
+			System.out.println("Installing a bundle with an exported package having different values for version and specification-version attributes");
+			tb13l = bundleInstaller.installBundle("classloading.tb13l.jar", false);
 			tb13l.uninstall();
 			fail("A bundle with an exported package having different values for version and specification-version attributes must fail to install");
 		}
@@ -2029,13 +1953,13 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testPackageExport009() throws Exception {
 		Bundle tb13m;
 
 		try {
-			trace("Installing a bundle with an exported package which incorrectly specify bundle-symbolic-name and bundle-version");
-			tb13m = getContext().installBundle(
-					getWebServer() + "classloading.tb13m.jar");
+			System.out.println("Installing a bundle with an exported package which incorrectly specify bundle-symbolic-name and bundle-version");
+			tb13m = bundleInstaller.installBundle("classloading.tb13m.jar", false);
 			tb13m.uninstall();
 			fail("A bundle with an exported package which incorrectly specify bundle-symbolic-name and bundle-version must fail to install");
 		}
@@ -2055,6 +1979,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testPackageImport001() throws Exception {
 		Bundle tb8a;
 		Bundle tb15a;
@@ -2063,16 +1988,15 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		InputStream inputStream;
 		URL url;
 
-		tb8a = installBundle("classloading.tb8a.jar");
-		tb15a = installBundle("classloading.tb15a.jar");
+		tb8a = bundleInstaller.installBundle("classloading.tb8a.jar", true);
+		tb15a = bundleInstaller.installBundle("classloading.tb15a.jar", true);
 
 		try {
 			// Install a bundle which import packages
-			tb15b = getContext().installBundle(
-					getWebServer() + "classloading.tb15b.jar");
+			tb15b = bundleInstaller.installBundle("classloading.tb15b.jar", false);
 
 			// Check if packages are correctly imported
-			trace("Loading a class from the imported package");
+			System.out.println("Loading a class from the imported package");
 			try {
 				tb15b
 						.loadClass("org.osgi.test.cases.framework.classloading.exports.service.SomeService");
@@ -2082,15 +2006,15 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			}
 
 			// Read the resource content to check the loading bundle
-			trace("Loading a resource and checking its loading bundle");
+			System.out.println("Loading a resource and checking its loading bundle");
 			url = tb15b.getResource("/resources/tb8a-resource.txt");
 
 			inputStream = url.openStream();
 			reader = new BufferedReader(new InputStreamReader(inputStream));
 			try {
-				assertEquals("Checking the loading bundle name",
-						"tb15a",
-						reader.readLine());
+				assertThat(reader.readLine())
+						.as("Checking the loading bundle name")
+						.isEqualTo("tb15a");
 			}
 			finally {
 				reader.close();
@@ -2119,16 +2043,16 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testPackageImport002() throws Exception {
 		Bundle tb1;
 		Bundle tb15c;
 
 		// Try to install when the imported package is not available
-		tb15c = getContext().installBundle(
-				getWebServer() + "classloading.tb15c.jar");
+		tb15c = bundleInstaller.installBundle("classloading.tb15c.jar", false);
 
 		try {
-			trace("Starting a bundle with an import package that is not available");
+			System.out.println("Starting a bundle with an import package that is not available");
 			tb15c.start();
 			fail("The bundle must not be resolved, since the imported package is not available");
 		}
@@ -2140,15 +2064,14 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		}
 
 		// Try to install when the imported package is available
-		tb1 = installBundle("classloading.tb1.jar");
+		tb1 = bundleInstaller.installBundle("classloading.tb1.jar", true);
 
 		try {
 			// Install a bundle which import package
-			tb15c = getContext().installBundle(
-					getWebServer() + "classloading.tb15c.jar");
+			tb15c = bundleInstaller.installBundle("classloading.tb15c.jar", false);
 
 			try {
-				trace("Starting a bundle with an import package that is available");
+				System.out.println("Starting a bundle with an import package that is available");
 				tb15c.start();
 			}
 			catch (BundleException ex) {
@@ -2156,7 +2079,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			}
 
 			// Check if packages are correctly imported
-			trace("Loading a class from the imported package");
+			System.out.println("Loading a class from the imported package");
 			try {
 				tb15c
 						.loadClass("org.osgi.test.cases.framework.classloading.exports.service.SomeService");
@@ -2183,49 +2106,43 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testPackageImport003() throws Exception {
+	@Test
+	public void testPackageImport003(
+			@InjectInstalledBundle(value = "classloading.tb15d.jar", start = false) Bundle tb15d
+			) throws Exception {
 		Bundle tb1;
-		Bundle tb15d;
 
 		// Try to install when the imported package is not available
-		tb15d = getContext().installBundle(
-				getWebServer() + "classloading.tb15d.jar");
 
 		try {
-			try {
-				trace("Starting a bundle with an import package that is not available");
-				tb15d.start();
-			}
-			catch (BundleException ex) {
-				fail("The bundle must be resolved, even though the imported package is not available");
-			}
+			System.out.println("Starting a bundle with an import package that is not available");
+			tb15d.start();
+		}
+		catch (BundleException ex) {
+			fail("The bundle must be resolved, even though the imported package is not available");
+		}
 
-			// Now, install a bundle with the imported package
-			tb1 = installBundle("classloading.tb1.jar");
+		// Now, install a bundle with the imported package
+		tb1 = bundleInstaller.installBundle("classloading.tb1.jar", true);
 
-			Wiring.synchronousRefreshBundles(getContext(), tb15d);
+		FrameworkWirings.refreshBundles(bundleContext, tb15d);
 
-			try {
-				Sleep.sleep(5000);
-			} catch (InterruptedException ex) {
-				// Ignore this exception
-			}
+		try {
+			Thread.sleep(5000);
+		} catch (InterruptedException ex) {
+			// Ignore this exception
+		}
 
-			// Check if the package is available
-			try {
-				tb15d
-						.loadClass("org.osgi.test.cases.framework.classloading.exports.service.SomeService");
-			}
-			catch (ClassNotFoundException ex) {
-				fail("The package must be available after resolve the bundle");
-			}
-			finally {
-				tb1.uninstall();
-			}
+		// Check if the package is available
+		try {
+			tb15d
+					.loadClass("org.osgi.test.cases.framework.classloading.exports.service.SomeService");
+		}
+		catch (ClassNotFoundException ex) {
+			fail("The package must be available after resolve the bundle");
 		}
 		finally {
-			tb15d.stop();
-			tb15d.uninstall();
+			tb1.uninstall();
 		}
 	}
 
@@ -2244,39 +2161,30 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testPackageImport004() throws Exception {
-		Bundle tb1;
+	@Test
+	public void testPackageImport004(
+			@InjectInstalledBundle(value = "classloading.tb1.jar", start = true) Bundle tb1
+			) throws Exception {
 		Bundle tb15e;
 		Bundle tb15f;
 
-		tb1 = installBundle("classloading.tb1.jar");
+		System.out.println("Installing a bundle with an import package having the same value for version and specification-version attributes");
+		try {
+			tb15e = bundleInstaller.installBundle("classloading.tb15e.jar", false);
+			tb15e.uninstall();
+		}
+		catch (BundleException ex) {
+			fail("A bundle with an imported package having the same value for version and specification-version attributes must be installed");
+		}
 
 		try {
-			trace("Installing a bundle with an import package having the same value for version and specification-version attributes");
-			try {
-				tb15e = getContext()
-						.installBundle(
-						getWebServer() + "classloading.tb15e.jar");
-				tb15e.uninstall();
-			}
-			catch (BundleException ex) {
-				fail("A bundle with an imported package having the same value for version and specification-version attributes must be installed");
-			}
-
-			try {
-				trace("Installing a bundle with an import package having different values for version and specification-version attributes");
-				tb15f = getContext()
-						.installBundle(
-						getWebServer() + "classloading.tb15f.jar");
-				tb15f.uninstall();
-				fail("A bundle with an imported package having different values for version and specification-version attributes must fail to install");
-			}
-			catch (BundleException ex) {
-				// expected
-			}
+			System.out.println("Installing a bundle with an import package having different values for version and specification-version attributes");
+			tb15f = bundleInstaller.installBundle("classloading.tb15f.jar", false);
+			tb15f.uninstall();
+			fail("A bundle with an imported package having different values for version and specification-version attributes must fail to install");
 		}
-		finally {
-			tb1.uninstall();
+		catch (BundleException ex) {
+			// expected
 		}
 	}
 
@@ -2292,25 +2200,18 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testPackageImport005() throws Exception {
-		Bundle tb1;
-		Bundle tb15g;
-
-		tb1 = installBundle("classloading.tb1.jar");
-		tb15g = getContext().installBundle(
-				getWebServer() + "classloading.tb15g.jar");
-
+	@Test
+	public void testPackageImport005(
+			@InjectInstalledBundle(value = "classloading.tb1.jar", start = true) Bundle tb1,
+			@InjectInstalledBundle(value = "classloading.tb15g.jar", start = false) Bundle tb15g
+			) throws Exception {
 		try {
-			trace("Starting a bundle which imports a package specifying the bundle name and version");
+			System.out.println("Starting a bundle which imports a package specifying the bundle name and version");
 			tb15g.start();
 			tb15g.stop();
 		}
 		catch (BundleException ex) {
 			fail("A bundle which imports a package specifying the bundle name and version must be started");
-		}
-		finally {
-			tb15g.uninstall();
-			tb1.uninstall();
 		}
 	}
 
@@ -2321,18 +2222,18 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testPackageImport006() throws Exception {
 		Bundle tb1;
 		Bundle tb15h;
 
-		tb1 = installBundle("classloading.tb1.jar");
+		tb1 = bundleInstaller.installBundle("classloading.tb1.jar", true);
 		tb15h = null;
 
 		try {
-			tb15h = getContext().installBundle(
-					getWebServer() + "classloading.tb15h.jar");
+			tb15h = bundleInstaller.installBundle("classloading.tb15h.jar", false);
 
-			trace("Starting a bundle which imports a given package more than once");
+			System.out.println("Starting a bundle which imports a given package more than once");
 			tb15h.start();
 			tb15h.stop();
 			fail("A bundle which imports a package more than once must not be resolved");
@@ -2355,6 +2256,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getBundleId()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testPackageImport007() throws Exception {
 		Bundle tb8a;
 		Bundle tb8b;
@@ -2363,9 +2265,9 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		InputStream inputStream;
 		URL url;
 
-		tb8a = installBundle("classloading.tb8a.jar");
-		tb8b = installBundle("classloading.tb8b.jar");
-		tb15i = installBundle("classloading.tb15i.jar");
+		tb8a = bundleInstaller.installBundle("classloading.tb8a.jar", true);
+		tb8b = bundleInstaller.installBundle("classloading.tb8b.jar", true);
+		tb15i = bundleInstaller.installBundle("classloading.tb15i.jar", true);
 
 		try {
 			// Check that tb8a has the lowest bundle id
@@ -2374,15 +2276,16 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			}
 
 			// Read the resource content to check the loading bundle
-			trace("Loading a resource and checking its loading bundle");
+			System.out.println("Loading a resource and checking its loading bundle");
 			url = tb15i.getResource("/resources/tb8a-resource.txt");
 
 			inputStream = url.openStream();
 			reader = new BufferedReader(new InputStreamReader(inputStream));
 			try {
-				assertEquals("Checking the loading bundle name",
-						"tb8a", reader
-						.readLine());
+				assertThat(reader
+						.readLine())
+						.as("Checking the loading bundle name")
+						.isEqualTo("tb8a");
 			}
 			finally {
 				reader.close();
@@ -2405,22 +2308,17 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testPackageDynamicImport001() throws Exception {
-		Bundle tb17a;
-
-		tb17a = getContext().installBundle(
-				getWebServer() + "classloading.tb17a.jar");
-
+	@Test
+	public void testPackageDynamicImport001(
+			@InjectInstalledBundle(value = "classloading.tb17a.jar", start = false) Bundle tb17a
+			) throws Exception {
 		try {
-			trace("Starting a bundle importing dynamically an exported package");
+			System.out.println("Starting a bundle importing dynamically an exported package");
 			tb17a.start();
 			tb17a.stop();
 		}
 		catch (BundleException ex) {
 			fail("When using dynamic imports, a bundle must be started even tough the imported package is not available");
-		}
-		finally {
-			tb17a.uninstall();
 		}
 	}
 
@@ -2441,18 +2339,19 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testPackageDynamicImport002() throws Exception {
 		Bundle tb1;
 		Bundle tb8a;
 		Bundle tb17b;
 		URL url;
 
-		tb1 = installBundle("classloading.tb1.jar");
-		tb8a = installBundle("classloading.tb8a.jar");
-		tb17b = installBundle("classloading.tb17b.jar");
+		tb1 = bundleInstaller.installBundle("classloading.tb1.jar", true);
+		tb8a = bundleInstaller.installBundle("classloading.tb8a.jar", true);
+		tb17b = bundleInstaller.installBundle("classloading.tb17b.jar", true);
 
 		try {
-			trace("Loading resources from a dynamic imported package");
+			System.out.println("Loading resources from a dynamic imported package");
 
 			try {
 				tb17b
@@ -2486,6 +2385,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testPackageDynamicImport003() throws Exception {
 		Bundle tb8a;
 		Bundle tb8b;
@@ -2494,21 +2394,22 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		InputStream inputStream;
 		URL url;
 
-		tb8a = installBundle("classloading.tb8a.jar");
-		tb8b = installBundle("classloading.tb8b.jar");
-		tb17c = installBundle("classloading.tb17c.jar");
+		tb8a = bundleInstaller.installBundle("classloading.tb8a.jar", true);
+		tb8b = bundleInstaller.installBundle("classloading.tb8b.jar", true);
+		tb17c = bundleInstaller.installBundle("classloading.tb17c.jar", true);
 
 		try {
 			// Read the resource content to check the loading bundle
-			trace("Loading a resource and checking its loading bundle");
+			System.out.println("Loading a resource and checking its loading bundle");
 			url = tb17c.getResource("/resources/tb8a-resource.txt");
 
 			inputStream = url.openStream();
 			reader = new BufferedReader(new InputStreamReader(inputStream));
 			try {
-				assertEquals("Checking the loading bundle name",
-						"tb8b", reader
-						.readLine());
+				assertThat(reader
+						.readLine())
+						.as("Checking the loading bundle name")
+						.isEqualTo("tb8b");
 			}
 			finally {
 				reader.close();
@@ -2528,38 +2429,24 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testPackageDynamicImport004() throws Exception {
-		Bundle tb1;
-		Bundle tb17i;
-		Bundle tb17j;
-
-		tb1 = installBundle("classloading.tb1.jar");
-		tb17i = installBundle("classloading.tb17i.jar");
-		tb17j = installBundle("classloading.tb17j.jar");
-
-		try {
-			try {
-				tb17i
-						.loadClass("org.osgi.test.cases.framework.classloading.exports.service.SomeService");
-				fail("bundle does not export package");
-			}
-			catch (ClassNotFoundException ex) {
-				// expected
-			}
-			try {
-				tb17j
-						.loadClass("org.osgi.test.cases.framework.classloading.exports.service.SomeService");
-				fail("The dynamic import must not be propagated");
-			}
-			catch (ClassNotFoundException ex) {
-				// expected
-			}
-		}
-		finally {
-			tb17j.uninstall();
-			tb17i.uninstall();
-			tb1.uninstall();
-		}
+	@Test
+	public void testPackageDynamicImport004(
+			@InjectInstalledBundle(value = "classloading.tb1.jar", start = true) Bundle tb1,
+			@InjectInstalledBundle(value = "classloading.tb17i.jar", start = true) Bundle tb17i,
+			@InjectInstalledBundle(value = "classloading.tb17j.jar", start = true) Bundle tb17j
+			) throws Exception {
+		assertThatExceptionOfType(ClassNotFoundException.class)
+				.as("bundle does not export package")
+				.isThrownBy(() -> {
+					tb17i
+							.loadClass("org.osgi.test.cases.framework.classloading.exports.service.SomeService");
+				});
+		assertThatExceptionOfType(ClassNotFoundException.class)
+				.as("The dynamic import must not be propagated")
+				.isThrownBy(() -> {
+					tb17j
+							.loadClass("org.osgi.test.cases.framework.classloading.exports.service.SomeService");
+				});
 	}
 
 	/**
@@ -2578,24 +2465,22 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testPackageDynamicImport005() throws Exception {
 		Bundle tb1;
 		Bundle tb17d;
 		Bundle tb17e;
 
-		tb1 = installBundle("classloading.tb1.jar");
+		tb1 = bundleInstaller.installBundle("classloading.tb1.jar", true);
 
 		tb17d = null;
 		try {
-			trace("Installing a bundle with a dynamic imported package having the same value for version and specification-version attributes");
-			tb17d = installBundle("classloading.tb17d.jar");
+			System.out.println("Installing a bundle with a dynamic imported package having the same value for version and specification-version attributes");
+			tb17d = bundleInstaller.installBundle("classloading.tb17d.jar", true);
 
-			trace("Loading a class from a dynamic imported package");
+			System.out.println("Loading a class from a dynamic imported package");
 			tb17d
 					.loadClass("org.osgi.test.cases.framework.classloading.exports.service.SomeService");
-		}
-		catch (BundleException ex) {
-			fail("A bundle with a dynamic imported package having the same value for version and specification-version attributes must be installed");
 		}
 		catch (ClassNotFoundException ex) {
 			fail("The class must be found when belongs a dynamic imported package");
@@ -2609,9 +2494,8 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		}
 
 		try {
-			trace("Installing a bundle with a dynamic imported package having different values for version and specification-version attributes");
-			tb17e = getContext().installBundle(
-					getWebServer() + "classloading.tb17e.jar");
+			System.out.println("Installing a bundle with a dynamic imported package having different values for version and specification-version attributes");
+			tb17e = bundleInstaller.installBundle("classloading.tb17e.jar", false);
 			tb17e.uninstall();
 			fail("A bundle with a dynamic imported package having different values for version and specification-version attributes must fail to install");
 		}
@@ -2632,29 +2516,18 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testPackageDynamicImport006() throws Exception {
-		Bundle tb13g;
-		Bundle tb17g;
-
-		tb13g = installBundle("classloading.tb13g.jar");
-		tb17g = installBundle("classloading.tb17g.jar");
-
+	@Test
+	public void testPackageDynamicImport006(
+			@InjectInstalledBundle(value = "classloading.tb13g.jar", start = true) Bundle tb13g,
+			@InjectInstalledBundle(value = "classloading.tb17g.jar", start = true) Bundle tb17g
+			) throws Exception {
+		System.out.println("Loading a class from a dynamic imported package");
 		try {
-			trace("Loading a class from a dynamic imported package");
-			try {
-				tb17g
-						.loadClass("org.osgi.test.cases.framework.classloading.exports.listener.ServiceListenerTester");
-			}
-			catch (ClassNotFoundException ex) {
-				fail("The class belongs to a dynamic imported package must be found");
-			}
+			tb17g
+					.loadClass("org.osgi.test.cases.framework.classloading.exports.listener.ServiceListenerTester");
 		}
-		finally {
-			tb17g.stop();
-			tb13g.stop();
-
-			tb17g.uninstall();
-			tb13g.uninstall();
+		catch (ClassNotFoundException ex) {
+			fail("The class belongs to a dynamic imported package must be found");
 		}
 	}
 
@@ -2670,29 +2543,18 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testPackageDynamicImport007() throws Exception {
-		Bundle tb13g;
-		Bundle tb17h;
-
-		tb13g = installBundle("classloading.tb13g.jar");
-		tb17h = installBundle("classloading.tb17h.jar");
-
-		try {
-			trace("Loading a class from a dynamic imported package");
-			try {
-				tb17h
-						.loadClass("org.osgi.test.cases.framework.classloading.exports.listener.ServiceListenerTester");
-				fail("The class belongs to a dynamic imported package must not be found");
-			}
-			catch (ClassNotFoundException ex) {
-				// expected
-			}
-		}
-		finally {
-			tb17h.uninstall();
-			tb13g.uninstall();
-		}
-
+	@Test
+	public void testPackageDynamicImport007(
+			@InjectInstalledBundle(value = "classloading.tb13g.jar", start = true) Bundle tb13g,
+			@InjectInstalledBundle(value = "classloading.tb17h.jar", start = true) Bundle tb17h
+			) throws Exception {
+		System.out.println("Loading a class from a dynamic imported package");
+		assertThatExceptionOfType(ClassNotFoundException.class)
+				.as("The class belongs to a dynamic imported package must not be found")
+				.isThrownBy(() -> {
+					tb17h
+							.loadClass("org.osgi.test.cases.framework.classloading.exports.listener.ServiceListenerTester");
+				});
 	}
 
 	// Requiring a Bundle -------------------------------------
@@ -2714,40 +2576,42 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
+	@Test
 	public void testRequiredBundle001() throws Exception {
-		Bundle tb16b = getContext().installBundle(
-				getWebServer() + "classloading.tb16b.jar");
-		Bundle tb16c = getContext().installBundle(
-				getWebServer() + "classloading.tb16c.jar");
-		Bundle tb16a = getContext().installBundle(
-				getWebServer() + "classloading.tb16a.jar");
+		Bundle tb16b = bundleInstaller.installBundle("classloading.tb16b.jar", false);
+		Bundle tb16c = bundleInstaller.installBundle("classloading.tb16c.jar", false);
+		Bundle tb16a = bundleInstaller.installBundle("classloading.tb16a.jar", false);
 		tb16b.start();
 		tb16c.start();
 		tb16a.start();
 		URL url = tb16a.getResource("test/package/resources/resource.txt");
 		try {
-			assertNotNull("Expecting to find resource", url);
+			assertThat(url)
+					.as("Expecting to find resource")
+					.isNotNull();
 
 			BufferedReader bufr = new BufferedReader(new InputStreamReader(url
 					.openStream()));
 			String line = bufr.readLine();
 			bufr.close();
-			assertEquals("Expecting to get resource from classloading.tb16c",
-					"tb16c", line);
+			assertThat(line)
+					.as("Expecting to get resource from classloading.tb16c")
+					.isEqualTo("tb16c");
 
 			// Test that own resources are available to requiring bundle
 			url = tb16a
 					.getResource("test/package/resources/tb16a-resource.txt");
-			assertNotNull("Expecting to find the resource in requiring bundle",
-					url);
+			assertThat(url)
+					.as("Expecting to find the resource in requiring bundle")
+					.isNotNull();
 		}
 		finally {
 			tb16a.stop();
 			tb16b.stop();
 			tb16c.stop();
-			uninstallBundle(tb16a);
-			uninstallBundle(tb16b);
-			uninstallBundle(tb16c);
+			tb16a.uninstall();
+			tb16b.uninstall();
+			tb16c.uninstall();
 		}
 	}
 
@@ -2759,23 +2623,22 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
+	@Test
 	public void testRequiredBundle002() throws Exception {
-		Bundle tb16b = getContext().installBundle(
-				getWebServer() + "classloading.tb16b.jar");
-		Bundle tb16c = getContext().installBundle(
-				getWebServer() + "classloading.tb16c.jar");
-		Bundle tb16a = getContext().installBundle(
-				getWebServer() + "classloading.tb16a.jar");
+		Bundle tb16b = bundleInstaller.installBundle("classloading.tb16b.jar", false);
+		Bundle tb16c = bundleInstaller.installBundle("classloading.tb16c.jar", false);
+		Bundle tb16a = bundleInstaller.installBundle("classloading.tb16a.jar", false);
 		URL url = tb16a
 				.getResource("org/osgi/test/cases/framework/classloading/tb16b/TestClass.class");
 		try {
-			assertNull("Not expecting to find the resource in required bundle",
-					url);
+			assertThat(url)
+					.as("Not expecting to find the resource in required bundle")
+					.isNull();
 		}
 		finally {
-			uninstallBundle(tb16a);
-			uninstallBundle(tb16b);
-			uninstallBundle(tb16c);
+			tb16a.uninstall();
+			tb16b.uninstall();
+			tb16c.uninstall();
 		}
 	}
 
@@ -2787,30 +2650,20 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
-	public void testRequiredBundle004() throws Exception {
-		Bundle tb16b = getContext().installBundle(
-				getWebServer() + "classloading.tb16b.jar");
-		Bundle tb16a = getContext().installBundle(
-				getWebServer() + "classloading.tb16k.jar");
-		Bundle tb16i = getContext().installBundle(
-				getWebServer() + "classloading.tb16i.jar");
+	@Test
+	public void testRequiredBundle004(
+			@InjectInstalledBundle(value = "classloading.tb16b.jar", start = false) Bundle tb16b,
+			@InjectInstalledBundle(value = "classloading.tb16k.jar", start = false) Bundle tb16a,
+			@InjectInstalledBundle(value = "classloading.tb16i.jar", start = false) Bundle tb16i
+			) throws Exception {
 		tb16a.start();
 		tb16b.start();
 		tb16i.start();
-		try {
-			URL url = tb16i
-					.getResource("test/package/resources/tb16b-resource.txt");
-			assertNull("Not expecting to find the resource tb16b-resource.txt",
-					url);
-		}
-		finally {
-			tb16a.stop();
-			tb16b.stop();
-			tb16i.stop();
-			uninstallBundle(tb16a);
-			uninstallBundle(tb16b);
-			uninstallBundle(tb16i);
-		}
+		URL url = tb16i
+				.getResource("test/package/resources/tb16b-resource.txt");
+		assertThat(url)
+				.as("Not expecting to find the resource tb16b-resource.txt")
+				.isNull();
 	}
 
 	/**
@@ -2824,28 +2677,28 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
+	@Test
 	public void testRequiredBundle005() throws Exception {
 		// Install and start requiring bundle
-		Bundle tb16e = getContext().installBundle(
-				getWebServer() + "classloading.tb16e.jar");
+		Bundle tb16e = bundleInstaller.installBundle("classloading.tb16e.jar", false);
 		tb16e.start(); // this will cause requiring bundle to be resolved
 
 		// Install and start required bundle
-		Bundle tb16b = getContext().installBundle(
-				getWebServer() + "classloading.tb16b.jar");
+		Bundle tb16b = bundleInstaller.installBundle("classloading.tb16b.jar", false);
 		tb16b.start(); // this will cause required bundle to be resolved
 		try {
 			// The resource in required bundle is not expected
 			URL url = tb16e.getResource("test/package/resources/resource.txt");
-			assertNull("Not expecting to find resource from required bundle",
-					url);
+			assertThat(url)
+					.as("Not expecting to find resource from required bundle")
+					.isNull();
 
 		}
 		finally {
 			tb16b.stop();
-			uninstallBundle(tb16b);
+			tb16b.uninstall();
 			tb16e.stop();
-			uninstallBundle(tb16e);
+			tb16e.uninstall();
 		}
 	}
 
@@ -2856,29 +2709,29 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
+	@Test
 	public void testRequiredBundle006() throws Exception {
 		// Install and start required bundle
-		Bundle tb16b = getContext().installBundle(
-				getWebServer() + "classloading.tb16b.jar");
+		Bundle tb16b = bundleInstaller.installBundle("classloading.tb16b.jar", false);
 		tb16b.start(); // this will cause required bundle to be resolved
 
 		// Install and start requiring bundle
-		Bundle tb16f = getContext().installBundle(
-				getWebServer() + "classloading.tb16f.jar");
+		Bundle tb16f = bundleInstaller.installBundle("classloading.tb16f.jar", false);
 		tb16f.start(); // this will cause requiring bundle to be resolved
 
 		try {
 			// The resource in required bundle is not expected
 			URL url = tb16f.getResource("test/package/resources/resource.txt");
-			assertNull("Not expecting to find resource from required bundle",
-					url);
+			assertThat(url)
+					.as("Not expecting to find resource from required bundle")
+					.isNull();
 
 		}
 		finally {
 			tb16b.stop();
-			uninstallBundle(tb16b);
+			tb16b.uninstall();
 			tb16f.stop();
-			uninstallBundle(tb16f);
+			tb16f.uninstall();
 		}
 	}
 
@@ -2893,33 +2746,35 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
+	@Test
 	public void testRequiredBundle007() throws Exception {
-		Bundle tb16b = getContext().installBundle(
-				getWebServer() + "classloading.tb16b.jar");
+		Bundle tb16b = bundleInstaller.installBundle("classloading.tb16b.jar", false);
 		tb16b.start();
-		Bundle tb16g = getContext().installBundle(
-				getWebServer() + "classloading.tb16g.jar");
+		Bundle tb16g = bundleInstaller.installBundle("classloading.tb16g.jar", false);
 		tb16g.start();
 		URL url = tb16g.getResource("test/package/resources/resource.txt");
 		try {
-			assertNotNull("Expecting to find resource", url);
+			assertThat(url)
+					.as("Expecting to find resource")
+					.isNotNull();
 			BufferedReader bufr = new BufferedReader(new InputStreamReader(url
 					.openStream()));
 			String line = bufr.readLine();
 			bufr.close();
-			assertEquals("Expecting to get resource from classloading.tb16b",
-					"tb16b", line);
+			assertThat(line)
+					.as("Expecting to get resource from classloading.tb16b")
+					.isEqualTo("tb16b");
 			url = tb16g
 					.getResource("test/package/resources/tb16g-resource.txt");
-			assertNull(
-					"Not expecting to find the resource in requiring bundle",
-					url);
+			assertThat(url)
+					.as("Not expecting to find the resource in requiring bundle")
+					.isNull();
 		}
 		finally {
 			tb16g.stop();
 			tb16b.stop();
-			uninstallBundle(tb16g);
-			uninstallBundle(tb16b);
+			tb16g.uninstall();
+			tb16b.uninstall();
 		}
 	}
 
@@ -2933,6 +2788,7 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.loadClass(String)
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
+	@Test
 	public void testRequiredBundle008() throws Exception {
 		Bundle tb8a;
 		Bundle tb8b;
@@ -2943,27 +2799,23 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		URL url;
 
 		// start bundles that export different versions of the same package
-		tb8a = getContext().installBundle(
-				getWebServer() + "classloading.tb8a.jar");
-		tb8b = getContext().installBundle(
-				getWebServer() + "classloading.tb8b.jar");
+		tb8a = bundleInstaller.installBundle("classloading.tb8a.jar", false);
+		tb8b = bundleInstaller.installBundle("classloading.tb8b.jar", false);
 		tb8a.start();
 		tb8b.start();
 
 		// start required bundle that exports the package used by the
 		// requiring bundle
-		tb13b = getContext().installBundle(
-				getWebServer() + "classloading.tb13b.jar");
+		tb13b = bundleInstaller.installBundle("classloading.tb13b.jar", false);
 		tb13b.start();
 
 		// start requiring bundle
-		tb16h = getContext().installBundle(
-				getWebServer() + "classloading.tb16h.jar");
+		tb16h = bundleInstaller.installBundle("classloading.tb16h.jar", false);
 		tb16h.start();
 
 		try {
 
-			trace("Loading a class from the imported package");
+			System.out.println("Loading a class from the imported package");
 			try {
 				tb16h
 						.loadClass("org.osgi.test.cases.framework.classloading.exports.service.SomeService");
@@ -2973,15 +2825,16 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 			}
 
 			// Read the resource content to check the loading bundle
-			trace("Loading a resource and checking its loading bundle");
+			System.out.println("Loading a resource and checking its loading bundle");
 			url = tb16h.getResource("/resources/tb8a-resource.txt");
 
 			inputStream = url.openStream();
 			reader = new BufferedReader(new InputStreamReader(inputStream));
 			try {
-				assertEquals("Checking the loading bundle name",
-						"tb8b", reader
-						.readLine());
+				assertThat(reader
+						.readLine())
+						.as("Checking the loading bundle name")
+						.isEqualTo("tb8b");
 			}
 			finally {
 				reader.close();
@@ -3011,41 +2864,29 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception If any exception occurs or an assert fails
 	 */
-	public void testRequiredBundle009() throws Exception {
-		Bundle tb16b = getContext().installBundle(
-				getWebServer() + "classloading.tb16b.jar");
-		Bundle tb16c = getContext().installBundle(
-				getWebServer() + "classloading.tb16c.jar");
-		Bundle tb16a = getContext().installBundle(
-				getWebServer() + "classloading.tb16a.jar");
-		Bundle tb16i = getContext().installBundle(
-				getWebServer() + "classloading.tb16i.jar");
+	@Test
+	public void testRequiredBundle009(
+			@InjectInstalledBundle(value = "classloading.tb16b.jar", start = false) Bundle tb16b,
+			@InjectInstalledBundle(value = "classloading.tb16c.jar", start = false) Bundle tb16c,
+			@InjectInstalledBundle(value = "classloading.tb16a.jar", start = false) Bundle tb16a,
+			@InjectInstalledBundle(value = "classloading.tb16i.jar", start = false) Bundle tb16i
+			) throws Exception {
 		tb16a.start();
 		tb16b.start();
 		tb16c.start();
 		tb16i.start();
-		try {
-			// test if resources from package re-exported by tb16a is available
-			// in tb16i due to the visibility directive being set to "reexport"
-			URL url = tb16i
-					.getResource("test/package/resources/tb16a-resource.txt");
-			assertNotNull("Expecting to find the resource tb16a-resource.txt",
-					url);
-			url = tb16i
-					.getResource("test/package/resources/tb16b-resource.txt");
-			assertNotNull("Expecting to find the resource tb16b-resource.txt",
-					url);
-		}
-		finally {
-			tb16a.stop();
-			tb16b.stop();
-			tb16c.stop();
-			tb16i.stop();
-			uninstallBundle(tb16a);
-			uninstallBundle(tb16b);
-			uninstallBundle(tb16c);
-			uninstallBundle(tb16i);
-		}
+		// test if resources from package re-exported by tb16a is available
+		// in tb16i due to the visibility directive being set to "reexport"
+		URL url = tb16i
+				.getResource("test/package/resources/tb16a-resource.txt");
+		assertThat(url)
+				.as("Expecting to find the resource tb16a-resource.txt")
+				.isNotNull();
+		url = tb16i
+				.getResource("test/package/resources/tb16b-resource.txt");
+		assertThat(url)
+				.as("Expecting to find the resource tb16b-resource.txt")
+				.isNotNull();
 	}
 
 	/**
@@ -3062,34 +2903,35 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.getResource(String)
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
+	@Test
 	public void testRequiredBundle010() throws Exception {
-		Bundle tb16b = getContext().installBundle(
-				getWebServer() + "classloading.tb16b.jar");
-		Bundle tb16c = getContext().installBundle(
-				getWebServer() + "classloading.tb16c.jar");
-		Bundle tb16a = getContext().installBundle(
-				getWebServer() + "classloading.tb16j.jar");
+		Bundle tb16b = bundleInstaller.installBundle("classloading.tb16b.jar", false);
+		Bundle tb16c = bundleInstaller.installBundle("classloading.tb16c.jar", false);
+		Bundle tb16a = bundleInstaller.installBundle("classloading.tb16j.jar", false);
 		tb16b.start();
 		tb16c.start();
 		tb16a.start();
 		URL url = tb16a.getResource("test/package/resources/resource.txt");
 		try {
-			assertNotNull("Expecting to find resource", url);
+			assertThat(url)
+					.as("Expecting to find resource")
+					.isNotNull();
 
 			BufferedReader bufr = new BufferedReader(new InputStreamReader(url
 					.openStream()));
 			String line = bufr.readLine();
 			bufr.close();
-			assertEquals("Expecting to get resource from classloading.tb16c",
-					"tb16c", line);
+			assertThat(line)
+					.as("Expecting to get resource from classloading.tb16c")
+					.isEqualTo("tb16c");
 		}
 		finally {
 			tb16a.stop();
 			tb16b.stop();
 			tb16c.stop();
-			uninstallBundle(tb16a);
-			uninstallBundle(tb16b);
-			uninstallBundle(tb16c);
+			tb16a.uninstall();
+			tb16b.uninstall();
+			tb16c.uninstall();
 		}
 	}
 
@@ -3102,16 +2944,12 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testInstallingModules001() throws Exception {
-		try {
-			Bundle tb14b = getContext().installBundle(
-					getWebServer() + "classloading.tb14b.jar");
-			tb14b.uninstall();
-			fail("Expecting bundle install to fail because the manifest has a duplicate directive.");
-		}
-		catch (BundleException e) {
-			// expected
-		}
+		// a bundle installed by mistake is removed by osgi-test
+		assertThatExceptionOfType(BundleException.class)
+				.as("Expecting bundle install to fail because the manifest has a duplicate directive.")
+				.isThrownBy(() -> bundleInstaller.installBundle("classloading.tb14b.jar", false));
 	}
 
 	/**
@@ -3121,16 +2959,12 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testInstallingModules002() throws Exception {
-		try {
-			Bundle tb14c = getContext().installBundle(
-					getWebServer() + "classloading.tb14c.jar");
-			tb14c.uninstall();
-			fail("Expecting bundle install to fail because a package has been imported multiple times.");
-		}
-		catch (BundleException e) {
-			// expected
-		}
+		// a bundle installed by mistake is removed by osgi-test
+		assertThatExceptionOfType(BundleException.class)
+				.as("Expecting bundle install to fail because a package has been imported multiple times.")
+				.isThrownBy(() -> bundleInstaller.installBundle("classloading.tb14c.jar", false));
 	}
 
 	/**
@@ -3141,11 +2975,11 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testInstallingModules003() throws Exception {
 
 		try {
-			Bundle tb14f = getContext().installBundle(
-					getWebServer() + "classloading.tb14f.jar");
+			Bundle tb14f = bundleInstaller.installBundle("classloading.tb14f.jar", false);
 			tb14f.uninstall();
 			fail("Expecting bundle install to fail because of errors in manifest.");
 		}
@@ -3169,11 +3003,11 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec BundleContext.installBundle(String)
 	 * @throws Exception if there is any problem or an assert fails
 	 */
+	@Test
 	public void testInstallingModules004() throws Exception {
 
 		try {
-			Bundle tb14g = getContext().installBundle(
-					getWebServer() + "classloading.tb14g.jar");
+			Bundle tb14g = bundleInstaller.installBundle("classloading.tb14g.jar", false);
 			tb14g.uninstall();
 			fail("Expecting bundle install to fail because of error in Import-Package specification.");
 		}

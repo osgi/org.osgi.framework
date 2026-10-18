@@ -16,38 +16,50 @@
  * SPDX-License-Identifier: Apache-2.0 
  *******************************************************************************/
 
-
 package org.osgi.test.cases.framework.junit.frameworkutil;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleReference;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.wiring.BundleWiring;
-import org.osgi.test.support.OSGiTestCase;
+import org.osgi.test.common.annotation.InjectBundleContext;
 
-public class BundleReferenceTests extends OSGiTestCase {
+public class BundleReferenceTests {
 
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	@Test
 	public void testBundleReference() {
-		Bundle me = getContext().getBundle();
+		Bundle me = bundleContext.getBundle();
 		Class< ? > self = getClass();
 		ClassLoader cl = self.getClassLoader();
-		assertTrue("classloader is not an instanceof BundleReference",
-				cl instanceof BundleReference);
+		assertThat(cl instanceof BundleReference)
+				.as("classloader is not an instanceof BundleReference")
+				.isTrue();
 		BundleReference ref = (BundleReference) cl;
-		assertEquals("wrong bundle returned", me, ref.getBundle());
+		assertThat(ref.getBundle())
+				.as("wrong bundle returned")
+				.isEqualTo(me);
 	}
 
+	@Test
 	public void testGetBundleFromClass() {
-		Bundle me = getContext().getBundle();
+		Bundle me = bundleContext.getBundle();
 		Class< ? > self = getClass();
-		assertEquals("wrong bundle returned", me, FrameworkUtil.getBundle(self));
+		assertThat(FrameworkUtil.getBundle(self))
+				.as("wrong bundle returned")
+				.isEqualTo(me);
 	}
 
+	@Test
 	public void testGetBundleFromClassLoader() {
-		Bundle me = getContext().getBundle();
+		Bundle me = bundleContext.getBundle();
 		BundleWiring wiring = me.adapt(BundleWiring.class);
 		assertThat(wiring).as("bundle wiring").isNotNull();
 		ClassLoader cl = wiring.getClassLoader();
@@ -56,17 +68,20 @@ public class BundleReferenceTests extends OSGiTestCase {
 				.hasValue(me);
 	}
 
+	@Test
 	public void testBootClass() {
-		assertNull("expected null", FrameworkUtil.getBundle(Object.class));
+		assertThat(FrameworkUtil.getBundle(Object.class))
+				.as("expected null")
+				.isNull();
 	}
 
+	@Test
 	public void testGetBundleFromClassNull() {
-		assertThatExceptionOfType(RuntimeException.class)
-				.isThrownBy(() -> FrameworkUtil.getBundle((Class< ? >) null));
+		assertThatThrownBy(() -> FrameworkUtil.getBundle((Class<?>) null)).isInstanceOf(RuntimeException.class);
 	}
 
+	@Test
 	public void testGetBundleFromClassLoaderNull() {
-		assertThatExceptionOfType(RuntimeException.class)
-				.isThrownBy(() -> FrameworkUtil.getBundle((ClassLoader) null));
+		assertThatThrownBy(() -> FrameworkUtil.getBundle((ClassLoader) null)).isInstanceOf(RuntimeException.class);
 	}
 }

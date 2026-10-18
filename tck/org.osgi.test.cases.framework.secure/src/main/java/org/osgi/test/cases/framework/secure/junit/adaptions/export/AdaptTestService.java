@@ -17,13 +17,10 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.secure.junit.adaptions.export;
 
-import static junit.framework.TestCase.assertFalse;
-import static junit.framework.TestCase.assertNotNull;
-import static junit.framework.TestCase.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import org.opentest4j.AssertionFailedError;
 import org.osgi.framework.Bundle;
-
-import junit.framework.AssertionFailedError;
 
 public class AdaptTestService<T> {
 	private final Class<T> serviceClazz;
@@ -53,17 +50,19 @@ public class AdaptTestService<T> {
 		error = null;
 		try {
 			T adapted = adaptBundle.adapt(serviceClazz);
-			assertTrue(
-					"Expected a security exception adapting: " + serviceClazz,
-					hasPermission);
-			assertNotNull("Adapted type is null: " + serviceClazz.getName(),
-					adapted);
-			assertTrue("Wrong adapted type: " + adapted.getClass(),
-					serviceClazz.isAssignableFrom(adapted.getClass()));
+			assertThat(hasPermission)
+					.as("Expected a security exception adapting: " + serviceClazz)
+					.isTrue();
+			assertThat(adapted)
+					.as("Adapted type is null: " + serviceClazz.getName())
+					.isNotNull();
+			assertThat(serviceClazz.isAssignableFrom(adapted.getClass()))
+					.as("Wrong adapted type: " + adapted.getClass())
+					.isTrue();
 		} catch (SecurityException e) {
-			assertFalse(
-					"Expected a security exception adapting: " + serviceClazz,
-					hasPermission);
+			assertThat(hasPermission)
+					.as("Expected a security exception adapting: " + serviceClazz)
+					.isFalse();
 		}
 	}
 }

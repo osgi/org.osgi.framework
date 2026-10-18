@@ -18,11 +18,17 @@
 
 package org.osgi.test.cases.framework.secure.junit.serviceregistry;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.osgi.test.assertj.bundle.BundleAssert.assertThat;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.PrototypeServiceFactory;
@@ -30,36 +36,46 @@ import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.test.cases.framework.secure.junit.serviceregistry.export.ReferenceProvider;
 import org.osgi.test.cases.framework.secure.junit.serviceregistry.export.TestService;
-import org.osgi.test.support.OSGiTestCase;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.install.BundleInstaller;
 
-public class ServiceObjectsPermissionTests extends OSGiTestCase {
+public class ServiceObjectsPermissionTests {
+
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
 
     private BundleContext context;
 
-    protected void setUp() {
-        context = getContext();
+	@BeforeEach
+	public void setUp() {
+        context = bundleContext.getBundle().getBundleContext(); // the injected context is a proxy
     }
 
-    public void testHasServicePermission() throws Exception {
-        Bundle tb1 = install("serviceregistry.tb1.jar");
-        assertNotNull(tb1);
+	@Test
+	public void testHasServicePermission() throws Exception {
+        Bundle tb1 = bundleInstaller.installBundle("serviceregistry.tb1.jar", false);
+        assertThat(tb1).isNotNull();
         try {
             TestPrototypeServiceFactory factory = new TestPrototypeServiceFactory();
             ServiceRegistration<TestService> registration = context.registerService(TestService.class, factory, null);
-            assertNotNull(registration);
+            assertThat(registration).isNotNull();
             try {
-                assertEquals(0, factory.services.size());
+				assertThat(factory.services).isEmpty();
 
                 tb1.start();
-                assertTrue((tb1.getState() & Bundle.ACTIVE) != 0);
+				assertThat(tb1).isInState(Bundle.ACTIVE);
 
-                assertEquals(1, factory.services.size());
-                assertEquals(1, factory.services.get(tb1).size());
+				assertThat(factory.services).hasSize(1);
+				assertThat(factory.services.get(tb1)).hasSize(1);
 
                 tb1.stop();
-                assertTrue((tb1.getState() & Bundle.ACTIVE) == 0);
+				assertThat(tb1).isNotInState(Bundle.ACTIVE);
 
-                assertEquals(0, factory.services.size());
+				assertThat(factory.services).isEmpty();
 
             } finally {
                 registration.unregister();
@@ -69,36 +85,37 @@ public class ServiceObjectsPermissionTests extends OSGiTestCase {
         }
     }
 
-    public void testNotServicePermission() throws Exception {
-        Bundle tb2 = install("serviceregistry.tb2.jar");
-        assertNotNull(tb2);
+	@Test
+	public void testNotServicePermission() throws Exception {
+        Bundle tb2 = bundleInstaller.installBundle("serviceregistry.tb2.jar", false);
+        assertThat(tb2).isNotNull();
         try {
             TestPrototypeServiceFactory factory = new TestPrototypeServiceFactory();
             final ServiceRegistration<TestService> registration = context.registerService(TestService.class, factory, null);
-            assertNotNull(registration);
+            assertThat(registration).isNotNull();
             try {
                 ServiceRegistration<ReferenceProvider> providerReg = context.registerService(ReferenceProvider.class, new ReferenceProvider() {
                     public ServiceReference<TestService> getReference() {
                         return registration.getReference();
                     }
                 }, null);
-                assertNotNull(providerReg);
+                assertThat(providerReg).isNotNull();
                 try {
 
-                    assertEquals(0, factory.services.size());
+					assertThat(factory.services).isEmpty();
 
                     tb2.start();
-                    assertTrue((tb2.getState() & Bundle.ACTIVE) != 0);
+					assertThat(tb2).isInState(Bundle.ACTIVE);
 
-                    assertEquals(0, factory.services.size());
+					assertThat(factory.services).isEmpty();
 
                     tb2.stop();
-                    assertTrue((tb2.getState() & Bundle.ACTIVE) == 0);
+					assertThat(tb2).isNotInState(Bundle.ACTIVE);
 
                 } finally {
                     providerReg.unregister();
                 }
-                assertEquals(0, factory.services.size());
+				assertThat(factory.services).isEmpty();
 
             } finally {
                 registration.unregister();
@@ -136,9 +153,9 @@ public class ServiceObjectsPermissionTests extends OSGiTestCase {
 
         public void ungetService(Bundle bundle, ServiceRegistration<TestService> registration, TestService service) {
             List<TestService> bundleServices = services.get(bundle);
-            assertNotNull(bundleServices);
-            assertTrue(bundleServices.contains(service));
-            assertEquals(bundle.getBundleId(), service.getId());
+            assertThat(bundleServices).isNotNull();
+            assertThat(bundleServices.contains(service)).isTrue();
+            assertThat(service.getId()).isEqualTo(bundle.getBundleId());
             bundleServices.remove(service);
             if (bundleServices.isEmpty()) {
                 services.remove(bundle);

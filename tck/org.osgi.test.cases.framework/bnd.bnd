@@ -2,7 +2,7 @@
 
 Bundle-Description					: Framework test cases.
 
--conditionalpackage					= org.osgi.test.support.*, org.osgi.tck.signature.*
+-conditionalpackage					= org.osgi.tck.signature.*
 -privatepackage						=  \
 	${p}.junit.*
 Import-Package: ${-signaturetest}, *
@@ -298,7 +298,12 @@ Bundle-ClassPath: .,div.tb6.jar
     org.osgi.framework.startlevel, \
     org.osgi.framework.startlevel.dto, \
     org.osgi.framework.wiring, \
-    org.osgi.framework.wiring.dto
+    org.osgi.framework.wiring.dto, \
+    org.osgi.framework.connect, \
+    org.osgi.framework.launch, \
+    org.osgi.service.condition
+# The last three came from the launch bundle: its suites now run as plain
+# JUnit tests outside a framework, where the signature test cannot run.
 
 p: org.osgi.test.cases.framework
 
@@ -308,8 +313,6 @@ p: org.osgi.test.cases.framework
 # way). bnd merges all -make.* entries.
 -make.maven: (*).(jar); type=bnd; recipe="bnd/$1.bnd"
 
-testcases.junit3: ${classes;EXTENDS;junit.framework.TestCase;CONCRETE}
-testcases.junit4: ${classes;HIERARCHY_ANNOTATED;org.junit.Test;CONCRETE}
-testcases.junit5: ${classes;HIERARCHY_INDIRECTLY_ANNOTATED;org.junit.platform.commons.annotation.Testable;CONCRETE}
-Test-Cases: ${sort;${uniq;${testcases.junit3};${testcases.junit4};${testcases.junit5}}}
+# All test classes are JUnit 5 (the signature test included)
+Test-Cases: ${sort;${classes;HIERARCHY_INDIRECTLY_ANNOTATED;org.junit.platform.commons.annotation.Testable;CONCRETE}}
 -plugin.signaturetest: SignatureTest

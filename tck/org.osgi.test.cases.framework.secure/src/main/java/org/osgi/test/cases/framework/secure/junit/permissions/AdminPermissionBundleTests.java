@@ -19,32 +19,40 @@
 
 package org.osgi.test.cases.framework.secure.junit.permissions;
 
-import static org.osgi.test.support.PermissionTestCase.assertImplies;
+import static org.osgi.test.assertj.permission.PermissionAssertions.assertThat;
 
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.AdminPermission;
 import org.osgi.framework.Bundle;
-import org.osgi.test.support.OSGiTestCase;
+import org.osgi.framework.BundleContext;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.annotation.InjectInstalledBundle;
+import org.osgi.test.common.install.BundleInstaller;
 
 
-public class AdminPermissionBundleTests extends OSGiTestCase {
+public class AdminPermissionBundleTests {
 
-	public void testRecursion() throws Exception {
-		Bundle admin2 = install("permissions.admin2.jar");
-		Bundle admin1 = install("permissions.admin1.jar");
-		try {
-			admin2.start();
-			admin1.start();
-		}
-		finally {
-			admin1.uninstall();
-			admin2.uninstall();
-		}
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
+
+	@Test
+	public void testRecursion(
+			@InjectInstalledBundle(value = "permissions.admin2.jar", start = false) Bundle admin2,
+			@InjectInstalledBundle(value = "permissions.admin1.jar", start = false) Bundle admin1
+			) throws Exception {
+		admin2.start();
+		admin1.start();
 	}
 
+	@Test
 	public void testBundleSource() {
 		AdminPermission granted = new AdminPermission("(id=*)", "class");
-		AdminPermission requested = new AdminPermission(getContext()
+		AdminPermission requested = new AdminPermission(bundleContext
 				.getBundle(), "class");
-		assertImplies(granted, requested);
+		assertThat(granted).implies(requested);
 	}
 }

@@ -17,46 +17,63 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.junit.dynpkgimport;
 
+
+
+import static org.assertj.core.api.Assertions.fail;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.FrameworkEvent;
 import org.osgi.framework.FrameworkListener;
 import org.osgi.framework.ServiceReference;
 import org.osgi.test.cases.framework.dynpkgimport.exported.TestService;
-import org.osgi.test.support.compatibility.DefaultTestBundleControl;
-import org.osgi.test.support.wiring.Wiring;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.install.BundleInstaller;
+import org.osgi.test.common.wiring.FrameworkWirings;
 
-public class DynPkgImportTests extends DefaultTestBundleControl implements
+public class DynPkgImportTests implements
 		FrameworkListener {
 
-	protected void setUp() throws Exception {
-		getContext().addFrameworkListener(this);
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
+
+	@BeforeEach
+	public void setUp() throws Exception {
+		bundleContext.addFrameworkListener(this);
 	}
 
-	protected void tearDown() throws Exception {
-		getContext().removeFrameworkListener(this);
-		Wiring.synchronousRefreshBundles(getContext());
+	@AfterEach
+	public void tearDown() throws Exception {
+		bundleContext.removeFrameworkListener(this);
+		FrameworkWirings.refreshBundles(bundleContext);
 	}
 
+	@Test
 	public void testInitial() throws Exception {
 		try {
-			Bundle tlx = getContext().installBundle(
-					getWebServer() + "dynpkgimport.tlx.jar");
+			Bundle tlx = bundleInstaller.installBundle("dynpkgimport.tlx.jar", false);
 			tlx.start();
-			Bundle tb0 = getContext().installBundle(
-					getWebServer() + "dynpkgimport.tb0.jar");
+			Bundle tb0 = bundleInstaller.installBundle("dynpkgimport.tb0.jar", false);
 			tb0.start();
-			ServiceReference<TestService> tsR = getContext()
+			ServiceReference<TestService> tsR = bundleContext
 					.getServiceReference(TestService.class);
 			if (tsR == null) {
 				fail("failed to get TestService reference");
 			}
-			TestService ts = getContext().getService(tsR);
+			TestService ts = bundleContext.getService(tsR);
 			if (ts == null) {
 				fail("failed to get TestService");
 			}
 			ts.test1();
-			getContext().ungetService(tsR);
+			bundleContext.ungetService(tsR);
 			tb0.stop();
 			tb0.uninstall();
 			tlx.uninstall();
@@ -73,25 +90,24 @@ public class DynPkgImportTests extends DefaultTestBundleControl implements
 		}
 	}
 
+	@Test
 	public void testBasicImport1() throws Exception {
 		try {
-			Bundle tlx = getContext().installBundle(
-					getWebServer() + "dynpkgimport.tlx.jar");
+			Bundle tlx = bundleInstaller.installBundle("dynpkgimport.tlx.jar", false);
 			tlx.start();
-			Bundle tb1 = getContext().installBundle(
-					getWebServer() + "dynpkgimport.tb1.jar");
+			Bundle tb1 = bundleInstaller.installBundle("dynpkgimport.tb1.jar", false);
 			tb1.start();
-			ServiceReference<TestService> tsR = getContext()
+			ServiceReference<TestService> tsR = bundleContext
 					.getServiceReference(TestService.class);
 			if (tsR == null) {
 				fail("failed to get TestService reference");
 			}
-			TestService ts = getContext().getService(tsR);
+			TestService ts = bundleContext.getService(tsR);
 			if (ts == null) {
 				fail("failed to get TestService");
 			}
 			ts.test1();
-			getContext().ungetService(tsR);
+			bundleContext.ungetService(tsR);
 			tb1.stop();
 			tb1.uninstall();
 			tlx.uninstall();
@@ -102,25 +118,24 @@ public class DynPkgImportTests extends DefaultTestBundleControl implements
 		}
 	}
 
+	@Test
 	public void testBasicImport2() throws Exception {
 		try {
-			Bundle tlx = getContext().installBundle(
-					getWebServer() + "dynpkgimport.tlx.jar");
+			Bundle tlx = bundleInstaller.installBundle("dynpkgimport.tlx.jar", false);
 			tlx.start();
-			Bundle tb2 = getContext().installBundle(
-					getWebServer() + "dynpkgimport.tb2.jar");
+			Bundle tb2 = bundleInstaller.installBundle("dynpkgimport.tb2.jar", false);
 			tb2.start();
-			ServiceReference<TestService> tsR = getContext()
+			ServiceReference<TestService> tsR = bundleContext
 					.getServiceReference(TestService.class);
 			if (tsR == null) {
 				fail("failed to get TestService reference");
 			}
-			TestService ts = getContext().getService(tsR);
+			TestService ts = bundleContext.getService(tsR);
 			if (ts == null) {
 				fail("failed to get TestService");
 			}
 			ts.test1();
-			getContext().ungetService(tsR);
+			bundleContext.ungetService(tsR);
 			tb2.stop();
 			tb2.uninstall();
 			tlx.uninstall();
@@ -131,45 +146,43 @@ public class DynPkgImportTests extends DefaultTestBundleControl implements
 		}
 	}
 
+	@Test
 	public void testPrecedence() throws Exception {
-		Bundle tlx = getContext().installBundle(
-				getWebServer() + "dynpkgimport.tlx.jar");
+		Bundle tlx = bundleInstaller.installBundle("dynpkgimport.tlx.jar", false);
 		tlx.start();
-		Bundle tb3 = getContext().installBundle(
-				getWebServer() + "dynpkgimport.tb3.jar");
+		Bundle tb3 = bundleInstaller.installBundle("dynpkgimport.tb3.jar", false);
 		tb3.start();
-		ServiceReference<TestService> tsR = getContext()
+		ServiceReference<TestService> tsR = bundleContext
 				.getServiceReference(TestService.class);
 		if (tsR == null) {
 			fail("failed to get TestService reference");
 		}
-		TestService ts = getContext().getService(tsR);
+		TestService ts = bundleContext.getService(tsR);
 		if (ts == null) {
 			fail("failed to get TestService");
 		}
 		ts.test1();
-		getContext().ungetService(tsR);
+		bundleContext.ungetService(tsR);
 		tb3.stop();
 		tb3.uninstall();
 		tlx.uninstall();
 	}
 
+	@Test
 	public void testUninstall() throws Exception {
-		Bundle tlx = getContext().installBundle(
-				getWebServer() + "dynpkgimport.tlx.jar");
+		Bundle tlx = bundleInstaller.installBundle("dynpkgimport.tlx.jar", false);
 		tlx.start();
 		tlx.stop();
 		tlx.uninstall();
-		Wiring.synchronousRefreshBundles(getContext());
-		Bundle tb2 = getContext().installBundle(
-				getWebServer() + "dynpkgimport.tb2.jar");
+		FrameworkWirings.refreshBundles(bundleContext);
+		Bundle tb2 = bundleInstaller.installBundle("dynpkgimport.tb2.jar", false);
 		tb2.start();
-		ServiceReference<TestService> tsR = getContext()
+		ServiceReference<TestService> tsR = bundleContext
 				.getServiceReference(TestService.class);
 		if (tsR == null) {
 			fail("failed to get TestService reference");
 		}
-		TestService ts = getContext().getService(tsR);
+		TestService ts = bundleContext.getService(tsR);
 		if (ts == null) {
 			fail("failed to get TestService");
 		}
@@ -177,7 +190,7 @@ public class DynPkgImportTests extends DefaultTestBundleControl implements
 			ts.test1();
 		}
 		catch (NoClassDefFoundError e) {
-			getContext().ungetService(tsR);
+			bundleContext.ungetService(tsR);
 			tb2.stop();
 			tb2.uninstall();
 			return;
@@ -193,13 +206,13 @@ public class DynPkgImportTests extends DefaultTestBundleControl implements
 	public void frameworkEvent(FrameworkEvent event) {
 		switch (event.getType()) {
 			case FrameworkEvent.ERROR :
-				log("got framework event " + event.getType() + ": "
+				System.out.println("got framework event " + event.getType() + ": "
 						+ event.getThrowable().getClass().getName());
-				log("stack trace:");
+				System.out.println("stack trace:");
 				event.getThrowable().printStackTrace();
 				break;
 			default :
-				//log("got framework event " + event.getType() + ": ");
+				//System.out.println("got framework event " + event.getType() + ": ");
 				break;
 		}
 	}

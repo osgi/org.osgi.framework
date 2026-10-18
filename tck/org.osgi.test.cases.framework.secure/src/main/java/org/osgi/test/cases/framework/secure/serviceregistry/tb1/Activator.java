@@ -17,8 +17,8 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.secure.serviceregistry.tb1;
 
-import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
@@ -34,7 +34,7 @@ public class Activator implements BundleActivator {
     public void start(BundleContext context) {
         ServiceReference<TestService> reference = context.getServiceReference(TestService.class);
         assertNotNull(reference);
-        assertEquals("service.scope not set correctly", Constants.SCOPE_PROTOTYPE, reference.getProperty(Constants.SERVICE_SCOPE));
+        assertEquals(Constants.SCOPE_PROTOTYPE, reference.getProperty(Constants.SERVICE_SCOPE), "service.scope not set correctly");
 
         ServiceObjects<TestService> objects = context.getServiceObjects(reference);
         assertNotNull(objects);

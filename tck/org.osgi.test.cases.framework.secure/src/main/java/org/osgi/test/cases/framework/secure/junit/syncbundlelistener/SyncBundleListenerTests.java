@@ -17,9 +17,16 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.secure.junit.syncbundlelistener;
 
+
+
+import static org.assertj.core.api.Assertions.fail;
+
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleException;
-import org.osgi.test.support.compatibility.DefaultTestBundleControl;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.annotation.InjectInstalledBundle;
+import org.osgi.test.common.install.BundleInstaller;
 
 /**
  * This is the bundle initially installed and started by the TestCase when
@@ -27,22 +34,23 @@ import org.osgi.test.support.compatibility.DefaultTestBundleControl;
  * 
  * @author Ericsson Telecom AB
  */
-public class SyncBundleListenerTests extends DefaultTestBundleControl {
+public class SyncBundleListenerTests {
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
 	/**
 	 * control that a security exception is thrown if we try to add a
 	 * synchronous bundle listener without adminPermission
 	 */
-	public void testPermission() throws Exception {
-		Bundle permissionBundle = getContext().installBundle(
-				getWebServer() + "syncbundlelistener.tb1a.jar");
+	@Test
+	public void testPermission(
+			@InjectInstalledBundle(value = "syncbundlelistener.tb1a.jar", start = false) Bundle permissionBundle
+			) throws Exception {
 		try {
 			permissionBundle.start();
 		}
 		catch (BundleException e) {
 			fail("Could not add SynchronousBundleListener", e);
-		}
-		finally {
-			permissionBundle.uninstall();
 		}
 	}
 
@@ -50,9 +58,10 @@ public class SyncBundleListenerTests extends DefaultTestBundleControl {
 	 * control that a security exception is thrown if we try to add a
 	 * synchronous bundle listener without adminPermission
 	 */
-	public void testNoPermission() throws Exception {
-		Bundle permissionBundle = getContext().installBundle(
-				getWebServer() + "syncbundlelistener.tb1b.jar");
+	@Test
+	public void testNoPermission(
+			@InjectInstalledBundle(value = "syncbundlelistener.tb1b.jar", start = false) Bundle permissionBundle
+			) throws Exception {
 		try {
 			permissionBundle.start();
 		}
@@ -61,9 +70,6 @@ public class SyncBundleListenerTests extends DefaultTestBundleControl {
 			if (cause instanceof SecurityException) {
 				return;
 			}
-		}
-		finally {
-			permissionBundle.uninstall();
 		}
 		fail("Was able to add SynchronousBundleListener");
 	}

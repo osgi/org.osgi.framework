@@ -17,16 +17,22 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.junit.syncbundlelistener;
 
+
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
-import org.osgi.test.support.BundleEventCollector;
-import org.osgi.test.support.OSGiTestCaseProperties;
-import org.osgi.test.support.SynchronousBundleEventCollector;
-import org.osgi.test.support.compatibility.DefaultTestBundleControl;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.install.BundleInstaller;
+import org.osgi.test.cases.framework.junit.tck.BundleEventCollector;
+import org.osgi.test.cases.framework.junit.tck.TckProperties;
+import org.osgi.test.cases.framework.junit.tck.SynchronousBundleEventCollector;
 
 /**
  * This is the bundle initially installed and started by the TestCase when
@@ -34,10 +40,17 @@ import org.osgi.test.support.compatibility.DefaultTestBundleControl;
  * 
  * @author Ericsson Telecom AB
  */
-public class SyncBundleListenerTests extends DefaultTestBundleControl {
-	static final int	timeout	= 2000 * OSGiTestCaseProperties
+public class SyncBundleListenerTests {
+
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
+	static final int	timeout	= 2000 * TckProperties
 												.getScaling();
-	
+
+	@Test
 	public void testListenerOrdering() throws Exception {
 		final int mask = BundleEvent.INSTALLED | BundleEvent.STARTED
 				| BundleEvent.STOPPED | BundleEvent.UPDATED
@@ -60,13 +73,13 @@ public class SyncBundleListenerTests extends DefaultTestBundleControl {
 				}
 			}
 		};
-		BundleContext context = getContext();
+		BundleContext context = bundleContext;
 		context.addBundleListener(sbec);
 		context.addBundleListener(abec);
 		context.addBundleListener(ibec);
 
-		Bundle tb = getContext().installBundle(
-				getWebServer() + "syncbundlelistener.tb3.jar");
+		// update() re-reads the location, so install by URL rather than by stream
+		Bundle tb = bundleContext.installBundle(bundleContext.getBundle().getEntry("syncbundlelistener.tb3.jar").toExternalForm());
 		try {
 			ibec.getList(1, timeout); // wait for async event
 			
@@ -95,8 +108,13 @@ public class SyncBundleListenerTests extends DefaultTestBundleControl {
 		expected.add(new BundleEvent(BundleEvent.UNINSTALLED, tb));
 		List<BundleEvent> sresult = sbec.getList(5, 1);
 		List<BundleEvent> aresult = abec.getList(5, 1);
-		assertEquals("SBL missed events", sbec.getComparator(), expected,
-				sresult);
-		assertEquals("BL missed events", abec.getComparator(), expected, aresult);
+		assertThat(sresult)
+				.as("SBL missed events")
+				.usingElementComparator(sbec.getComparator())
+				.containsExactlyElementsOf(expected);
+		assertThat(aresult)
+				.as("BL missed events")
+				.usingElementComparator(abec.getComparator())
+				.containsExactlyElementsOf(expected);
 	}
 }

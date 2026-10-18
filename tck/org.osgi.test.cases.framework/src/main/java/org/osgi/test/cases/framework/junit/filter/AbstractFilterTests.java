@@ -18,10 +18,10 @@
 
 package org.osgi.test.cases.framework.junit.filter;
 
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.AdditionalAnswers.delegatesTo;
+import static org.mockito.Mockito.mock;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -43,7 +43,6 @@ import org.osgi.framework.Filter;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.Version;
-import org.osgi.test.support.mock.MockFactory;
 
 public abstract class AbstractFilterTests {
 	public abstract Filter createFilter(String filterString);
@@ -333,8 +332,7 @@ public abstract class AbstractFilterTests {
 			"  (room = *=b**oo*m*) ) ", "  (room = =b**oo*m*) ) "
 	})
 	public void testInvalidFilter(String invalidFilter) {
-		assertThatExceptionOfType(InvalidSyntaxException.class)
-				.isThrownBy(() -> createFilter(invalidFilter));
+		assertThatThrownBy(() -> createFilter(invalidFilter)).isInstanceOf(InvalidSyntaxException.class);
 	}
 
 	@Test
@@ -376,11 +374,21 @@ public abstract class AbstractFilterTests {
 	public void testNormalization() {
 		Filter f1 = createFilter("( a = bedroom  )");
 		Filter f2 = createFilter(" (a= bedroom  ) ");
-		assertEquals("not equal", "(a= bedroom  )", f1.toString());
-		assertEquals("not equal", "(a= bedroom  )", f2.toString());
-		assertEquals("not equal", f1, f2);
-		assertEquals("not equal", f2, f1);
-		assertEquals("not equal", f1.hashCode(), f2.hashCode());
+		assertThat(f1.toString())
+				.as("not equal")
+				.isEqualTo("(a= bedroom  )");
+		assertThat(f2.toString())
+				.as("not equal")
+				.isEqualTo("(a= bedroom  )");
+		assertThat(f2)
+				.as("not equal")
+				.isEqualTo(f1);
+		assertThat(f1)
+				.as("not equal")
+				.isEqualTo(f2);
+		assertThat(f2.hashCode())
+				.as("not equal")
+				.isEqualTo(f1.hashCode());
 	}
 
 	private void assertFilterTrue(String query, Matcher matcher) {
@@ -397,7 +405,9 @@ public abstract class AbstractFilterTests {
 			matcher.matches(softly, f2, true);
 		}
 
-		assertEquals("normalized not equal", normalized, f2.toString());
+		assertThat(f2.toString())
+				.as("normalized not equal")
+				.isEqualTo(normalized);
 	}
 
 	private void assertFilterFalse(String query, Matcher matcher) {
@@ -414,7 +424,9 @@ public abstract class AbstractFilterTests {
 			matcher.matches(softly, f2, false);
 		}
 
-		assertEquals("normalized not equal", normalized, f2.toString());
+		assertThat(f2.toString())
+				.as("normalized not equal")
+				.isEqualTo(normalized);
 	}
 
 	@Test
@@ -426,59 +438,108 @@ public abstract class AbstractFilterTests {
 		Filter f1 = createFilter("(comparable=42)");
 
 		hash.put("comparable", comp42);
-		assertTrue("does not match filter", f1.match(hash));
-		assertTrue("does not match filter", f1.matchCase(hash));
-		assertTrue("does not match filter", f1.matches(hash));
-		assertTrue("does not match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matchCase(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matches(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does not match filter")
+				.isTrue();
 
 		hash.put("comparable", comp43);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 
 		f1 = createFilter("(comparable<=42)");
 
 		hash.put("comparable", comp42);
-		assertTrue("does not match filter", f1.match(hash));
-		assertTrue("does not match filter", f1.matchCase(hash));
-		assertTrue("does not match filter", f1.matches(hash));
-		assertTrue("does not match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matchCase(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matches(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does not match filter")
+				.isTrue();
 
 		hash.put("comparable", comp43);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 
 		f1 = createFilter("(comparable>=42)");
 
 		hash.put("comparable", comp42);
-		assertTrue("does not match filter", f1.match(hash));
-		assertTrue("does not match filter", f1.matchCase(hash));
-		assertTrue("does not match filter", f1.matches(hash));
-		assertTrue("does not match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matchCase(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matches(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does not match filter")
+				.isTrue();
 
 		hash.put("comparable", comp43);
-		assertTrue("does not match filter", f1.match(hash));
-		assertTrue("does not match filter", f1.matchCase(hash));
-		assertTrue("does not match filter", f1.matches(hash));
-		assertTrue("does not match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matchCase(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matches(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does not match filter")
+				.isTrue();
 
 		f1 = createFilter("(comparable=4*2)");
 
 		hash.put("comparable", comp42);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 	}
 
 	@Test
@@ -489,11 +550,18 @@ public abstract class AbstractFilterTests {
 		Filter f1 = createFilter("(comparable=exception)");
 
 		hash.put("comparable", compbad);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 	}
 
 	@Test
@@ -505,59 +573,108 @@ public abstract class AbstractFilterTests {
 		Filter f1 = createFilter("(version=4.2)");
 
 		hash.put("version", v42);
-		assertTrue("does not match filter", f1.match(hash));
-		assertTrue("does not match filter", f1.matchCase(hash));
-		assertTrue("does not match filter", f1.matches(hash));
-		assertTrue("does not match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matchCase(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matches(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does not match filter")
+				.isTrue();
 
 		hash.put("version", v43);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 
 		f1 = createFilter("(version<=4.2)");
 
 		hash.put("version", v42);
-		assertTrue("does not match filter", f1.match(hash));
-		assertTrue("does not match filter", f1.matchCase(hash));
-		assertTrue("does not match filter", f1.matches(hash));
-		assertTrue("does not match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matchCase(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matches(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does not match filter")
+				.isTrue();
 
 		hash.put("version", v43);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 
 		f1 = createFilter("(version>=4.2)");
 
 		hash.put("version", v42);
-		assertTrue("does not match filter", f1.match(hash));
-		assertTrue("does not match filter", f1.matchCase(hash));
-		assertTrue("does not match filter", f1.matches(hash));
-		assertTrue("does not match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matchCase(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matches(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does not match filter")
+				.isTrue();
 
 		hash.put("version", v43);
-		assertTrue("does not match filter", f1.match(hash));
-		assertTrue("does not match filter", f1.matchCase(hash));
-		assertTrue("does not match filter", f1.matches(hash));
-		assertTrue("does not match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matchCase(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matches(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does not match filter")
+				.isTrue();
 
 		f1 = createFilter("(version=4*2)");
 
 		hash.put("version", v42);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 	}
 
 	@Test
@@ -568,11 +685,18 @@ public abstract class AbstractFilterTests {
 		Filter f1 = createFilter("(version=exception)");
 
 		hash.put("version", v);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 	}
 
 	@Test
@@ -584,27 +708,48 @@ public abstract class AbstractFilterTests {
 		Filter f1 = createFilter("(object=42)");
 
 		hash.put("object", obj42);
-		assertTrue("does not match filter", f1.match(hash));
-		assertTrue("does not match filter", f1.matchCase(hash));
-		assertTrue("does not match filter", f1.matches(hash));
-		assertTrue("does not match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matchCase(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matches(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does not match filter")
+				.isTrue();
 
 		hash.put("object", obj43);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 
 		f1 = createFilter("(object=4*2)");
 
 		hash.put("object", obj42);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 	}
 
 	@Test
@@ -615,11 +760,18 @@ public abstract class AbstractFilterTests {
 		Filter f1 = createFilter("(object=exception)");
 
 		hash.put("object", objbad);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 	}
 
 	@Test
@@ -631,27 +783,48 @@ public abstract class AbstractFilterTests {
 		Filter f1 = createFilter("(object=42)");
 
 		hash.put("object", obj42);
-		assertTrue("does not match filter", f1.match(hash));
-		assertTrue("does not match filter", f1.matchCase(hash));
-		assertTrue("does not match filter", f1.matches(hash));
-		assertTrue("does not match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matchCase(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matches(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does not match filter")
+				.isTrue();
 
 		hash.put("object", obj43);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 
 		f1 = createFilter("(object=4*2)");
 
 		hash.put("object", obj42);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 	}
 
 	@Test
@@ -662,11 +835,18 @@ public abstract class AbstractFilterTests {
 		Filter f1 = createFilter("(object=exception)");
 
 		hash.put("object", objbad);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 	}
 
 	@Test
@@ -678,27 +858,48 @@ public abstract class AbstractFilterTests {
 		Filter f1 = createFilter("(object=42)");
 
 		hash.put("object", obj42);
-		assertTrue("does not match filter", f1.match(hash));
-		assertTrue("does not match filter", f1.matchCase(hash));
-		assertTrue("does not match filter", f1.matches(hash));
-		assertTrue("does not match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matchCase(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matches(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does not match filter")
+				.isTrue();
 
 		hash.put("object", obj43);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 
 		f1 = createFilter("(object=4*2)");
 
 		hash.put("object", obj42);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 	}
 
 	@Test
@@ -706,7 +907,9 @@ public abstract class AbstractFilterTests {
 		Map<String,Object> map = new HashMap<>();
 		map.put("foo", null);
 		Filter f1 = createFilter("(foo=*)");
-		assertFalse("does match filter", f1.matches(map));
+		assertThat(f1.matches(map))
+				.as("does match filter")
+				.isFalse();
 	}
 
 	@Test
@@ -718,59 +921,108 @@ public abstract class AbstractFilterTests {
 		Filter f1 = createFilter("(comparable=42)");
 
 		hash.put("comparable", comp42);
-		assertTrue("does not match filter", f1.match(hash));
-		assertTrue("does not match filter", f1.matchCase(hash));
-		assertTrue("does not match filter", f1.matches(hash));
-		assertTrue("does not match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matchCase(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matches(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does not match filter")
+				.isTrue();
 
 		hash.put("comparable", comp43);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 
 		f1 = createFilter("(comparable<=42)");
 
 		hash.put("comparable", comp42);
-		assertTrue("does not match filter", f1.match(hash));
-		assertTrue("does not match filter", f1.matchCase(hash));
-		assertTrue("does not match filter", f1.matches(hash));
-		assertTrue("does not match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matchCase(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matches(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does not match filter")
+				.isTrue();
 
 		hash.put("comparable", comp43);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 
 		f1 = createFilter("(comparable>=42)");
 
 		hash.put("comparable", comp42);
-		assertTrue("does not match filter", f1.match(hash));
-		assertTrue("does not match filter", f1.matchCase(hash));
-		assertTrue("does not match filter", f1.matches(hash));
-		assertTrue("does not match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matchCase(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matches(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does not match filter")
+				.isTrue();
 
 		hash.put("comparable", comp43);
-		assertTrue("does not match filter", f1.match(hash));
-		assertTrue("does not match filter", f1.matchCase(hash));
-		assertTrue("does not match filter", f1.matches(hash));
-		assertTrue("does not match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matchCase(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.matches(hash))
+				.as("does not match filter")
+				.isTrue();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does not match filter")
+				.isTrue();
 
 		f1 = createFilter("(comparable=4*2)");
 
 		hash.put("comparable", comp42);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 	}
 
 	@Test
@@ -781,11 +1033,18 @@ public abstract class AbstractFilterTests {
 		Filter f1 = createFilter("(comparable=exception)");
 
 		hash.put("comparable", compbad);
-		assertFalse("does match filter", f1.match(hash));
-		assertFalse("does match filter", f1.matchCase(hash));
-		assertFalse("does match filter", f1.matches(hash));
-		assertFalse("does match filter",
-				f1.match(newDictionaryServiceReference(hash)));
+		assertThat(f1.match(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matchCase(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.matches(hash))
+				.as("does match filter")
+				.isFalse();
+		assertThat(f1.match(newDictionaryServiceReference(hash)))
+				.as("does match filter")
+				.isFalse();
 	}
 
 	public static class SampleComparableValueOf
@@ -988,8 +1247,7 @@ public abstract class AbstractFilterTests {
 
 	public static ServiceReference< ? > newDictionaryServiceReference(
 			Dictionary<String,Object> dictionary) {
-		return MockFactory.newMock(ServiceReference.class,
-				new DictionaryServiceReference(dictionary));
+		return mock(ServiceReference.class, delegatesTo(new DictionaryServiceReference(dictionary)));
 	}
 
 	private static class DictionaryServiceReference {

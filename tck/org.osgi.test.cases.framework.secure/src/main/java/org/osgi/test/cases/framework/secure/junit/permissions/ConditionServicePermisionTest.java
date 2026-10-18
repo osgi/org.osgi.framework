@@ -18,37 +18,38 @@
 
 package org.osgi.test.cases.framework.secure.junit.permissions;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleException;
-import org.osgi.test.support.OSGiTestCase;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.install.BundleInstaller;
 
-public class ConditionServicePermisionTest extends OSGiTestCase {
+public class ConditionServicePermisionTest {
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
 	private final List<Bundle>								bundles			= new ArrayList<>();
 
 	public Bundle install(String bundle) {
-		Bundle result = null;
-		try {
-			result = super.install(bundle);
-		} catch (BundleException e) {
-			fail("failed to install bundle: " + bundle, e);
-		} catch (IOException e) {
-			fail("failed to install bundle: " + bundle, e);
-		}
+		Bundle result = bundleInstaller.installBundle(bundle, false);
 		if (!bundles.contains(result))
 			bundles.add(result);
 		return result;
 	}
 
-	protected void setUp() throws Exception {
+	@BeforeEach
+	public void setUp() throws Exception {
 		bundles.clear();
 	}
 
-	protected void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() throws Exception {
 		for (Iterator<Bundle> iBundles = bundles.iterator(); iBundles
 				.hasNext();)
 			try {
@@ -61,7 +62,7 @@ public class ConditionServicePermisionTest extends OSGiTestCase {
 		bundles.clear();
 	}
 
-
+	@Test
 	public void testImpliedConditonServicePermision() throws BundleException {
 		// install bundle with osgi.ee requirement
 		Bundle tester = install("permissions.condition.jar");

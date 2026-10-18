@@ -18,6 +18,10 @@
 
 package org.osgi.test.cases.framework.junit.wiring;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+import static org.osgi.test.assertj.bundle.BundleAssert.assertThat;
+
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -27,6 +31,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.Constants;
@@ -47,6 +52,7 @@ import org.osgi.resource.Resource;
 import org.osgi.resource.Wire;
 
 public class BundleWiringTests extends WiringTest {
+	@Test
 	public void testGetRevision() {
 		Bundle tb1 = install("resolver.tb1.v110.jar");
 		Bundle tb2 = install("resolver.tb2.jar");
@@ -56,7 +62,7 @@ public class BundleWiringTests extends WiringTest {
 		Bundle tb14 = install("resolver.tb14.jar");
 		List<Bundle> testBundles = Arrays.asList(tb1, tb2, tb3, tb4, tb5, tb14);
 
-		assertTrue(frameworkWiring.resolveBundles(testBundles));
+		assertThat(frameworkWiring.resolveBundles(testBundles)).isTrue();
 
 		List<BundleRevision> testRevisions = getRevisions(testBundles);
 
@@ -251,29 +257,49 @@ public class BundleWiringTests extends WiringTest {
 	}
 
 	void checkCapabilities(List<BundleCapability> toCheck, List<BundleCapability> all, String namespace, int expectedNum, BundleRevision provider) {
-		assertEquals("Wrong number of capabilities for " + namespace + " from " + provider, expectedNum, toCheck.size());
+		assertThat(toCheck.size())
+				.as("Wrong number of capabilities for " + namespace + " from " + provider)
+				.isEqualTo(expectedNum);
 		for (BundleCapability capability : toCheck) {
-			assertTrue("Capability is not in all capabilities", all.contains(capability));
-			assertEquals("Wrong namespace", namespace, capability.getNamespace());
-			assertEquals("Wrong provider", provider, capability.getRevision());
+			assertThat(all.contains(capability))
+					.as("Capability is not in all capabilities")
+				.isTrue();
+			assertThat(capability.getNamespace())
+					.as("Wrong namespace")
+				.isEqualTo(namespace);
+			assertThat(capability.getRevision())
+					.as("Wrong provider")
+				.isEqualTo(provider);
 			assertResourceEqualsRevision(capability.getResource(), capability.getRevision());
 		}
 	}
 	
 	void checkRequirements(List<BundleRequirement> toCheck, List<BundleRequirement> all, String namespace, int expectedNum, BundleRevision requirer) {
-		assertEquals("Wrong number of requirements for " + namespace + " from " + requirer, expectedNum, toCheck.size());
+		assertThat(toCheck.size())
+				.as("Wrong number of requirements for " + namespace + " from " + requirer)
+				.isEqualTo(expectedNum);
 		for (BundleRequirement requirement : toCheck) {
-			assertTrue("Capability is not in all capabilities", all.contains(requirement));
-			assertEquals("Wrong namespace", namespace, requirement.getNamespace());
-			assertEquals("Wrong requirer", requirer, requirement.getRevision());
+			assertThat(all.contains(requirement))
+					.as("Capability is not in all capabilities")
+				.isTrue();
+			assertThat(requirement.getNamespace())
+					.as("Wrong namespace")
+				.isEqualTo(namespace);
+			assertThat(requirement.getRevision())
+					.as("Wrong requirer")
+				.isEqualTo(requirer);
 			assertResourceEqualsRevision(requirement.getResource(), requirement.getRevision());
 		}
 	}
 	
 	void checkWires(List<BundleWire> toCheck, List<BundleWire> all, String namespace, int expectedNum) {
-		assertEquals("Wrong number of wires for " + namespace, expectedNum, toCheck.size());
+		assertThat(toCheck.size())
+				.as("Wrong number of wires for " + namespace)
+				.isEqualTo(expectedNum);
 		for (BundleWire wire : toCheck) {
-			assertTrue("Capability is not in all capabilities for revision", all.contains(wire));
+			assertThat(all.contains(wire))
+					.as("Capability is not in all capabilities for revision")
+				.isTrue();
 		}
 	}
 
@@ -282,21 +308,33 @@ public class BundleWiringTests extends WiringTest {
 		for (Bundle bundle : testBundles) {
 			BundleRevision revision = bundle.adapt(BundleRevision.class);
 			result.add(revision);
-			assertEquals("Wrong BSN", bundle.getSymbolicName(), revision.getSymbolicName());
-			assertEquals("Wrong bundle", bundle, revision.getBundle());
-			assertEquals("Wrong version", bundle.getVersion(), revision.getVersion());
-			assertEquals("Wrong type", bundle.getHeaders("").get(Constants.FRAGMENT_HOST) == null ? 0 : BundleRevision.TYPE_FRAGMENT, revision.getTypes());
+			assertThat(revision.getSymbolicName())
+					.as("Wrong BSN")
+				.isEqualTo(bundle.getSymbolicName());
+			assertThat(revision.getBundle())
+					.as("Wrong bundle")
+				.isEqualTo(bundle);
+			assertThat(revision.getVersion())
+					.as("Wrong version")
+				.isEqualTo(bundle.getVersion());
+			assertThat(revision.getTypes())
+					.as("Wrong type")
+				.isEqualTo(bundle.getHeaders("").get(Constants.FRAGMENT_HOST) == null ? 0 : BundleRevision.TYPE_FRAGMENT);
 			
 			Collection<BundleWire> hostWirings = revision.getWiring()
 					.getRequiredWires(HostNamespace.HOST_NAMESPACE);
-			assertNotNull("Host wirings must never be null.", hostWirings);
+			assertThat(hostWirings)
+					.as("Host wirings must never be null.")
+				.isNotNull();
 			assertRequiredResourceWiresEqualsRequiredWires(revision.getWiring(), HostNamespace.HOST_NAMESPACE);
 			if ((revision.getTypes() & BundleRevision.TYPE_FRAGMENT) != 0) {
 				// we assume the fragment resolved to one host
-				assertEquals("Wrong number of host wirings found", 1, hostWirings.size());
+				assertThat(hostWirings)
+						.as("Wrong number of host wirings found").hasSize(1);
 			} else {
 				// regular bundles must have empty host wirings
-				assertEquals("Must have empty wirings for regular bundles", 0, hostWirings.size());
+				assertThat(hostWirings)
+						.as("Must have empty wirings for regular bundles").hasSize(0);
 			}
 			
 			assertCapabilitiesEqualsDeclaredCapabilities(revision);
@@ -306,13 +344,17 @@ public class BundleWiringTests extends WiringTest {
 	}
 	
 	private void assertCapabilitiesEqualsDeclaredCapabilities(BundleRevision revision) {
-		assertEquals("Capabilities do not equal declared capabilities", revision.getDeclaredCapabilities(null), revision.getCapabilities(null));
+		assertThat(revision.getCapabilities(null))
+				.as("Capabilities do not equal declared capabilities")
+				.isEqualTo(revision.getDeclaredCapabilities(null));
 	}
 	
 	private void assertProvidedResourceWiresEqualsProvidedWires(BundleWiring wiring, String namespace) {
 		List<BundleWire> providedWires = wiring.getProvidedWires(namespace);
 		List<Wire> providedResourceWires = wiring.getProvidedResourceWires(namespace);
-		assertEquals("Provided resource wires not same as provided wires for namespace " + namespace, providedWires, providedResourceWires);
+		assertThat(providedResourceWires)
+				.as("Provided resource wires not same as provided wires for namespace " + namespace)
+				.isEqualTo(providedWires);
 	}
 	
 	private void assertProvidedResourceWiresEqualsProvidedWires(BundleWiring wiring, Collection<String> genericNamespaces) {
@@ -332,7 +374,9 @@ public class BundleWiringTests extends WiringTest {
 	private void assertRequiredResourceWiresEqualsRequiredWires(BundleWiring wiring, String namespace) {
 		List<BundleWire> requiredWires = wiring.getRequiredWires(namespace);
 		List<Wire> requiredResourceWires = wiring.getRequiredResourceWires(namespace);
-		assertEquals("Required resource wires not same as required wires for namespace " + namespace, requiredWires, requiredResourceWires);
+		assertThat(requiredResourceWires)
+				.as("Required resource wires not same as required wires for namespace " + namespace)
+				.isEqualTo(requiredWires);
 	}
 	
 	private void assertRequiredResourceWiresEqualsRequiredWires(BundleWiring wiring, Collection<String> genericNamespaces) {
@@ -350,7 +394,9 @@ public class BundleWiringTests extends WiringTest {
 	}
 	
 	private void assertRequirementsEqualsDeclaredRequirements(BundleRevision revision) {
-		assertEquals("Requirements do not equal declared requirements", revision.getDeclaredRequirements(null), revision.getRequirements(null));
+		assertThat(revision.getRequirements(null))
+				.as("Requirements do not equal declared requirements")
+				.isEqualTo(revision.getDeclaredRequirements(null));
 	}
 	
 	private void assertResourceEqualsRevision(BundleWiring wiring) {
@@ -358,17 +404,24 @@ public class BundleWiringTests extends WiringTest {
 	}
 	
 	private void assertResourceEqualsRevision(Resource resource, BundleRevision revision) {
-		assertEquals("Resource does not equal revision", revision, resource);
+		assertThat(resource)
+				.as("Resource does not equal revision")
+				.isEqualTo(revision);
 	}
 	
 	private void assertResourceCapabilitiesEqualsCapabilites(BundleWiring wiring) {
-		assertEquals("Resource capabilities do not equal capabilities", wiring.getCapabilities(null), wiring.getResourceCapabilities(null));
+		assertThat(wiring.getResourceCapabilities(null))
+				.as("Resource capabilities do not equal capabilities")
+				.isEqualTo(wiring.getCapabilities(null));
 	}
 	
 	private void assertResourceRequirementsEqualsRequirements(BundleWiring wiring) {
-		assertEquals("Resource requirements do not equal requirements", wiring.getRequirements(null), wiring.getResourceRequirements(null));
+		assertThat(wiring.getResourceRequirements(null))
+				.as("Resource requirements do not equal requirements")
+				.isEqualTo(wiring.getRequirements(null));
 	}
 
+	@Test
 	public void testGetWiring() {
 		Bundle tb1 = install("resolver.tb1.v110.jar");
 		Bundle tb2 = install("resolver.tb2.jar");
@@ -378,7 +431,7 @@ public class BundleWiringTests extends WiringTest {
 		Bundle tb14 = install("resolver.tb14.jar");
 		List<Bundle> testBundles = Arrays.asList(tb1, tb2, tb3, tb4, tb5, tb14);
 
-		assertTrue(frameworkWiring.resolveBundles(testBundles));
+		assertThat(frameworkWiring.resolveBundles(testBundles)).isTrue();
 
 		BundleWiring tb1Wiring = tb1.adapt(BundleWiring.class);
 		BundleWiring tb2Wiring = tb2.adapt(BundleWiring.class);
@@ -409,13 +462,14 @@ public class BundleWiringTests extends WiringTest {
 		// fragment-attachment:="never"
 		List<BundleCapability> osgiHostTb2Capabilities = tb2Wiring
 				.getCapabilities(HostNamespace.HOST_NAMESPACE);
-		assertEquals("Expecting no osgi.wiring.host capability", 0, osgiHostTb2Capabilities.size());
+		assertThat(osgiHostTb2Capabilities)
+				.as("Expecting no osgi.wiring.host capability").hasSize(0);
 
 		checkBundleWires(tb1Wiring, tb2Wiring, tb3Wiring, tb5Wiring, tb14Wiring, tb4, allTb1Capabilities, osgiBundleTb1Capabilities, osgiHostTb1Capabilities, osgiPackageTb1Capabilities, genTestTb1Capabilities, genTestMultipleTb1Capabilities, genTestFragmentTb1Capabilities, genTestNoAttrsTb1Capabilities);
 
 		// test the refresh case
 		refreshBundles(Arrays.asList(new Bundle[]{tb1}));
-		assertTrue(frameworkWiring.resolveBundles(testBundles));
+		assertThat(frameworkWiring.resolveBundles(testBundles)).isTrue();
 
 		checkNotInUseWirings(wirings);
 
@@ -442,36 +496,49 @@ public class BundleWiringTests extends WiringTest {
 		genTestFragmentTb1Capabilities = tb1Wiring.getProvidedWires(genericNamespaces.get(3));
 
 		// test the update case
-		URL content = getContext().getBundle().getEntry("resolver.tb1.v110.jar");
-		assertNotNull("Cannot find content for update", content);
+		URL content = bundleContext.getBundle().getEntry("resolver.tb1.v110.jar");
+		assertThat(content)
+				.as("Cannot find content for update")
+				.isNotNull();
 		try {
 			tb1.update(content.openStream());
 		} catch (BundleException e) {
-			fail("Unexpected update failure",e);
+			fail("Unexpected update failure", e);
 		} catch (IOException e) {
-			fail("Unexpected update failure",e);
+			fail("Unexpected update failure", e);
 		}
 
-		assertTrue("Could not resolve updated bundle", frameworkWiring.resolveBundles(Arrays.asList(new Bundle[]{tb1})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[]{tb1})))
+				.as("Could not resolve updated bundle")
+				.isTrue();
 
 		// check that the updated wiring has no requirers
 		BundleWiring updatedWiring = tb1.adapt(BundleWiring.class);
 		checkBundleWiring(new Bundle[] {tb1}, new BundleWiring[] {updatedWiring});
 		List<BundleWire> updatedWires = updatedWiring.getProvidedWires(null);
-		assertNotNull("Requirers is null", updatedWires);
+		assertThat(updatedWires)
+				.as("Requirers is null")
+				.isNotNull();
 		// May have zero wires or one fragment wire
 		if (updatedWires.size() == 1) {
-			assertEquals("Wrong wire capability namespace",
-					HostNamespace.HOST_NAMESPACE, updatedWires.get(0)
-							.getCapability().getNamespace());
-			assertEquals("Wrong requirer", tb4Wiring.getRevision(),
-					updatedWires.get(0).getRequirement().getRevision());
+			assertThat(updatedWires.get(0)
+							.getCapability().getNamespace())
+					.as("Wrong wire capability namespace")
+				.isEqualTo(HostNamespace.HOST_NAMESPACE);
+			assertThat(updatedWires.get(0).getRequirement().getRevision())
+					.as("Wrong requirer")
+				.isEqualTo(tb4Wiring.getRevision());
 		} else {
-			assertEquals("Wrong number of requirers", 0, updatedWires.size());
+			assertThat(updatedWires)
+					.as("Wrong number of requirers").hasSize(0);
 		}
 
-		assertTrue("Wiring is not in use for: " + tb1, tb1Wiring.isInUse());
-		assertFalse("Wiring is current for: " + tb1, tb1Wiring.isCurrent());
+		assertThat(tb1Wiring.isInUse())
+				.as("Wiring is not in use for: " + tb1)
+				.isTrue();
+		assertThat(tb1Wiring.isCurrent())
+				.as("Wiring is current for: " + tb1)
+				.isFalse();
 
 		// Check that old wiring for tb1 is still correct
 		assertProvidedResourceWiresEqualsProvidedWires(tb1Wiring, genericNamespaces);
@@ -480,7 +547,7 @@ public class BundleWiringTests extends WiringTest {
 
 		// test the refresh case
 		refreshBundles(Arrays.asList(new Bundle[]{tb1}));
-		assertTrue(frameworkWiring.resolveBundles(testBundles));
+		assertThat(frameworkWiring.resolveBundles(testBundles)).isTrue();
 
 		checkNotInUseWirings(wirings);
 		checkNotInUseWirings(new BundleWiring[] {updatedWiring});
@@ -502,7 +569,9 @@ public class BundleWiringTests extends WiringTest {
 			fail("Unexpecte error on uninstall", e);
 		}
 
-		assertNull("Bundle wiring is not null for bundle: " + tb1, tb1.adapt(BundleWiring.class));
+		assertThat(tb1.adapt(BundleWiring.class))
+				.as("Bundle wiring is not null for bundle: " + tb1)
+				.isNull();
 		// note that we do not reget tb1Wiring because it must be null on uninstall from the check above
 		tb2Wiring = tb2.adapt(BundleWiring.class);
 		tb3Wiring = tb3.adapt(BundleWiring.class);
@@ -511,8 +580,12 @@ public class BundleWiringTests extends WiringTest {
 		tb14Wiring = tb14.adapt(BundleWiring.class);
 		wirings = new BundleWiring[] {tb1Wiring, tb2Wiring, tb3Wiring, tb4Wiring, tb5Wiring, tb14Wiring};
 
-		assertTrue("Wiring is not in use for: " + tb1, tb1Wiring.isInUse());
-		assertFalse("Wring is current for: " + tb1, tb1Wiring.isCurrent());
+		assertThat(tb1Wiring.isInUse())
+				.as("Wiring is not in use for: " + tb1)
+				.isTrue();
+		assertThat(tb1Wiring.isCurrent())
+				.as("Wring is current for: " + tb1)
+				.isFalse();
 
 		allTb1Capabilities = tb1Wiring.getProvidedWires(null);
 		osgiBundleTb1Capabilities = tb1Wiring
@@ -530,20 +603,32 @@ public class BundleWiringTests extends WiringTest {
 
 		// test the refresh case
 		refreshBundles(null);
-		assertFalse(frameworkWiring.resolveBundles(testBundles));
+		assertThat(frameworkWiring.resolveBundles(testBundles)).isFalse();
 
 		checkNotInUseWirings(wirings);
 
 		// Wirings must be null now since the bundles are not resolved
-		assertNull("Bundle wiring is not null for bundle: " + tb1, tb1.adapt(BundleWiring.class));
-		assertNull("Bundle wiring is not null for bundle: " + tb2, tb2.adapt(BundleWiring.class));
-		assertNull("Bundle wiring is not null for bundle: " + tb3, tb3.adapt(BundleWiring.class));
-		assertNull("Bundle wiring is not null for bundle: " + tb4, tb4.adapt(BundleWiring.class));
-		assertNull("Bundle wiring is not null for bundle: " + tb5, tb5.adapt(BundleWiring.class));
+		assertThat(tb1.adapt(BundleWiring.class))
+				.as("Bundle wiring is not null for bundle: " + tb1)
+				.isNull();
+		assertThat(tb2.adapt(BundleWiring.class))
+				.as("Bundle wiring is not null for bundle: " + tb2)
+				.isNull();
+		assertThat(tb3.adapt(BundleWiring.class))
+				.as("Bundle wiring is not null for bundle: " + tb3)
+				.isNull();
+		assertThat(tb4.adapt(BundleWiring.class))
+				.as("Bundle wiring is not null for bundle: " + tb4)
+				.isNull();
+		assertThat(tb5.adapt(BundleWiring.class))
+				.as("Bundle wiring is not null for bundle: " + tb5)
+				.isNull();
 	}
 
 	private void checkBundleWiring(Bundle[] bundles, BundleWiring[] wirings) {
-		assertEquals("Lists are not the same size", bundles.length, wirings.length);
+		assertThat(wirings.length)
+				.as("Lists are not the same size")
+				.isEqualTo(bundles.length);
 		assertProvidedResourceWiresEqualsProvidedWires(wirings,
 				Collections.<String> emptyList());
 		assertRequiredResourceWiresEqualsRequiredWires(wirings,
@@ -552,20 +637,40 @@ public class BundleWiringTests extends WiringTest {
 			BundleWiring wiring = wirings[i];
 			Bundle bundle = bundles[i];
 			BundleRevision revision = bundle.adapt(BundleRevision.class);
-			assertNotNull("BundleRevision is null for: " + bundle, revision);
-			assertEquals("Wrong BSN", bundle.getSymbolicName(), revision.getSymbolicName());
-			assertEquals("Wrong version", bundle.getVersion(), revision.getVersion());
+			assertThat(revision)
+					.as("BundleRevision is null for: " + bundle)
+				.isNotNull();
+			assertThat(revision.getSymbolicName())
+					.as("Wrong BSN")
+				.isEqualTo(bundle.getSymbolicName());
+			assertThat(revision.getVersion())
+					.as("Wrong version")
+				.isEqualTo(bundle.getVersion());
 
-			assertNotNull("BundleWiring is null for bundle: " + bundle, wiring);
-			assertEquals("Wrong bundle for wiring: " + bundle, bundle, wiring.getBundle());
+			assertThat(wiring)
+					.as("BundleWiring is null for bundle: " + bundle)
+				.isNotNull();
+			assertThat(wiring.getBundle())
+					.as("Wrong bundle for wiring: " + bundle)
+				.isEqualTo(bundle);
 
 			BundleRevision wiringRevision = wiring.getRevision();
-			assertNotNull("Wiring revision is null for bundle: " + bundle, wiringRevision);
-			assertEquals("Wrong BSN", bundle.getSymbolicName(), wiringRevision.getSymbolicName());
-			assertEquals("Wrong version", bundle.getVersion(), wiringRevision.getVersion());
+			assertThat(wiringRevision)
+					.as("Wiring revision is null for bundle: " + bundle)
+				.isNotNull();
+			assertThat(wiringRevision.getSymbolicName())
+					.as("Wrong BSN")
+				.isEqualTo(bundle.getSymbolicName());
+			assertThat(wiringRevision.getVersion())
+					.as("Wrong version")
+				.isEqualTo(bundle.getVersion());
 
-			assertTrue("Wiring is not current for: " + bundle, wiring.isCurrent());
-			assertTrue("Wiring is not in use for: " + bundle, wiring.isInUse());
+			assertThat(wiring.isCurrent())
+					.as("Wiring is not current for: " + bundle)
+				.isTrue();
+			assertThat(wiring.isInUse())
+					.as("Wiring is not in use for: " + bundle)
+				.isTrue();
 			
 			assertResourceEqualsRevision(wiring);
 			assertResourceCapabilitiesEqualsCapabilites(wiring);
@@ -578,20 +683,39 @@ public class BundleWiringTests extends WiringTest {
 			BundleWiring wiring = wirings[i];
 			if (wiring == null)
 				continue; // fragment case
-			assertFalse("Wiring is current for: " + wiring.getBundle(), wiring.isCurrent());
-			assertFalse("Wiring is in use for: " + wiring.getBundle(), wiring.isInUse());
-			assertNull("Wiring capabilities must be null: " + wiring.getBundle(), wiring.getCapabilities(null));
-			assertNull("Wiring requirements must be null: " + wiring.getBundle(), wiring.getRequirements(null));
-			assertNull("Wiring class loader must be null: " + wiring.getBundle(), wiring.getClassLoader());
-			assertNull("Wiring findEntries must be null: " + wiring.getBundle(), wiring.findEntries("/", "*", 0));
-			assertNull("Wiring listResources must be null: " + wiring.getBundle(), wiring.listResources("/", "*", 0));
-			assertNull("Wiring providedWires must be null: " + wiring.getBundle(), wiring.getProvidedWires(null));
-			assertNull("Wiring requiredWires must be null: " + wiring.getBundle(), wiring.getRequiredWires(null));
+			assertThat(wiring.isCurrent())
+					.as("Wiring is current for: " + wiring.getBundle())
+				.isFalse();
+			assertThat(wiring.isInUse())
+					.as("Wiring is in use for: " + wiring.getBundle())
+				.isFalse();
+			assertThat(wiring.getCapabilities(null))
+					.as("Wiring capabilities must be null: " + wiring.getBundle())
+				.isNull();
+			assertThat(wiring.getRequirements(null))
+					.as("Wiring requirements must be null: " + wiring.getBundle())
+				.isNull();
+			assertThat(wiring.getClassLoader())
+					.as("Wiring class loader must be null: " + wiring.getBundle())
+				.isNull();
+			assertThat(wiring.findEntries("/", "*", 0))
+					.as("Wiring findEntries must be null: " + wiring.getBundle())
+				.isNull();
+			assertThat(wiring.listResources("/", "*", 0))
+					.as("Wiring listResources must be null: " + wiring.getBundle())
+				.isNull();
+			assertThat(wiring.getProvidedWires(null))
+					.as("Wiring providedWires must be null: " + wiring.getBundle())
+				.isNull();
+			assertThat(wiring.getRequiredWires(null))
+					.as("Wiring requiredWires must be null: " + wiring.getBundle())
+				.isNull();
 		}
 	}
 	
 	private void checkCapabilitiesTb1v110(BundleWiring tb1Wiring, Bundle tb4) {
-		assertEquals("Wrong number of capabilities", 9, tb1Wiring.getCapabilities(null).size());
+		assertThat(tb1Wiring.getCapabilities(null))
+				.as("Wrong number of capabilities").hasSize(9);
 		checkCapabilities(
 				tb1Wiring.getCapabilities(BundleNamespace.BUNDLE_NAMESPACE),
 				tb1Wiring.getCapabilities(null), 
@@ -637,7 +761,8 @@ public class BundleWiringTests extends WiringTest {
 	}
 	
 	private void checkCapabilitiesTb2(BundleWiring tb2Wiring) {
-		assertEquals("Wrong number of capabilities", 2, tb2Wiring.getCapabilities(null).size());
+		assertThat(tb2Wiring.getCapabilities(null))
+				.as("Wrong number of capabilities").hasSize(2);
 		checkCapabilities(
 				tb2Wiring.getCapabilities(BundleNamespace.BUNDLE_NAMESPACE),
 				tb2Wiring.getCapabilities(null), 
@@ -659,7 +784,8 @@ public class BundleWiringTests extends WiringTest {
 	}
 	
 	private void checkCapabilitiesTb3(BundleWiring tb3Wiring) {
-		assertEquals("Wrong number of capabilities", 3, tb3Wiring.getCapabilities(null).size());
+		assertThat(tb3Wiring.getCapabilities(null))
+				.as("Wrong number of capabilities").hasSize(3);
 		checkCapabilities(
 				tb3Wiring.getCapabilities(BundleNamespace.BUNDLE_NAMESPACE),
 				tb3Wiring.getCapabilities(null), 
@@ -681,11 +807,13 @@ public class BundleWiringTests extends WiringTest {
 	}
 	
 	private void checkCapabilitiesTb4(BundleWiring tb4Wiring) {
-		assertEquals("Wrong number of capabilities", 1, tb4Wiring.getCapabilities(null).size());
+		assertThat(tb4Wiring.getCapabilities(null))
+				.as("Wrong number of capabilities").hasSize(1);
 	}
 	
 	private void checkCapabilitiesTb5(BundleWiring tb5Wiring) {
-		assertEquals("Wrong number of capabilities", 3, tb5Wiring.getCapabilities(null).size());
+		assertThat(tb5Wiring.getCapabilities(null))
+				.as("Wrong number of capabilities").hasSize(3);
 		checkCapabilities(
 				tb5Wiring.getCapabilities(BundleNamespace.BUNDLE_NAMESPACE),
 				tb5Wiring.getCapabilities(null), 
@@ -707,7 +835,8 @@ public class BundleWiringTests extends WiringTest {
 	}
 	
 	private void checkCapabilitiesTb14(BundleWiring tb14Wiring) {
-		assertEquals("Wrong number of capabilities", 3, tb14Wiring.getCapabilities(null).size());
+		assertThat(tb14Wiring.getCapabilities(null))
+				.as("Wrong number of capabilities").hasSize(3);
 		checkCapabilities(
 				tb14Wiring.getCapabilities(BundleNamespace.BUNDLE_NAMESPACE),
 				tb14Wiring.getCapabilities(null), 
@@ -729,11 +858,13 @@ public class BundleWiringTests extends WiringTest {
 	}
 	
 	private void checkRequirementsTb1v110(BundleWiring tb1Wiring) {
-		assertEquals("Wrong number of requirements", 0, tb1Wiring.getRequirements(null).size());
+		assertThat(tb1Wiring.getRequirements(null))
+				.as("Wrong number of requirements").hasSize(0);
 	}
 	
 	private void checkRequirementsTb2(BundleWiring tb2Wiring) {
-		assertEquals("Wrong number of requirements", 2, tb2Wiring.getRequirements(null).size());
+		assertThat(tb2Wiring.getRequirements(null))
+				.as("Wrong number of requirements").hasSize(2);
 		checkRequirements(
 				tb2Wiring.getRequirements(PackageNamespace.PACKAGE_NAMESPACE),
 				tb2Wiring.getRequirements(null), 
@@ -743,7 +874,8 @@ public class BundleWiringTests extends WiringTest {
 	}
 	
 	private void checkRequirementsTb3(BundleWiring tb3Wiring) {
-		assertEquals("Wrong number of requirements", 2, tb3Wiring.getRequirements(null).size());
+		assertThat(tb3Wiring.getRequirements(null))
+				.as("Wrong number of requirements").hasSize(2);
 		checkRequirements(
 				tb3Wiring.getRequirements(BundleNamespace.BUNDLE_NAMESPACE),
 				tb3Wiring.getRequirements(null), 
@@ -765,7 +897,8 @@ public class BundleWiringTests extends WiringTest {
 	}
 	
 	private void checkRequirementsTb4(BundleWiring tb4Wiring) {
-		assertEquals("Wrong number of requirements", 1, tb4Wiring.getRequirements(null).size());
+		assertThat(tb4Wiring.getRequirements(null))
+				.as("Wrong number of requirements").hasSize(1);
 		checkRequirements(
 				tb4Wiring.getRequirements(BundleNamespace.BUNDLE_NAMESPACE),
 				tb4Wiring.getRequirements(null), 
@@ -787,7 +920,8 @@ public class BundleWiringTests extends WiringTest {
 	}
 	
 	private void checkRequirementsTb5(BundleWiring tb5Wiring) {
-		assertEquals("Wrong number of requirements", 11, tb5Wiring.getRequirements(null).size());
+		assertThat(tb5Wiring.getRequirements(null))
+				.as("Wrong number of requirements").hasSize(11);
 		checkRequirements(
 				tb5Wiring.getRequirements("test"), 
 				tb5Wiring.getRequirements(null), 
@@ -803,7 +937,8 @@ public class BundleWiringTests extends WiringTest {
 	}
 	
 	private void checkRequirementsTb14(BundleWiring tb14Wiring) {
-		assertEquals("Wrong number of requirements", 1, tb14Wiring.getRequirements(null).size());
+		assertThat(tb14Wiring.getRequirements(null))
+				.as("Wrong number of requirements").hasSize(1);
 		checkRequirements(
 				tb14Wiring.getRequirements("test.fragment"), 
 				tb14Wiring.getRequirements(null), 
@@ -823,7 +958,8 @@ public class BundleWiringTests extends WiringTest {
 			List<BundleWire> genTestMultipleTb1ProvidedWires, 
 			List<BundleWire> genTestFragmentTb1ProvidedWires, 
 			List<BundleWire> genTestNoAttrsTb1ProvidedWires) {
-		assertEquals("Wrong number of wires", 15, allTb1ProvidedWires.size());
+		assertThat(allTb1ProvidedWires)
+				.as("Wrong number of wires").hasSize(15);
 		checkWires(osgiBundleTb1ProvidedWires, allTb1ProvidedWires,
 				BundleNamespace.BUNDLE_NAMESPACE, 1);
 		checkWires(osgiHostTb1ProvidedWires, allTb1ProvidedWires,
@@ -946,8 +1082,11 @@ public class BundleWiringTests extends WiringTest {
 		
 		List<BundleWire> fragments = tb1Wiring
 				.getProvidedWires(HostNamespace.HOST_NAMESPACE);
-		assertEquals("Wrong number of fragments", 1, fragments.size());
-		assertEquals("Wrong fragment", tb4, fragments.get(0).getRequirerWiring().getBundle());
+		assertThat(fragments)
+				.as("Wrong number of fragments").hasSize(1);
+		assertThat(fragments.get(0).getRequirerWiring().getBundle())
+				.as("Wrong fragment")
+				.isEqualTo(tb4);
 	}
 
 	private void checkBundleWire(
@@ -956,26 +1095,46 @@ public class BundleWiringTests extends WiringTest {
 			BundleWiring requirer, 
 			BundleCapability capability,
 			BundleRequirement requirement) {
-		assertEquals("Wrong provider", provider.getResource(), wire.getProvider());
-		assertEquals("Wrong requirer", requirer.getResource(), wire.getRequirer());
-		assertEquals("Wrong provider wiring", provider, wire.getProviderWiring());
-		assertEquals("Wrong requirer wiring", requirer, wire.getRequirerWiring());
-		assertEquals("Wrong capability", capability, wire.getCapability());
-		assertEquals("Wrong requirement", requirement, wire.getRequirement());
-		assertTrue("Requirement does not match capability", wire.getRequirement().matches(wire.getCapability()));
+		assertThat(wire.getProvider())
+				.as("Wrong provider")
+				.isEqualTo(provider.getResource());
+		assertThat(wire.getRequirer())
+				.as("Wrong requirer")
+				.isEqualTo(requirer.getResource());
+		assertThat(wire.getProviderWiring())
+				.as("Wrong provider wiring")
+				.isEqualTo(provider);
+		assertThat(wire.getRequirerWiring())
+				.as("Wrong requirer wiring")
+				.isEqualTo(requirer);
+		assertThat(wire.getCapability())
+				.as("Wrong capability")
+				.isEqualTo(capability);
+		assertThat(wire.getRequirement())
+				.as("Wrong requirement")
+				.isEqualTo(requirement);
+		assertThat(wire.getRequirement().matches(wire.getCapability()))
+				.as("Requirement does not match capability")
+				.isTrue();
 		String filterDirective = wire.getRequirement().getDirectives().get(Constants.FILTER_DIRECTIVE);
 		if (wire.getRequirement().getNamespace().startsWith("osgi.wiring.")) {
-			assertTrue("An osgi.wiring.* requirement has non-empty attribute map.", wire.getRequirement().getAttributes().isEmpty());
-			assertNotNull("Null filter directive is not allowed for osgi.wiring.* name spaces.", filterDirective);
+			assertThat(wire.getRequirement().getAttributes())
+					.as("An osgi.wiring.* requirement has non-empty attribute map.").isEmpty();
+			assertThat(filterDirective)
+					.as("Null filter directive is not allowed for osgi.wiring.* name spaces.")
+				.isNotNull();
 			try {
 				Filter filter = FrameworkUtil.createFilter(filterDirective);
-				assertTrue("Filter directive does not match capability attributes: " + filterDirective, filter.matches(wire.getCapability().getAttributes()));
+				assertThat(filter.matches(wire.getCapability().getAttributes()))
+						.as("Filter directive does not match capability attributes: " + filterDirective)
+				.isTrue();
 			} catch (InvalidSyntaxException e) {
 				fail("Failed to create filter: " + filterDirective, e);
 			}
 		}
 	}
 
+	@Test
 	public void testGetRevisions() {
 		Bundle tb1 = install("resolver.tb1.v110.jar");
 		Bundle tb2 = install("resolver.tb2.jar");
@@ -984,7 +1143,7 @@ public class BundleWiringTests extends WiringTest {
 		Bundle tb5 = install("resolver.tb5.jar");
 		List<Bundle> testBundles = Arrays.asList(new Bundle[]{tb1, tb2, tb3, tb4, tb5});
 
-		assertTrue(frameworkWiring.resolveBundles(testBundles));
+		assertThat(frameworkWiring.resolveBundles(testBundles)).isTrue();
 
 		BundleRevisions tb1Revisions = tb1.adapt(BundleRevisions.class);
 		BundleRevisions tb2Revisions = tb2.adapt(BundleRevisions.class);
@@ -998,7 +1157,7 @@ public class BundleWiringTests extends WiringTest {
 
 		// test the refresh case
 		refreshBundles(Arrays.asList(new Bundle[]{tb1}));
-		assertTrue(frameworkWiring.resolveBundles(testBundles));
+		assertThat(frameworkWiring.resolveBundles(testBundles)).isTrue();
 
 		// do not reget the BundleRevisions must survive refresh operations
 		checkWirings(testBundles.toArray(new Bundle[testBundles.size()]), revisions, 1, true);
@@ -1006,17 +1165,21 @@ public class BundleWiringTests extends WiringTest {
 		// test the update case
 		Bundle tb8 = install("resolver.tb8.jar");
 		BundleRevision tb1Revision1 = tb1.adapt(BundleRevision.class);
-		URL content = getContext().getBundle().getEntry("resolver.tb1.v120.jar");
-		assertNotNull("Cannot find content for update", content);
+		URL content = bundleContext.getBundle().getEntry("resolver.tb1.v120.jar");
+		assertThat(content)
+				.as("Cannot find content for update")
+				.isNotNull();
 		try {
 			tb1.update(content.openStream());
 		} catch (BundleException e) {
-			fail("Unexpected update failure",e);
+			fail("Unexpected update failure", e);
 		} catch (IOException e) {
-			fail("Unexpected update failure",e);
+			fail("Unexpected update failure", e);
 		}
 		BundleRevision tb1Revision2 = tb1.adapt(BundleRevision.class);
-		assertTrue("Could not resolve updated bundle", frameworkWiring.resolveBundles(Arrays.asList(new Bundle[]{tb1, tb8})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[]{tb1, tb8})))
+				.as("Could not resolve updated bundle")
+				.isTrue();
 		checkWirings(new Bundle[] {tb1}, new BundleRevisions[] {tb1Revisions},
 				2,
 				true);
@@ -1024,17 +1187,21 @@ public class BundleWiringTests extends WiringTest {
 				tb1Revision1});
 
 		Bundle tb9 = install("resolver.tb9.jar");
-		content = getContext().getBundle().getEntry("resolver.tb1.v130.jar");
-		assertNotNull("Cannot find content for update", content);
+		content = bundleContext.getBundle().getEntry("resolver.tb1.v130.jar");
+		assertThat(content)
+				.as("Cannot find content for update")
+				.isNotNull();
 		try {
 			tb1.update(content.openStream());
 		} catch (BundleException e) {
-			fail("Unexpected update failure",e);
+			fail("Unexpected update failure", e);
 		} catch (IOException e) {
-			fail("Unexpected update failure",e);
+			fail("Unexpected update failure", e);
 		}
 		BundleRevision tb1Revision3 = tb1.adapt(BundleRevision.class);
-		assertTrue("Could not resolve updated bundle", frameworkWiring.resolveBundles(Arrays.asList(new Bundle[]{tb1, tb9})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[]{tb1, tb9})))
+				.as("Could not resolve updated bundle")
+				.isTrue();
 		checkWirings(new Bundle[] {tb1}, new BundleRevisions[] {tb1Revisions},
 				3,
 				true);
@@ -1043,7 +1210,9 @@ public class BundleWiringTests extends WiringTest {
 		
 		// test the refresh case
 		refreshBundles(Arrays.asList(new Bundle[]{tb1}));
-		assertTrue("Could not resolve test bundles", frameworkWiring.resolveBundles(testBundles));
+		assertThat(frameworkWiring.resolveBundles(testBundles))
+				.as("Could not resolve test bundles")
+				.isTrue();
 
 		// do not reget the BundleRevisions must survive refresh operations
 		checkWirings(testBundles.toArray(new Bundle[testBundles.size()]), revisions, 1, true);
@@ -1071,126 +1240,175 @@ public class BundleWiringTests extends WiringTest {
 	private void checkRevisions(BundleRevisions revisions,
 			BundleRevision[] bundleRevisions) {
 		List<BundleRevision> revisionList = revisions.getRevisions();
-		assertEquals("Wrong number of revisions", bundleRevisions.length, revisionList.size());
+		assertThat(revisionList)
+				.as("Wrong number of revisions").hasSize(bundleRevisions.length);
 		int i = 0;
 		for (Iterator<BundleRevision> iRevisions = revisionList.iterator(); iRevisions.hasNext(); i++)
-			assertEquals("Wrong revision found", bundleRevisions[i], iRevisions.next());
+			assertThat(iRevisions.next())
+					.as("Wrong revision found")
+				.isEqualTo(bundleRevisions[i]);
 	}
 
 	private void checkWirings(Bundle[] bundles,
 			BundleRevisions[] bundlesRevisions,
 			int expectedNumRevisions, boolean hasCurrent) {
-		assertEquals("Lists are not the same size", bundles.length,
-				bundlesRevisions.length);
+		assertThat(bundlesRevisions.length)
+				.as("Lists are not the same size")
+				.isEqualTo(bundles.length);
 		for (int i = 0; i < bundlesRevisions.length; i++) {
 			Bundle bundle = bundles[i];
 			BundleRevision current = bundle.adapt(BundleRevision.class);
 			if (hasCurrent) {
-				assertNotNull("BundleRevision is null for: " + bundle, current);
-				assertEquals("Wrong BSN", bundle.getSymbolicName(), current.getSymbolicName());
-				assertEquals("Wrong version", bundle.getVersion(), current.getVersion());
+				assertThat(current)
+						.as("BundleRevision is null for: " + bundle)
+				.isNotNull();
+				assertThat(current.getSymbolicName())
+						.as("Wrong BSN")
+				.isEqualTo(bundle.getSymbolicName());
+				assertThat(current.getVersion())
+						.as("Wrong version")
+				.isEqualTo(bundle.getVersion());
 			} else {
-				assertNull("BundleRevision must be null for: " + bundle, current);
+				assertThat(current)
+						.as("BundleRevision must be null for: " + bundle)
+				.isNull();
 			}
 			BundleRevisions bundleRevisions = bundlesRevisions[i];
-			assertNotNull("BundleRevisions is null for bundle: " + bundle,
-					bundleRevisions);
-			assertEquals("Wrong bundle for revisions", bundle,
-					bundleRevisions.getBundle());
+			assertThat(bundleRevisions)
+					.as("BundleRevisions is null for bundle: " + bundle)
+				.isNotNull();
+			assertThat(bundleRevisions.getBundle())
+					.as("Wrong bundle for revisions")
+				.isEqualTo(bundle);
 			List<BundleRevision> revisions = bundleRevisions.getRevisions();
 			if (hasCurrent)
-				assertEquals("Wrong current revision for bundle", current, revisions.get(0));
-			assertEquals("Wrong number of in use revisions",
-					expectedNumRevisions, revisions.size());
+				assertThat(revisions.get(0))
+						.as("Wrong current revision for bundle")
+				.isEqualTo(current);
+			assertThat(revisions)
+					.as("Wrong number of in use revisions").hasSize(expectedNumRevisions);
 
 			int index = 0;
 			for (Iterator<BundleRevision> iter = revisions.iterator(); iter.hasNext(); index++) {
 				BundleRevision revision = iter.next();
 				BundleWiring wiring = revision.getWiring();
-				assertNotNull("bundle wiring is null", wiring);
+				assertThat(wiring)
+						.as("bundle wiring is null")
+				.isNotNull();
 				Collection<BundleWire> hostWires = wiring
 						.getProvidedWires(HostNamespace.HOST_NAMESPACE);
 				Collection<BundleWire> fragmentWires = wiring
 						.getRequiredWires(HostNamespace.HOST_NAMESPACE);
-				assertNotNull("Host wires is null", hostWires);
-				assertNotNull("Fragment wires is null", fragmentWires);
+				assertThat(hostWires)
+						.as("Host wires is null")
+				.isNotNull();
+				assertThat(fragmentWires)
+						.as("Fragment wires is null")
+				.isNotNull();
 				if ((revision.getTypes() & BundleRevision.TYPE_FRAGMENT) != 0) {
-					assertEquals("Wrong number of host wires", 0, hostWires.size());
-					assertEquals("Wrong number of fragment wires", 1, fragmentWires.size());
+					assertThat(hostWires.size())
+							.as("Wrong number of host wires")
+				.isEqualTo(0);
+					assertThat(fragmentWires.size())
+							.as("Wrong number of fragment wires")
+				.isEqualTo(1);
 					BundleWire fragmentWire = fragmentWires.iterator().next();
-					assertTrue(
-							"Fragment wire not found",
-							fragmentWire
+					assertThat(fragmentWire
 									.getProviderWiring()
 									.getProvidedWires(
 											HostNamespace.HOST_NAMESPACE)
-									.contains(fragmentWire));
+									.contains(fragmentWire))
+							.as("Fragment wire not found")
+				.isTrue();
 					continue;
 				}
-				assertEquals("Wrong number of fragment wires", 0, fragmentWires.size());
+				assertThat(fragmentWires.size())
+						.as("Wrong number of fragment wires")
+				.isEqualTo(0);
 				if (index == 0 && hasCurrent)
-					assertTrue("Wiring is not current for: " + bundle, wiring.isCurrent());
+					assertThat(wiring.isCurrent())
+							.as("Wiring is not current for: " + bundle)
+				.isTrue();
 				else
-					assertFalse("Wiring is current for: " + bundle, wiring.isCurrent());
-				assertTrue("Wiring is not in use for: " + bundle, wiring.isInUse());
+					assertThat(wiring.isCurrent())
+							.as("Wiring is current for: " + bundle)
+				.isFalse();
+				assertThat(wiring.isInUse())
+						.as("Wiring is not in use for: " + bundle)
+				.isTrue();
 			}
 		}
 	}
 
 	// Note that this test assumes the tests are run on a JavaSE 1.5 vm or higher
+	@Test
 	public void testOSGiEE() {
 		// First bundle tests that the framework sets reasonable defaults for JavaSE 1.5
 		Bundle tb10v100 = install("resolver.tb10.v100.jar");
-		assertTrue(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb10v100})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb10v100}))).isTrue();
 		// Second bundle requires an osgi.ee that should not be able to resolve
 		Bundle tb10v110 = install("resolver.tb10.v110.jar");
-		assertFalse(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb10v110})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb10v110}))).isFalse();
 		// Third bundle requires an osgi.ee that is specified by the system.capabilities.extra property
 		Bundle tb10v120 = install("resolver.tb10.v120.jar");
-		assertTrue(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb10v120})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb10v120}))).isTrue();
 		// forth bundle requires JavaSE [1.3, 1.4)
 		Bundle tb10v130 = install("resolver.tb10.v130.jar");
-		assertFalse(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb10v130})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb10v130}))).isFalse();
 		// fifth bundle requires JavaSE [1.3, 10000)
 		Bundle tb10v140 = install("resolver.tb10.v140.jar");
-		assertTrue(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb10v140})));
-
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb10v140}))).isTrue();
 
 		// Test that the ees come from the system bundle
 		BundleWiring tb10v100Wiring = tb10v100.adapt(BundleWiring.class);
-		assertNotNull("Wiring is null for: " + tb10v100, tb10v100Wiring);
+		assertThat(tb10v100Wiring)
+				.as("Wiring is null for: " + tb10v100)
+				.isNotNull();
 		List<BundleWire> v100RequiredEEs = tb10v100Wiring.getRequiredWires("osgi.ee");
-		assertEquals("Wrong number of required osgi.ees", 7, v100RequiredEEs.size());
-		Bundle systemBundle = getContext().getBundle(0);
-		assertNotNull("SystemBundle is null", systemBundle);
+		assertThat(v100RequiredEEs)
+				.as("Wrong number of required osgi.ees").hasSize(7);
+		Bundle systemBundle = bundleContext.getBundle(0);
+		assertThat(systemBundle)
+				.as("SystemBundle is null")
+				.isNotNull();
 		for (Iterator<BundleWire> ees = v100RequiredEEs.iterator(); ees.hasNext();) {
-			assertEquals("Wrong provider for osgi.ee", systemBundle, ees.next().getProviderWiring().getBundle());
+			assertThat(ees.next().getProviderWiring().getBundle())
+					.as("Wrong provider for osgi.ee")
+				.isEqualTo(systemBundle);
 		}
 
 		BundleWiring tb10v120Wiring = tb10v120.adapt(BundleWiring.class);
-		assertNotNull("Wiring is null for: " + tb10v120, tb10v120Wiring);
+		assertThat(tb10v120Wiring)
+				.as("Wiring is null for: " + tb10v120)
+				.isNotNull();
 		List<BundleWire> v120RequiredEEs = tb10v120Wiring.getRequiredWires("osgi.ee");
-		assertEquals("Wrong number of required osgi.ees", 1, v120RequiredEEs.size());
-		assertNotNull("SystemBundle is null", systemBundle);
+		assertThat(v120RequiredEEs)
+				.as("Wrong number of required osgi.ees").hasSize(1);
+		assertThat(systemBundle)
+				.as("SystemBundle is null")
+				.isNotNull();
 		for (Iterator<BundleWire> ees = v120RequiredEEs.iterator(); ees.hasNext();) {
-			assertEquals("Wrong provider for osgi.ee", systemBundle, ees.next().getProviderWiring().getBundle());
+			assertThat(ees.next().getProviderWiring().getBundle())
+					.as("Wrong provider for osgi.ee")
+				.isEqualTo(systemBundle);
 		}
 	}
 
+	@Test
 	public void testRequiredExecutionEnvironment() {
 		// install bundles that use BREE header
 		Bundle tb1 = install("wiring.ee.tb1.jar");
-		assertTrue(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb1})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb1}))).isTrue();
 		Bundle tb2 = install("wiring.ee.tb2.jar");
-		assertTrue(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb2})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb2}))).isTrue();
 		Bundle tb3 = install("wiring.ee.tb3.jar");
-		assertTrue(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb3})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb3}))).isTrue();
 		Bundle tb4 = install("wiring.ee.tb4.jar");
-		assertTrue(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb4})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb4}))).isTrue();
 		Bundle tb5 = install("wiring.ee.tb5.jar");
-		assertTrue(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb5})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb5}))).isTrue();
 		Bundle tb6 = install("wiring.ee.tb6.jar");
-		assertTrue(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb6})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb6}))).isTrue();
 
 		checkOSGiEEWiring(tb1, "OSGi/Minimum");
 		checkOSGiEEWiring(tb2, "JavaSE");
@@ -1202,46 +1420,76 @@ public class BundleWiringTests extends WiringTest {
 
 	private void checkOSGiEEWiring(Bundle tb, String eeName) {
 		BundleWiring wiring = tb.adapt(BundleWiring.class);
-		assertNotNull("Null wiring for resolved bundle: " + tb, wiring);
+		assertThat(wiring)
+				.as("Null wiring for resolved bundle: " + tb)
+				.isNotNull();
 
 		List<BundleWire> eeWires = wiring.getRequiredWires(ExecutionEnvironmentNamespace.EXECUTION_ENVIRONMENT_NAMESPACE);
-		assertNotNull("Null ee wires: " + tb, eeWires);
-		assertEquals("Wrong number of ee wires: " + tb, 1, eeWires.size());
+		assertThat(eeWires)
+				.as("Null ee wires: " + tb)
+				.isNotNull();
+		assertThat(eeWires)
+				.as("Wrong number of ee wires: " + tb).hasSize(1);
 
 		BundleWire eeWire = eeWires.iterator().next();
 		BundleCapability eeCapability = eeWire.getCapability();
-		assertEquals("Wrong namespace", ExecutionEnvironmentNamespace.EXECUTION_ENVIRONMENT_NAMESPACE, eeCapability.getNamespace());
-		assertEquals("Wrong ee name", eeCapability.getAttributes().get(ExecutionEnvironmentNamespace.EXECUTION_ENVIRONMENT_NAMESPACE), eeName);
+		assertThat(eeCapability.getNamespace())
+				.as("Wrong namespace")
+				.isEqualTo(ExecutionEnvironmentNamespace.EXECUTION_ENVIRONMENT_NAMESPACE);
+		assertThat(eeName)
+				.as("Wrong ee name")
+				.isEqualTo(eeCapability.getAttributes().get(ExecutionEnvironmentNamespace.EXECUTION_ENVIRONMENT_NAMESPACE));
 	}
 
+	@Test
 	public void testOptionalRequireCapability() {
 		Bundle tb11 = install("resolver.tb11.jar");
-		assertTrue(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb11})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb11}))).isTrue();
 
 		BundleWiring tb11Wiring = tb11.adapt(BundleWiring.class);
-		assertNotNull("Wiring is null", tb11Wiring);
+		assertThat(tb11Wiring)
+				.as("Wiring is null")
+				.isNotNull();
 		List<BundleRequirement> requirements = tb11Wiring.getRequirements(null);
-		assertNotNull("Requirements is null", requirements);
-		assertEquals("Wrong number of requirements", 0, requirements.size());
+		assertThat(requirements)
+				.as("Requirements is null")
+				.isNotNull();
+		assertThat(requirements)
+				.as("Wrong number of requirements").hasSize(0);
 		List<BundleWire> wires = tb11Wiring.getRequiredWires(null);
-		assertNotNull("Wires is null", wires);
-		assertEquals("Wrong number of wires", 0, wires.size());
+		assertThat(wires)
+				.as("Wires is null")
+				.isNotNull();
+		assertThat(wires)
+				.as("Wrong number of wires").hasSize(0);
 
 		Bundle tb12 = install("resolver.tb12.jar");
 		refreshBundles(Arrays.asList(new Bundle[] {tb11}));
 
-		assertTrue(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb11, tb12})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {tb11, tb12}))).isTrue();
 		tb11Wiring = tb11.adapt(BundleWiring.class);
-		assertNotNull("Wiring is null", tb11Wiring);
+		assertThat(tb11Wiring)
+				.as("Wiring is null")
+				.isNotNull();
 		requirements = tb11Wiring.getRequirements(null);
-		assertNotNull("Requirements is null", requirements);
-		assertEquals("Wrong number of requirements", 1, requirements.size());
+		assertThat(requirements)
+				.as("Requirements is null")
+				.isNotNull();
+		assertThat(requirements)
+				.as("Wrong number of requirements").hasSize(1);
 		wires = tb11Wiring.getRequiredWires(null);
-		assertNotNull("Wires is null", wires);
-		assertEquals("Wrong number of wires", 1, wires.size());
+		assertThat(wires)
+				.as("Wires is null")
+				.isNotNull();
+		assertThat(wires)
+				.as("Wrong number of wires").hasSize(1);
 		BundleWire wire = wires.get(0);
-		assertEquals("Wrong provider", tb12, wire.getProviderWiring().getBundle());
-		assertEquals("Wrong requirer", tb11, wire.getRequirerWiring().getBundle());
+		assertThat(wire.getProviderWiring().getBundle())
+				.as("Wrong provider")
+				.isEqualTo(tb12);
+		assertThat(wire.getRequirerWiring().getBundle())
+				.as("Wrong requirer")
+				.isEqualTo(tb11);
 	}
 
 	// Note that this test is done in GetEntryResourceTest
@@ -1249,17 +1497,22 @@ public class BundleWiringTests extends WiringTest {
 	//		fail("Need to write a findEntries test.");
 	//	}
 
+	@Test
 	public void testListResources() {
 		install("wiring.base.jar");
 		// force base to resolve first
-		assertTrue("Could not resolve test bundles", frameworkWiring.resolveBundles(bundles));
+		assertThat(frameworkWiring.resolveBundles(bundles))
+				.as("Could not resolve test bundles")
+				.isTrue();
 
 		Bundle exporter = install("wiring.exporter.jar");
 		Bundle importer = install("wiring.importer.jar");
 		Bundle requirer = install("wiring.requirer.jar");
 		install("wiring.reexport.jar");
 
-		assertTrue("Could not resolve test bundles", frameworkWiring.resolveBundles(bundles));
+		assertThat(frameworkWiring.resolveBundles(bundles))
+				.as("Could not resolve test bundles")
+				.isTrue();
 
 		BundleWiring exporterWiring = exporter.adapt(BundleWiring.class);
 		BundleWiring importerWiring = importer.adapt(BundleWiring.class);
@@ -1268,21 +1521,33 @@ public class BundleWiringTests extends WiringTest {
 		// test that empty lists are returned when no resources are found
 		Collection<String> empty = exporterWiring.listResources("", "*.notfound",
 				BundleWiring.LISTRESOURCES_RECURSE);
-		assertNotNull("Should return empty list", empty);
-		assertEquals("Should have 0 resources", 0, empty.size());
+		assertThat(empty)
+				.as("Should return empty list")
+				.isNotNull();
+		assertThat(empty)
+				.as("Should have 0 resources").hasSize(0);
 		empty = importerWiring.listResources("", "*.notfound", BundleWiring.LISTRESOURCES_RECURSE);
-		assertNotNull("Should return empty list", empty);
-		assertEquals("Should have 0 resources", 0, empty.size());
+		assertThat(empty)
+				.as("Should return empty list")
+				.isNotNull();
+		assertThat(empty)
+				.as("Should have 0 resources").hasSize(0);
 		empty = requirerWiring.listResources("", "*.notfound", BundleWiring.LISTRESOURCES_RECURSE);
-		assertNotNull("Should return empty list", empty);
-		assertEquals("Should have 0 resources", 0, empty.size());
+		assertThat(empty)
+				.as("Should return empty list")
+				.isNotNull();
+		assertThat(empty)
+				.as("Should have 0 resources").hasSize(0);
 
 		// test exporter resources
 		Collection<String> rootResources = exporterWiring.listResources("/root",
 				"*.txt", 0);
-		assertEquals("Wrong number of resources", 1, rootResources.size());
-		assertEquals("Wrong resource", "root/root.export.txt", rootResources
-				.iterator().next());
+		assertThat(rootResources)
+				.as("Wrong number of resources").hasSize(1);
+		assertThat(rootResources
+				.iterator().next())
+				.as("Wrong resource")
+				.isEqualTo("root/root.export.txt");
 		checkResources(exporterWiring.getClassLoader(), rootResources);
 
 		// note that root.B package has been substituted
@@ -1314,9 +1579,12 @@ public class BundleWiringTests extends WiringTest {
 
 		// test importer resources
 		rootResources = importerWiring.listResources("/root", "*.txt", 0);
-		assertEquals("Wrong number of resources", 1, rootResources.size());
-		assertEquals("Wrong resource", "root/root.local.txt", rootResources
-				.iterator().next());
+		assertThat(rootResources)
+				.as("Wrong number of resources").hasSize(1);
+		assertThat(rootResources
+				.iterator().next())
+				.as("Wrong resource")
+				.isEqualTo("root/root.local.txt");
 		checkResources(importerWiring.getClassLoader(), rootResources);
 
 		// note that root.B package has been substituted
@@ -1396,15 +1664,23 @@ public class BundleWiringTests extends WiringTest {
 		install("wiring.requirer.frag.jar");
 
 		refreshBundles(bundles);
-		assertTrue("failed to resolve test fragments", frameworkWiring.resolveBundles(bundles));
+		assertThat(frameworkWiring.resolveBundles(bundles))
+				.as("failed to resolve test fragments")
+				.isTrue();
 
 		// test that old wirings return null
 		rootResources = exporterWiring.listResources("/root", "*.txt", 0);
-		assertNull("Old wiring still accesses resources", rootResources);
+		assertThat(rootResources)
+				.as("Old wiring still accesses resources")
+				.isNull();
 		rootResources = importerWiring.listResources("/root", "*.txt", 0);
-		assertNull("Old wiring still accesses resources", rootResources);
+		assertThat(rootResources)
+				.as("Old wiring still accesses resources")
+				.isNull();
 		rootResources = requirerWiring.listResources("/root", "*.txt", 0);
-		assertNull("Old wiring still accesses resources", rootResources);
+		assertThat(rootResources)
+				.as("Old wiring still accesses resources")
+				.isNull();
 
 		// get the latest wiring
 		exporterWiring = exporter.adapt(BundleWiring.class);
@@ -1563,14 +1839,18 @@ public class BundleWiringTests extends WiringTest {
 		checkResources(requirerWiring.getClassLoader(), rootResources);
 
 		// test update case
-		URL updateContent = getContext().getBundle().getEntry("wiring.exporter.v2.jar");
-		assertNotNull("Could not find update content", updateContent);
+		URL updateContent = bundleContext.getBundle().getEntry("wiring.exporter.v2.jar");
+		assertThat(updateContent)
+				.as("Could not find update content")
+				.isNotNull();
 		try {
 			exporter.update(updateContent.openStream());
 		} catch (Exception e) {
 			fail("Failed to update bundle", e);
 		}
-		assertTrue("Failed to resolve bundle", frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {exporter})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[] {exporter})))
+				.as("Failed to resolve bundle")
+				.isTrue();
 		BundleWiring oldExporterWiring = exporterWiring;
 		BundleWiring newExporterWiring = exporter.adapt(BundleWiring.class);
 
@@ -1614,6 +1894,7 @@ public class BundleWiringTests extends WiringTest {
 		checkResources(newExporterWiring.getClassLoader(), rootResources);
 	}
 
+	@Test
 	public void testBSNMatchingAttributes() {
 		Bundle tb13a = install("resolver.tb13a.jar");
 		Bundle tb13b = install("resolver.tb13b.jar");
@@ -1626,87 +1907,138 @@ public class BundleWiringTests extends WiringTest {
 		Bundle tb13Frag3 = install("resolver.tb13.frag3.jar");
 		Bundle tb13Frag4 = install("resolver.tb13.frag4.jar");
 
-		assertFalse(frameworkWiring.resolveBundles(bundles));
+		assertThat(frameworkWiring.resolveBundles(bundles)).isFalse();
 
-		assertEquals("Unexpected state for: " + tb13a.getSymbolicName(), Bundle.RESOLVED, tb13a.getState());
-		assertEquals("Unexpected state for: " + tb13b.getSymbolicName(), Bundle.RESOLVED, tb13b.getState());
-		assertEquals("Unexpected state for: " + tb13Client1.getSymbolicName(), Bundle.INSTALLED, tb13Client1.getState());
-		assertEquals("Unexpected state for: " + tb13Client2.getSymbolicName(), Bundle.RESOLVED, tb13Client2.getState());
-		assertEquals("Unexpected state for: " + tb13Client3.getSymbolicName(), Bundle.INSTALLED, tb13Client3.getState());
-		assertEquals("Unexpected state for: " + tb13Client4.getSymbolicName(), Bundle.RESOLVED, tb13Client4.getState());
-		assertEquals("Unexpected state for: " + tb13Frag1.getSymbolicName(), Bundle.INSTALLED, tb13Frag1.getState());
-		assertEquals("Unexpected state for: " + tb13Frag2.getSymbolicName(), Bundle.RESOLVED, tb13Frag2.getState());
-		assertEquals("Unexpected state for: " + tb13Frag3.getSymbolicName(), Bundle.INSTALLED, tb13Frag3.getState());
-		assertEquals("Unexpected state for: " + tb13Frag4.getSymbolicName(), Bundle.RESOLVED, tb13Frag4.getState());
+		assertThat(tb13a)
+				.as("Unexpected state for: " + tb13a.getSymbolicName()).isInState(Bundle.RESOLVED);
+		assertThat(tb13b)
+				.as("Unexpected state for: " + tb13b.getSymbolicName()).isInState(Bundle.RESOLVED);
+		assertThat(tb13Client1)
+				.as("Unexpected state for: " + tb13Client1.getSymbolicName()).isInState(Bundle.INSTALLED);
+		assertThat(tb13Client2)
+				.as("Unexpected state for: " + tb13Client2.getSymbolicName()).isInState(Bundle.RESOLVED);
+		assertThat(tb13Client3)
+				.as("Unexpected state for: " + tb13Client3.getSymbolicName()).isInState(Bundle.INSTALLED);
+		assertThat(tb13Client4)
+				.as("Unexpected state for: " + tb13Client4.getSymbolicName()).isInState(Bundle.RESOLVED);
+		assertThat(tb13Frag1)
+				.as("Unexpected state for: " + tb13Frag1.getSymbolicName()).isInState(Bundle.INSTALLED);
+		assertThat(tb13Frag2)
+				.as("Unexpected state for: " + tb13Frag2.getSymbolicName()).isInState(Bundle.RESOLVED);
+		assertThat(tb13Frag3)
+				.as("Unexpected state for: " + tb13Frag3.getSymbolicName()).isInState(Bundle.INSTALLED);
+		assertThat(tb13Frag4)
+				.as("Unexpected state for: " + tb13Frag4.getSymbolicName()).isInState(Bundle.RESOLVED);
 
 		BundleWiring tb13Client1Wiring = tb13Client1.adapt(BundleWiring.class);
-		assertNull("Expected null Wiring: " + tb13Client1.getSymbolicName(), tb13Client1Wiring);
+		assertThat(tb13Client1Wiring)
+				.as("Expected null Wiring: " + tb13Client1.getSymbolicName())
+				.isNull();
 		BundleWiring tb13Client3Wiring = tb13Client3.adapt(BundleWiring.class);
-		assertNull("Expected null Wiring: " + tb13Client3.getSymbolicName(), tb13Client3Wiring);
+		assertThat(tb13Client3Wiring)
+				.as("Expected null Wiring: " + tb13Client3.getSymbolicName())
+				.isNull();
 
 		BundleWiring tb13aWiring = tb13a.adapt(BundleWiring.class);
-		assertNotNull("Expected non-null wiring: " + tb13a.getSymbolicName(), tb13aWiring);
+		assertThat(tb13aWiring)
+				.as("Expected non-null wiring: " + tb13a.getSymbolicName())
+				.isNotNull();
 		BundleWiring tb13bWiring = tb13b.adapt(BundleWiring.class);
-		assertNotNull("Expected non-null wiring: " + tb13b.getSymbolicName(), tb13bWiring);
+		assertThat(tb13bWiring)
+				.as("Expected non-null wiring: " + tb13b.getSymbolicName())
+				.isNotNull();
 		BundleWiring tb13Client2Wiring = tb13Client2.adapt(BundleWiring.class);
-		assertNotNull("Expected non-null wiring: " + tb13Client2.getSymbolicName(), tb13Client2Wiring);
+		assertThat(tb13Client2Wiring)
+				.as("Expected non-null wiring: " + tb13Client2.getSymbolicName())
+				.isNotNull();
 		BundleWiring tb13Client4Wiring = tb13Client4.adapt(BundleWiring.class);
-		assertNotNull("Expected non-null wiring: " + tb13Client4.getSymbolicName(), tb13Client4Wiring);
+		assertThat(tb13Client4Wiring)
+				.as("Expected non-null wiring: " + tb13Client4.getSymbolicName())
+				.isNotNull();
 		
 		List<BundleRequirement> client2Requirements = tb13Client2Wiring
 				.getRequirements(BundleNamespace.BUNDLE_NAMESPACE);
-		assertEquals("Unexpected number of requirements", 1, client2Requirements.size());
-		assertEquals("Wrong provider", tb13Client2, client2Requirements.get(0).getRevision().getBundle());
+		assertThat(client2Requirements)
+				.as("Unexpected number of requirements").hasSize(1);
+		assertThat(client2Requirements.get(0).getRevision().getBundle())
+				.as("Wrong provider")
+				.isEqualTo(tb13Client2);
 		
 		List<BundleWire> client2RequiredWires = tb13Client2Wiring
 				.getRequiredWires(BundleNamespace.BUNDLE_NAMESPACE);
-		assertEquals("Unexpected number of wires", 1, client2RequiredWires.size());
-		assertEquals("Wrong provider", tb13a, client2RequiredWires.get(0).getProviderWiring().getBundle());
+		assertThat(client2RequiredWires)
+				.as("Unexpected number of wires").hasSize(1);
+		assertThat(client2RequiredWires.get(0).getProviderWiring().getBundle())
+				.as("Wrong provider")
+				.isEqualTo(tb13a);
 
 		List<BundleWire> client4RequiredWires = tb13Client4Wiring
 				.getRequiredWires(BundleNamespace.BUNDLE_NAMESPACE);
-		assertEquals("Unexpected number of wires", 1, client4RequiredWires.size());
-		assertEquals("Wrong provider", tb13b, client4RequiredWires.get(0).getProviderWiring().getBundle());
+		assertThat(client4RequiredWires)
+				.as("Unexpected number of wires").hasSize(1);
+		assertThat(client4RequiredWires.get(0).getProviderWiring().getBundle())
+				.as("Wrong provider")
+				.isEqualTo(tb13b);
 		
 		List<BundleWire> tb13aProvidedWires = tb13aWiring
 				.getProvidedWires(HostNamespace.HOST_NAMESPACE);
-		assertEquals("Unexpected number of wires", 1, tb13aProvidedWires.size());
-		assertEquals("Wrong fragment attached", tb13Frag2, tb13aProvidedWires.get(0).getRequirerWiring().getBundle());
+		assertThat(tb13aProvidedWires)
+				.as("Unexpected number of wires").hasSize(1);
+		assertThat(tb13aProvidedWires.get(0).getRequirerWiring().getBundle())
+				.as("Wrong fragment attached")
+				.isEqualTo(tb13Frag2);
 		
 		BundleWiring tb13Frag2Wiring = tb13Frag2.adapt(BundleWiring.class);
-		assertNotNull("Fragments must be adaptable to BundleWiring", tb13Frag2Wiring);
+		assertThat(tb13Frag2Wiring)
+				.as("Fragments must be adaptable to BundleWiring")
+				.isNotNull();
 		List<BundleWire> tb13Frag2RequiredWires = tb13Frag2Wiring
 				.getRequiredWires(HostNamespace.HOST_NAMESPACE);
-		assertEquals("Unexpected number of wires", 1, tb13Frag2RequiredWires.size());
-		assertEquals("Wrong host attached", tb13a, tb13Frag2RequiredWires.get(0).getProviderWiring().getBundle());
+		assertThat(tb13Frag2RequiredWires)
+				.as("Unexpected number of wires").hasSize(1);
+		assertThat(tb13Frag2RequiredWires.get(0).getProviderWiring().getBundle())
+				.as("Wrong host attached")
+				.isEqualTo(tb13a);
 		
 		List<BundleWire> tb13bProvidedWires = tb13bWiring
 				.getProvidedWires(HostNamespace.HOST_NAMESPACE);
-		assertEquals("Unexpected number of wires", 1, tb13bProvidedWires.size());
-		assertEquals("Wrong fragment attached", tb13Frag4, tb13bProvidedWires.get(0).getRequirerWiring().getBundle());
+		assertThat(tb13bProvidedWires)
+				.as("Unexpected number of wires").hasSize(1);
+		assertThat(tb13bProvidedWires.get(0).getRequirerWiring().getBundle())
+				.as("Wrong fragment attached")
+				.isEqualTo(tb13Frag4);
 		
 		BundleWiring tb13Frag4Wiring = tb13Frag4.adapt(BundleWiring.class);
-		assertNotNull("Fragments must be adaptable to BundleWiring", tb13Frag2Wiring);
+		assertThat(tb13Frag2Wiring)
+				.as("Fragments must be adaptable to BundleWiring")
+				.isNotNull();
 		List<BundleWire> tb13Frag4RequiredWires = tb13Frag4Wiring
 				.getRequiredWires(HostNamespace.HOST_NAMESPACE);
-		assertEquals("Unexpected number of wires", 1, tb13Frag4RequiredWires.size());
-		assertEquals("Wrong host attached", tb13b, tb13Frag4RequiredWires.get(0).getProviderWiring().getBundle());
+		assertThat(tb13Frag4RequiredWires)
+				.as("Unexpected number of wires").hasSize(1);
+		assertThat(tb13Frag4RequiredWires.get(0).getProviderWiring().getBundle())
+				.as("Wrong host attached")
+				.isEqualTo(tb13b);
 	}
 
 	private void assertResourcesEquals(String message, Collection<?> expected, Collection<?> actual) {
 		if (expected.size() != actual.size())
 			fail(message + ": Collections are not the same size: " + expected + ":  " + actual);
-		assertTrue(message + ": Colections do not contain the same content: " + expected + ":  " + actual, actual.containsAll(expected));
+		assertThat(actual.containsAll(expected))
+				.as(message + ": Colections do not contain the same content: " + expected + ":  " + actual)
+				.isTrue();
 	}
 
 	private void checkResources(ClassLoader cl, Collection<String> resources) {
 		for(Iterator<String> iResources = resources.iterator(); iResources.hasNext();) {
 			String path = iResources.next();
 			URL resource = cl.getResource(path);
-			assertNotNull("Could not find resource: " + path, resource);
+			assertThat(resource)
+					.as("Could not find resource: " + path)
+				.isNotNull();
 		}
 	}
-	
+
 	/**
 	 * Ensures an implementation delivers a bundle wiring's provided wires in
 	 * the proper order. The ordering rules are as follows.
@@ -1721,66 +2053,80 @@ public class BundleWiringTests extends WiringTest {
 	 * capability, but the wires must be contiguous, and the group must be
 	 * ordered as in (1).
 	 */
+	@Test
 	public void testProvidedWiresOrdering() {
 		Bundle tb1 = install("wiring.tb1.jar");
 		Bundle tb2 = install("wiring.tb2.jar");
 		Bundle tb3 = install("wiring.tb3.jar");
 		Bundle tb4 = install("wiring.tb4.jar");
-		assertTrue("Bundles should have resolved", frameworkWiring.resolveBundles(Arrays.asList(new Bundle[]{tb1,tb2,tb3,tb4})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[]{tb1,tb2,tb3,tb4})))
+				.as("Bundles should have resolved")
+				.isTrue();
 		BundleWiring tb1Wiring = tb1.adapt(BundleWiring.class);
 		BundleWiring tb2Wiring = tb2.adapt(BundleWiring.class);
 		BundleWiring tb3Wiring = tb3.adapt(BundleWiring.class);
 		BundleWiring tb4Wiring = tb4.adapt(BundleWiring.class);
 		List<BundleWire> tb1Wires = tb1Wiring
 				.getProvidedWires(PackageNamespace.PACKAGE_NAMESPACE);
-		assertEquals("Wrong number of wires", 6, tb1Wires.size());
-		assertEquals(
-				"Wrong order",
-				"org.osgi.test.cases.framework.wiring.tb1a",
-				tb1Wires.get(0).getCapability().getAttributes()
-						.get(PackageNamespace.PACKAGE_NAMESPACE));
-		assertTrue("Wrong requirer", tb1Wires.get(0).getRequirerWiring().equals(tb2Wiring) || tb1Wires.get(0).getRequirerWiring().equals(tb3Wiring));
-		assertEquals(
-				"Wrong order",
-				"org.osgi.test.cases.framework.wiring.tb1a",
-				tb1Wires.get(1).getCapability().getAttributes()
-						.get(PackageNamespace.PACKAGE_NAMESPACE));
-		assertTrue("Wrong requirer", tb1Wires.get(1).getRequirerWiring().equals(tb2Wiring) || tb1Wires.get(1).getRequirerWiring().equals(tb3Wiring));
-		assertEquals(
-				"Wrong order",
-				"org.osgi.test.cases.framework.wiring.tb1b",
-				tb1Wires.get(2).getCapability().getAttributes()
-						.get(PackageNamespace.PACKAGE_NAMESPACE));
-		assertTrue("Wrong requirer", tb1Wires.get(2).getRequirerWiring().equals(tb2Wiring) || tb1Wires.get(2).getRequirerWiring().equals(tb4Wiring));
-		assertEquals(
-				"Wrong order",
-				"org.osgi.test.cases.framework.wiring.tb1b",
-				tb1Wires.get(3).getCapability().getAttributes()
-						.get(PackageNamespace.PACKAGE_NAMESPACE));
-		assertTrue("Wrong requirer", tb1Wires.get(3).getRequirerWiring().equals(tb2Wiring) || tb1Wires.get(3).getRequirerWiring().equals(tb4Wiring));
-		assertEquals(
-				"Wrong order",
-				"org.osgi.test.cases.framework.wiring.tb1c",
-				tb1Wires.get(4).getCapability().getAttributes()
-						.get(PackageNamespace.PACKAGE_NAMESPACE));
-		assertTrue("Wrong requirer", tb1Wires.get(4).getRequirerWiring().equals(tb3Wiring) || tb1Wires.get(4).getRequirerWiring().equals(tb4Wiring));
-		assertEquals(
-				"Wrong order",
-				"org.osgi.test.cases.framework.wiring.tb1c",
-				tb1Wires.get(5).getCapability().getAttributes()
-						.get(PackageNamespace.PACKAGE_NAMESPACE));
-		assertTrue("Wrong requirer", tb1Wires.get(5).getRequirerWiring().equals(tb3Wiring) || tb1Wires.get(5).getRequirerWiring().equals(tb4Wiring));
+		assertThat(tb1Wires.size())
+				.as("Wrong number of wires")
+				.isEqualTo(6);
+		assertThat(tb1Wires.get(0).getCapability().getAttributes()
+						.get(PackageNamespace.PACKAGE_NAMESPACE))
+				.as("Wrong order")
+				.isEqualTo("org.osgi.test.cases.framework.wiring.tb1a");
+		assertThat(tb1Wires.get(0).getRequirerWiring().equals(tb2Wiring) || tb1Wires.get(0).getRequirerWiring().equals(tb3Wiring))
+				.as("Wrong requirer")
+				.isTrue();
+		assertThat(tb1Wires.get(1).getCapability().getAttributes()
+						.get(PackageNamespace.PACKAGE_NAMESPACE))
+				.as("Wrong order")
+				.isEqualTo("org.osgi.test.cases.framework.wiring.tb1a");
+		assertThat(tb1Wires.get(1).getRequirerWiring().equals(tb2Wiring) || tb1Wires.get(1).getRequirerWiring().equals(tb3Wiring))
+				.as("Wrong requirer")
+				.isTrue();
+		assertThat(tb1Wires.get(2).getCapability().getAttributes()
+						.get(PackageNamespace.PACKAGE_NAMESPACE))
+				.as("Wrong order")
+				.isEqualTo("org.osgi.test.cases.framework.wiring.tb1b");
+		assertThat(tb1Wires.get(2).getRequirerWiring().equals(tb2Wiring) || tb1Wires.get(2).getRequirerWiring().equals(tb4Wiring))
+				.as("Wrong requirer")
+				.isTrue();
+		assertThat(tb1Wires.get(3).getCapability().getAttributes()
+						.get(PackageNamespace.PACKAGE_NAMESPACE))
+				.as("Wrong order")
+				.isEqualTo("org.osgi.test.cases.framework.wiring.tb1b");
+		assertThat(tb1Wires.get(3).getRequirerWiring().equals(tb2Wiring) || tb1Wires.get(3).getRequirerWiring().equals(tb4Wiring))
+				.as("Wrong requirer")
+				.isTrue();
+		assertThat(tb1Wires.get(4).getCapability().getAttributes()
+						.get(PackageNamespace.PACKAGE_NAMESPACE))
+				.as("Wrong order")
+				.isEqualTo("org.osgi.test.cases.framework.wiring.tb1c");
+		assertThat(tb1Wires.get(4).getRequirerWiring().equals(tb3Wiring) || tb1Wires.get(4).getRequirerWiring().equals(tb4Wiring))
+				.as("Wrong requirer")
+				.isTrue();
+		assertThat(tb1Wires.get(5).getCapability().getAttributes()
+						.get(PackageNamespace.PACKAGE_NAMESPACE))
+				.as("Wrong order")
+				.isEqualTo("org.osgi.test.cases.framework.wiring.tb1c");
+		assertThat(tb1Wires.get(5).getRequirerWiring().equals(tb3Wiring) || tb1Wires.get(5).getRequirerWiring().equals(tb4Wiring))
+				.as("Wrong requirer")
+				.isTrue();
 	}
-	
+
 	/**
 	 * Basic test for support of the DynamicImport-Package requirement.
 	 */
+	@Test
 	public void testDynamicImportPackage() throws Exception {
 		Bundle tb1 = install("resolver.tb1.v110.jar");
 		Bundle tb2 = install("wiring.tb1.jar");
 		Bundle tb3 = install("wiring.tb5.jar");
 		
-		assertTrue("The bundles should have resolved", frameworkWiring.resolveBundles(Arrays.asList(new Bundle[]{tb1,tb2,tb3})));
+		assertThat(frameworkWiring.resolveBundles(Arrays.asList(new Bundle[]{tb1,tb2,tb3})))
+				.as("The bundles should have resolved")
+				.isTrue();
 
 		BundleRevision tb3Revision = tb3.adapt(BundleRevision.class);
 		
@@ -1832,9 +2178,10 @@ public class BundleWiringTests extends WiringTest {
 				2);
 		BundleCapability bc = tb2Wiring.getCapabilities(
 				PackageNamespace.PACKAGE_NAMESPACE).get(0);
-		assertEquals("Wrong attribute",
-				"org.osgi.test.cases.framework.wiring.tb1a", bc.getAttributes()
-						.get(PackageNamespace.PACKAGE_NAMESPACE));
+		assertThat(bc.getAttributes()
+						.get(PackageNamespace.PACKAGE_NAMESPACE))
+				.as("Wrong attribute")
+				.isEqualTo("org.osgi.test.cases.framework.wiring.tb1a");
 		checkBundleWire(
 				tb3Wiring.getRequiredWires(PackageNamespace.PACKAGE_NAMESPACE)
 						.get(1),
@@ -1853,9 +2200,10 @@ public class BundleWiringTests extends WiringTest {
 				3);
 		bc = tb2Wiring.getCapabilities(PackageNamespace.PACKAGE_NAMESPACE).get(
 				1);
-		assertEquals("Wrong attribute",
-				"org.osgi.test.cases.framework.wiring.tb1b", bc.getAttributes()
-						.get(PackageNamespace.PACKAGE_NAMESPACE));
+		assertThat(bc.getAttributes()
+						.get(PackageNamespace.PACKAGE_NAMESPACE))
+				.as("Wrong attribute")
+				.isEqualTo("org.osgi.test.cases.framework.wiring.tb1b");
 		checkBundleWire(
 				tb3Wiring.getRequiredWires(PackageNamespace.PACKAGE_NAMESPACE)
 						.get(2),

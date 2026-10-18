@@ -17,6 +17,10 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.launch.junit;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.fail;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -47,6 +51,9 @@ import java.util.function.Consumer;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
@@ -63,24 +70,24 @@ import org.osgi.framework.wiring.FrameworkWiring;
 import org.osgi.service.condition.Condition;
 import org.osgi.test.cases.framework.launch.junit.connect.test.classes.Activator;
 
-import junit.framework.TestCase;
-
 public class ConnectTests extends LaunchTest {
 
 	private File storageArea;
 
+	@BeforeEach
 	public void setUp() throws Exception {
 		super.setUp();
 		storageArea = new File(rootStorageArea, getName());
 		storageArea.mkdirs();
 	}
 
+	@AfterEach
 	public void tearDown() throws Exception {
 		super.tearDown();
 		if (storageArea != null) {
-			assertTrue(
-					"Could not clean up storage area: " + storageArea.getPath(),
-					delete(storageArea));
+			assertThat(delete(storageArea))
+					.as("Could not clean up storage area: " + storageArea.getPath())
+					.isTrue();
 		}
 	}
 
@@ -326,6 +333,7 @@ public class ConnectTests extends LaunchTest {
 	static final TestConnectModule BUNDLE_EXCEPTION = new TestConnectModule(
 			null);
 
+	@Test
 	public void testConnectFactoryNoModules() {
 		TestCountingConnectFramework connectFactory = new TestCountingConnectFramework();
 
@@ -350,12 +358,15 @@ public class ConnectTests extends LaunchTest {
 			}
 		});
 
-		assertEquals("Wrong number of init called.", 2,
-				connectFactory.getInitializeCnt());
-		assertEquals("Wrong number of create activator called.", 3,
-				connectFactory.getCreateBundleActivatorCnt());
+		assertThat(connectFactory.getInitializeCnt())
+				.as("Wrong number of init called.")
+				.isEqualTo(2);
+		assertThat(connectFactory.getCreateBundleActivatorCnt())
+				.as("Wrong number of create activator called.")
+				.isEqualTo(3);
 	}
 
+	@Test
 	public void testConnectActivator() {
 		final AtomicInteger bundleActvatorStartCalled = new AtomicInteger();
 		final AtomicInteger bundleActvatorStopCalled = new AtomicInteger();
@@ -390,12 +401,15 @@ public class ConnectTests extends LaunchTest {
 				sneakyThrow(e);
 			}
 		});
-		assertEquals("Wrong number of start called.", 2,
-				bundleActvatorStartCalled.get());
-		assertEquals("Wrong number of stop called.", 2,
-				bundleActvatorStopCalled.get());
+		assertThat(bundleActvatorStartCalled.get())
+				.as("Wrong number of start called.")
+				.isEqualTo(2);
+		assertThat(bundleActvatorStopCalled.get())
+				.as("Wrong number of stop called.")
+				.isEqualTo(2);
 	}
 
+	@Test
 	public void testConditionTrue() {
 		final AtomicReference<ServiceReference<Condition>> trueConditionStart = new AtomicReference<>();
 		final AtomicReference<ServiceReference<Condition>> trueConditionStop = new AtomicReference<>();
@@ -432,17 +446,21 @@ public class ConnectTests extends LaunchTest {
 				f.init();
 				ServiceReference<Condition> trueCondition = trueConditionStart
 						.get();
-				assertNotNull("No true condition found.", trueCondition);
-				assertEquals("Wrong bundle.", f.getBundleContext().getBundle(),
-						trueCondition.getBundle());
+				assertThat(trueCondition)
+						.as("No true condition found.")
+						.isNotNull();
+				assertThat(trueCondition.getBundle())
+						.as("Wrong bundle.")
+						.isEqualTo(f.getBundleContext().getBundle());
 				f.stop();
 				f.waitForStop(5000);
 
-				assertEquals(
-						"Different true condition found on start and stop.",
-						trueCondition, trueConditionStop.get());
-				assertNull("True condition should be unregistered on stop.",
-						trueCondition.getBundle());
+				assertThat(trueConditionStop.get())
+						.as("Different true condition found on start and stop.")
+						.isEqualTo(trueCondition);
+				assertThat(trueCondition.getBundle())
+						.as("True condition should be unregistered on stop.")
+						.isNull();
 			} catch (Exception e) {
 				sneakyThrow(e);
 			}
@@ -450,6 +468,7 @@ public class ConnectTests extends LaunchTest {
 
 	}
 
+	@Test
 	public void testConnectInit() {
 		final AtomicReference<File> initFile = new AtomicReference<>();
 		final AtomicReference<File> storeFile = new AtomicReference<>();
@@ -478,22 +497,23 @@ public class ConnectTests extends LaunchTest {
 				sneakyThrow(e);
 			}
 		});
-		TestCase.assertEquals("Wrong init store file.", storeFile.get(),
-				initFile.get());
-		assertTrue("Did not find all init configs: " + initConfig.get(),
-				initConfig.get().entrySet().containsAll(config.entrySet()));
-		try {
-			initConfig.get().put("k3", "v3");
-			fail("Expected unmodifiable map");
-		} catch (UnsupportedOperationException e) {
-			// expected
-		}
+		assertThat(initFile.get())
+				.as("Wrong init store file.")
+				.isEqualTo(storeFile.get());
+		assertThat(initConfig.get().entrySet().containsAll(config.entrySet()))
+				.as("Did not find all init configs: " + initConfig.get())
+				.isTrue();
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.as("Expected unmodifiable map")
+				.isThrownBy(() -> initConfig.get().put("k3", "v3"));
 	}
 
+	@Test
 	public void testConnectContentHeaders() throws IOException {
 		doTestConnectContentSimple(false);
 	}
 
+	@Test
 	public void testConnectContentManifest() throws IOException {
 		doTestConnectContentSimple(true);
 	}
@@ -516,8 +536,9 @@ public class ConnectTests extends LaunchTest {
 						.set(f.getBundleContext().getBundles().length);
 				for (String l : locations) {
 					Bundle b = f.getBundleContext().installBundle(l);
-					assertEquals("Wrong symbolic name.", l,
-							b.getSymbolicName());
+					assertThat(b.getSymbolicName())
+							.as("Wrong symbolic name.")
+							.isEqualTo(l);
 				}
 			} catch (Throwable t) {
 				sneakyThrow(t);
@@ -528,14 +549,17 @@ public class ConnectTests extends LaunchTest {
 			try {
 				f.init();
 				Bundle[] bundles = f.getBundleContext().getBundles();
-				assertEquals("Wrong number of bundles from cache.",
-						locations.size() + initialBundleCount.get(),
-						bundles.length);
+				assertThat(bundles.length)
+						.as("Wrong number of bundles from cache.")
+						.isEqualTo(locations.size() + initialBundleCount.get());
 				for (String l : locations) {
 					Bundle b = f.getBundleContext().getBundle(l);
-					assertNotNull("No bundle at location: " + l, b);
-					assertEquals("Wrong symbolic name.", l,
-							b.getSymbolicName());
+					assertThat(b)
+							.as("No bundle at location: " + l)
+							.isNotNull();
+					assertThat(b.getSymbolicName())
+							.as("Wrong symbolic name.")
+							.isEqualTo(l);
 				}
 			} catch (BundleException e) {
 				sneakyThrow(e);
@@ -551,17 +575,22 @@ public class ConnectTests extends LaunchTest {
 			try {
 				f.init();
 				Bundle[] bundles = f.getBundleContext().getBundles();
-				assertEquals("Wrong number of bundles from cache.",
-						locations.size() + initialBundleCount.get() - 2,
-						bundles.length);
+				assertThat(bundles.length)
+						.as("Wrong number of bundles from cache.")
+						.isEqualTo(locations.size() + initialBundleCount.get() - 2);
 				for (String l : locations) {
 					Bundle b = f.getBundleContext().getBundle(l);
 					if ("b.2".equals(l) || "b.3".equals(l)) {
-						assertNull("Found unexpected bundle.", b);
+						assertThat(b)
+								.as("Found unexpected bundle.")
+								.isNull();
 					} else {
-						assertNotNull("No bundle at location: " + l, b);
-						assertEquals("Wrong symbolic name.", l,
-								b.getSymbolicName());
+						assertThat(b)
+								.as("No bundle at location: " + l)
+								.isNotNull();
+						assertThat(b.getSymbolicName())
+								.as("Wrong symbolic name.")
+								.isEqualTo(l);
 					}
 				}
 			} catch (BundleException e) {
@@ -570,10 +599,12 @@ public class ConnectTests extends LaunchTest {
 		});
 	}
 
+	@Test
 	public void testConnectContentActivatorsWithFrameworkLoaders() {
 		doTestConnectContentActivators(false);
 	}
 
+	@Test
 	public void testConnectContentActivatorsWithProvidedLoaders() {
 		doTestConnectContentActivators(true);
 	}
@@ -592,25 +623,29 @@ public class ConnectTests extends LaunchTest {
 				for (Integer id : ids) {
 					Bundle b = f.getBundleContext()
 							.installBundle(id.toString());
-					assertEquals("Wrong symbolic name.", id.toString(),
-							b.getSymbolicName());
+					assertThat(b.getSymbolicName())
+							.as("Wrong symbolic name.")
+							.isEqualTo(id.toString());
 					b.start();
 					ServiceReference< ? >[] registered = b
 							.getRegisteredServices();
-					assertNotNull("No services found.", registered);
-					assertEquals("Wrong number of services.", 1,
-							registered.length);
-					assertEquals("Wrong service property.",
-							Activator.class.getSimpleName() + id,
-							(String) registered[0].getProperty("activator"));
+					assertThat(registered)
+							.as("No services found.")
+							.isNotNull();
+					assertThat(registered.length)
+							.as("Wrong number of services.").isOne();
+					assertThat((String) registered[0].getProperty("activator"))
+							.as("Wrong service property.")
+							.isEqualTo(Activator.class.getSimpleName() + id);
 					if (provideLoader) {
-						assertTrue("Expected the same classes.",
-								Activator.class.equals(b
-										.loadClass(Activator.class.getName())));
+						assertThat(Activator.class)
+								.as("Expected the same classes.").isEqualTo(b
+								.loadClass(Activator.class.getName()));
 					} else {
-						assertFalse("Expected different classes.",
-								Activator.class.equals(b
-										.loadClass(Activator.class.getName())));
+						assertThat(Activator.class.equals(b
+										.loadClass(Activator.class.getName())))
+								.as("Expected different classes.")
+								.isFalse();
 					}
 				}
 			} catch (Throwable t) {
@@ -619,10 +654,12 @@ public class ConnectTests extends LaunchTest {
 		});
 	}
 
+	@Test
 	public void testConnectContentEntriesWithFrameworkLoaders() {
 		doTestConnectContentEntries(false);
 	}
 
+	@Test
 	public void testConnectContentEntriesWithProvidedLoaders() {
 		doTestConnectContentEntries(true);
 	}
@@ -643,8 +680,9 @@ public class ConnectTests extends LaunchTest {
 				for (Integer id : ids) {
 					Bundle b = f.getBundleContext()
 							.installBundle(id.toString());
-					assertEquals("Wrong symbolic name.", id.toString(),
-							b.getSymbolicName());
+					assertThat(b.getSymbolicName())
+							.as("Wrong symbolic name.")
+							.isEqualTo(id.toString());
 					TestConnectModule m = modules.get(id);
 					List<String> entries = new ArrayList<>();
 					for (String entry : m.getContent().getEntries()) {
@@ -658,10 +696,12 @@ public class ConnectTests extends LaunchTest {
 						bundleEntryUrls.add(
 								eUrls.nextElement().getPath().substring(1));
 					}
-					assertEquals("Wrong number of bundle entry URLs.",
-							entries.size(), bundleEntryUrls.size());
-					assertTrue("Wrong bundle entry URLs: " + bundleEntryUrls,
-							entries.containsAll(bundleEntryUrls));
+					assertThat(bundleEntryUrls.size())
+							.as("Wrong number of bundle entry URLs.")
+							.isEqualTo(entries.size());
+					assertThat(entries.containsAll(bundleEntryUrls))
+							.as("Wrong bundle entry URLs: " + bundleEntryUrls)
+							.isTrue();
 
 					List<String> bundleEntryPaths = new ArrayList<>();
 					for (Enumeration<String> ePaths = b.getEntryPaths(
@@ -669,25 +709,28 @@ public class ConnectTests extends LaunchTest {
 									.hasMoreElements();) {
 						bundleEntryPaths.add(ePaths.nextElement());
 					}
-					assertEquals(
-							"Wrong number of bundle entry paths from root.", 1,
-							bundleEntryPaths.size());
-					assertEquals("Wrong bundle entry found at root.",
-							"org/osgi/test/cases/framework/launch/junit/connect/test/resources/"
+					assertThat(bundleEntryPaths)
+							.as("Wrong number of bundle entry paths from root.").hasSize(1);
+					assertThat(bundleEntryPaths.get(0))
+							.as("Wrong bundle entry found at root.")
+							.isEqualTo("org/osgi/test/cases/framework/launch/junit/connect/test/resources/"
 									+ id
-									+ ".txt",
-							bundleEntryPaths.get(0));
+									+ ".txt");
 
 					BundleWiring wiring = b.adapt(BundleWiring.class);
-					assertNotNull("No wiring.", wiring);
+					assertThat(wiring)
+							.as("No wiring.")
+							.isNotNull();
 					Collection<String> wiringResourcePaths = wiring
 							.listResources("/", "*",
 									BundleWiring.LISTRESOURCES_LOCAL
 											| BundleWiring.LISTRESOURCES_RECURSE);
-					assertEquals("Wrong number of resource paths.",
-							entries.size(), wiringResourcePaths.size());
-					assertTrue("Wrong resource paths: " + wiringResourcePaths,
-							entries.containsAll(wiringResourcePaths));
+					assertThat(wiringResourcePaths.size())
+							.as("Wrong number of resource paths.")
+							.isEqualTo(entries.size());
+					assertThat(entries.containsAll(wiringResourcePaths))
+							.as("Wrong resource paths: " + wiringResourcePaths)
+							.isTrue();
 
 					Set<String> wiringEntryUrls = new HashSet<>();
 					for (URL url : wiring.findEntries("/", "*",
@@ -695,17 +738,19 @@ public class ConnectTests extends LaunchTest {
 						// URL paths always begin with '/', remove it
 						wiringEntryUrls.add(url.getPath().substring(1));
 					}
-					assertEquals("Wrong number of wiring entry URLs.",
-							entries.size(), wiringEntryUrls.size());
-					assertTrue("Wrong wiring entry URLs: " + wiringEntryUrls,
-							entries.containsAll(wiringEntryUrls));
+					assertThat(wiringEntryUrls.size())
+							.as("Wrong number of wiring entry URLs.")
+							.isEqualTo(entries.size());
+					assertThat(entries.containsAll(wiringEntryUrls))
+							.as("Wrong wiring entry URLs: " + wiringEntryUrls)
+							.isTrue();
 
 					String txtPathDir = "org/osgi/test/cases/framework/launch/junit/connect/test/resources/";
 					String txtPath = txtPathDir + id + ".txt";
 					Optional<ConnectEntry> txtConnectEntry = m.getContent()
 							.getEntry(txtPath);
-					assertTrue("Could not find text entry.",
-							txtConnectEntry.isPresent());
+					assertThat(txtConnectEntry)
+							.as("Could not find text entry.").isPresent();
 
 					doCheckEntry(provideLoader, id, b, txtPathDir, txtPath,
 							txtConnectEntry);
@@ -738,9 +783,12 @@ public class ConnectTests extends LaunchTest {
 				false);
 		checkEntry(txtConnectEntry.get(), found.nextElement(), id,
 				false);
-		assertFalse("More entries found.", found.hasMoreElements());
+		assertThat(found.hasMoreElements())
+				.as("More entries found.")
+				.isFalse();
 	}
 
+	@Test
 	public void testOpenCloseUpdateConnectContent() {
 		final String NAME1 = "testUpdate.1";
 		final String NAME2 = "testUpdate.2";
@@ -752,11 +800,15 @@ public class ConnectTests extends LaunchTest {
 			try {
 				f.start();
 				Bundle b = f.getBundleContext().installBundle(NAME1);
-				assertEquals("Wrong name.", NAME1, b.getSymbolicName());
+				assertThat(b.getSymbolicName())
+						.as("Wrong name.")
+						.isEqualTo(NAME1);
 				// make sure to open the bundle file
-				assertNull(b.getEntry("doesNotExist.txt"));
+				assertThat(b.getEntry("doesNotExist.txt")).isNull();
 				TestConnectContent original = m.getContent();
-				assertTrue("Original content is not open.", original.isOpen());
+				assertThat(original.isOpen())
+						.as("Original content is not open.")
+						.isTrue();
 
 				// set the new content but don't update
 				m.setContent(createSimpleHeadersContent(NAME2));
@@ -768,17 +820,27 @@ public class ConnectTests extends LaunchTest {
 				refreshDone.await();
 
 				// should still be NAME1
-				assertEquals("Wrong name.", NAME1, b.getSymbolicName());
-				assertTrue("Original content is not open.", original.isOpen());
+				assertThat(b.getSymbolicName())
+						.as("Wrong name.")
+						.isEqualTo(NAME1);
+				assertThat(original.isOpen())
+						.as("Original content is not open.")
+						.isTrue();
 
 				// now update should stage in the new content
 				b.update();
-				assertEquals("Wrong name.", NAME2, b.getSymbolicName());
+				assertThat(b.getSymbolicName())
+						.as("Wrong name.")
+						.isEqualTo(NAME2);
 				// make sure to open the bundle file
-				assertNull(b.getEntry("doesNotExist.txt"));
+				assertThat(b.getEntry("doesNotExist.txt")).isNull();
 				TestConnectContent newContent = m.getContent();
-				assertTrue("New content is not open.", newContent.isOpen());
-				assertFalse("Original content is open.", original.isOpen());
+				assertThat(newContent.isOpen())
+						.as("New content is not open.")
+						.isTrue();
+				assertThat(original.isOpen())
+						.as("Original content is open.")
+						.isFalse();
 			} catch (Throwable t) {
 				sneakyThrow(t);
 			}
@@ -789,30 +851,40 @@ public class ConnectTests extends LaunchTest {
 			boolean matchUrl)
 			throws IOException {
 
-		assertNotNull("No entry found.", actual);
+		assertThat(actual)
+				.as("No entry found.")
+				.isNotNull();
 		if (matchUrl) {
-			assertEquals("Wrong path.",
-					((TestConnectEntryURL) expected).getContentURL(), actual);
+			assertThat(actual)
+					.as("Wrong path.")
+					.isEqualTo(((TestConnectEntryURL) expected).getContentURL());
 		} else {
-			assertEquals("Wrong path.", expected.getName(),
-					actual.getPath().substring(1));
+			assertThat(actual.getPath().substring(1))
+					.as("Wrong path.")
+					.isEqualTo(expected.getName());
 		}
 
 		URLConnection connection = actual.openConnection();
-		assertEquals("Wrong last modified.", expected.getLastModified(),
-				connection.getLastModified());
-		assertEquals("Wrong content length.", expected.getContentLength(),
-				connection.getContentLengthLong());
+		assertThat(connection.getLastModified())
+				.as("Wrong last modified.")
+				.isEqualTo(expected.getLastModified());
+		assertThat(connection.getContentLengthLong())
+				.as("Wrong content length.")
+				.isEqualTo(expected.getContentLength());
 		byte[] expectedBytes = getBytes(expected.getInputStream());
 		byte[] actualBytes = getBytes(connection.getInputStream());
-		assertEquals("Wrong input steam size.", expectedBytes.length,
-				actualBytes.length);
+		assertThat(actualBytes.length)
+				.as("Wrong input steam size.")
+				.isEqualTo(expectedBytes.length);
 		for (int i = 0; i < expectedBytes.length; i++) {
-			assertEquals("Wrong byte at: " + i, expectedBytes[i],
-					actualBytes[i]);
+			assertThat(actualBytes[i])
+					.as("Wrong byte at: " + i)
+					.isEqualTo(expectedBytes[i]);
 		}
 		String actualString = new String(actualBytes);
-		assertEquals("Wrong entry string.", id.toString(), actualString);
+		assertThat(actualString)
+				.as("Wrong entry string.")
+				.isEqualTo(id.toString());
 	}
 
 	TestConnectModule createSimpleHeadersModule(String name) {

@@ -17,13 +17,14 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.secure.junit.hooks.weaving;
 
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.fail;
+
+import org.opentest4j.AssertionFailedError;
 import org.osgi.framework.PackagePermission;
 import org.osgi.framework.hooks.weaving.WovenClass;
 import org.osgi.framework.hooks.weaving.WovenClassListener;
 import org.osgi.test.cases.framework.secure.junit.hooks.weaving.export.TestConstants;
-
-import junit.framework.AssertionFailedError;
-import junit.framework.TestCase;
 
 public class TestWovenClassListener implements WovenClassListener {
 	private static final PackagePermission permission = new PackagePermission(TestConstants.DYNAMIC_IMPORT_PACKAGE, PackagePermission.IMPORT);
@@ -31,6 +32,7 @@ public class TestWovenClassListener implements WovenClassListener {
 	private volatile boolean called;
 	private volatile AssertionFailedError error;
 	
+	// NOTE: JUnit assertions on purpose: AssertJ would load its own classes here and re-enter the weaving hook
 	public void modified(WovenClass wovenClass) {
 		if (!wovenClass.getClassName().equals(TestConstants.WOVEN_CLASS))
 			return;
@@ -65,20 +67,15 @@ public class TestWovenClassListener implements WovenClassListener {
 		if (TestConstants.isExpectSecurityExceptionAll() || 
 				TestConstants.isExpectSecurityExceptionAddDynamicImport() ||
 				wovenClass.getState() == WovenClass.TRANSFORMED) {
-			try {
-				wovenClass.getBundleWiring().getBundle().loadClass(TestConstants.DYNAMIC_IMPORT_CLASS);
-				TestCase.fail("The class should not have loaded");
-			}
-			catch (ClassNotFoundException e) {
-				// Okay.
-			}
+			assertThatExceptionOfType(ClassNotFoundException.class).as("The class should not have loaded")
+					.isThrownBy(() -> wovenClass.getBundleWiring().getBundle().loadClass(TestConstants.DYNAMIC_IMPORT_CLASS));
 		}
 		else {
 			try {
 				wovenClass.getBundleWiring().getBundle().loadClass(TestConstants.DYNAMIC_IMPORT_CLASS);
 			}
 			catch (ClassNotFoundException e) {
-				TestCase.fail("The class should have loaded");
+				fail("The class should have loaded");
 			}
 		}
 	}
@@ -86,11 +83,11 @@ public class TestWovenClassListener implements WovenClassListener {
 	private void assertDynamicImport(WovenClass wovenClass) {
 		if (TestConstants.isExpectSecurityExceptionAll() || TestConstants.isExpectSecurityExceptionAddDynamicImport()) {
 			if (wovenClass.getDynamicImports().contains(TestConstants.DYNAMIC_IMPORT_PACKAGE))
-				TestCase.fail("The dynamic import was added");
+				fail("The dynamic import was added");
 		}
 		else {
 			if (!wovenClass.getDynamicImports().contains(TestConstants.DYNAMIC_IMPORT_PACKAGE))
-				TestCase.fail("The dynamic import was not added");
+				fail("The dynamic import was not added");
 		}
 	}
 	
@@ -99,11 +96,11 @@ public class TestWovenClassListener implements WovenClassListener {
 				TestConstants.isExpectSecurityExceptionAddDynamicImport() ||
 				wovenClass.getState() == WovenClass.TRANSFORMED) {
 			if (wovenClass.getBundleWiring().getBundle().hasPermission(permission))
-				TestCase.fail("The woven bundle should not have package permission");
+				fail("The woven bundle should not have package permission");
 		}
 		else {
 			if (!wovenClass.getBundleWiring().getBundle().hasPermission(permission))
-				TestCase.fail("The woven bundle should have package permission");
+				fail("The woven bundle should have package permission");
 		}
 	}
 }

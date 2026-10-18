@@ -2,12 +2,11 @@
 
 Bundle-Description					: Framework test cases.
 
--conditionalpackage					= org.osgi.test.support.*
 -privatepackage						=  \
 	${p}.junit, \
 	${p}.junit.*
 	
-Import-Package: ${-signaturetest}, *
+Import-Package: *
 	
 -includeresource = \
     fragments.tb4.jar, \
@@ -34,9 +33,6 @@ Import-Package: ${-signaturetest}, *
 
 -fixupmessages.host: "Host * for this fragment"
 
--signaturetest                      = org.osgi.framework.connect , \
-	org.osgi.framework.launch , \
-	org.osgi.service.condition
 
 
 -runframework: none
@@ -50,7 +46,5 @@ p: org.osgi.test.cases.framework.launch
 # way). bnd merges all -make.* entries.
 -make.maven: (*).(jar); type=bnd; recipe="bnd/$1.bnd"
 
-testcases.junit3: ${classes;EXTENDS;junit.framework.TestCase;CONCRETE}
-testcases.junit4: ${classes;HIERARCHY_ANNOTATED;org.junit.Test;CONCRETE}
-Test-Cases: ${sort;${uniq;${testcases.junit3};${testcases.junit4}}}
--plugin.signaturetest: SignatureTest
+testcases.junit5: ${classes;HIERARCHY_INDIRECTLY_ANNOTATED;org.junit.platform.commons.annotation.Testable;CONCRETE}
+Test-Cases: ${sort;${uniq;${testcases.junit5}}}

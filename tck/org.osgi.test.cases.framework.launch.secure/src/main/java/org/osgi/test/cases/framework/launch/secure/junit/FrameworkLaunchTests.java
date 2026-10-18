@@ -17,6 +17,9 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.launch.secure.junit;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+
 import java.io.IOException;
 import java.security.AllPermission;
 import java.security.CodeSource;
@@ -29,12 +32,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.Constants;
 import org.osgi.framework.launch.Framework;
 
 public class FrameworkLaunchTests extends LaunchTest {
+
 	private static final String	TEST_TRUST_REPO		= "org.osgi.test.cases.framework.launch.secure.trust.repositories";
 
 	private Map<String, String> getConfiguration(String testName) {
@@ -48,6 +54,7 @@ public class FrameworkLaunchTests extends LaunchTest {
 		return configuration;
 	}
 
+	@Test
 	public void testSecurity() {
 		SecurityManager previousSM = System.getSecurityManager();
 		if (previousSM != null) {
@@ -61,10 +68,14 @@ public class FrameworkLaunchTests extends LaunchTest {
 			configuration.put(Constants.FRAMEWORK_SECURITY, "osgi");
 			Framework framework = createFramework(configuration);
 			initFramework(framework);
-			assertNotNull("Null SecurityManager", System.getSecurityManager());
+			assertThat(System.getSecurityManager())
+					.as("Null SecurityManager")
+					.isNotNull();
 			stopFramework(framework);
-			assertNull("SecurityManager is not null", System
-					.getSecurityManager());
+			assertThat(System
+					.getSecurityManager())
+					.as("SecurityManager is not null")
+					.isNull();
 
 			System.setSecurityManager(new SecurityManager());
 			try {
@@ -85,15 +96,15 @@ public class FrameworkLaunchTests extends LaunchTest {
 		}
 	}
 
+	@Test
 	public void testTrustRepositories() throws BundleException, IOException {
-		String testRepo = getProperty(TEST_TRUST_REPO);
+		String testRepo = System.getProperty(TEST_TRUST_REPO);
 		if (testRepo == null)
 			fail("Must set property to test: \"" + TEST_TRUST_REPO + "\"");
 		Map<String, String> configuration = getConfiguration(getName());
 		doTestTrustRepository(configuration, null, false);
 		doTestTrustRepository(configuration, testRepo, true);
 	}
-
 
 	private void doTestTrustRepository(Map<String, String> configuration,
 			String testRepo, boolean trusted) throws BundleException,
@@ -107,13 +118,16 @@ public class FrameworkLaunchTests extends LaunchTest {
 		Bundle testBundle = installBundle(framework, "/launch.secure.tb1.jar");
 		Map<X509Certificate, List<X509Certificate>> signers = testBundle
 				.getSignerCertificates(Bundle.SIGNERS_ALL);
-		assertEquals("Expecting 1 signer", 1, signers.size());
+		assertThat(signers)
+				.as("Expecting 1 signer").hasSize(1);
 		Map<X509Certificate, List<X509Certificate>> trustedSigners = testBundle
 				.getSignerCertificates(Bundle.SIGNERS_TRUSTED);
 		if (trusted)
-			assertEquals("Expecting 1 signer", 1, trustedSigners.size());
+			assertThat(trustedSigners)
+					.as("Expecting 1 signer").hasSize(1);
 		else
-			assertEquals("Expecting 0 signers", 0, trustedSigners.size());
+			assertThat(trustedSigners)
+					.as("Expecting 0 signers").hasSize(0);
 		stopFramework(framework);
 	}
 

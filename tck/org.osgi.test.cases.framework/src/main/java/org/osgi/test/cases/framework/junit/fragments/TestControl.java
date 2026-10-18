@@ -17,46 +17,68 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.junit.fragments;
 
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.fail;
+import static org.osgi.test.assertj.bundle.BundleAssert.assertThat;
+
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Hashtable;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.BundleListener;
 import org.osgi.framework.FrameworkEvent;
 import org.osgi.framework.FrameworkListener;
 import org.osgi.framework.ServiceRegistration;
-import org.osgi.test.support.compatibility.DefaultTestBundleControl;
-import org.osgi.test.support.sleep.Sleep;
-import org.osgi.test.support.wiring.Wiring;
+import org.osgi.framework.wiring.FrameworkWiring;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.annotation.InjectInstalledBundle;
+import org.osgi.test.common.install.BundleInstaller;
+import org.osgi.test.common.wiring.FrameworkWirings;
 
 /**
  * Test cases for testing fragment bundles and extension bundles.
  *
  * @author $Id$
  */
-public class TestControl extends DefaultTestBundleControl implements
+public class TestControl implements
 		BundleListener, FrameworkListener {
+
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
 
 	private Hashtable<String,Bundle>	events		= new Hashtable<>();
 	private static final String	SEPARATOR	= "#";
 	private ServiceRegistration<Bundle>	bundleReg;
 
-	protected void setUp() throws Exception {
-		super.setUp();
+	@BeforeEach
+	public void setUp() throws Exception {
+		// injected bundles are uninstalled after @AfterEach: refresh before the next test
+		FrameworkWirings.refreshBundles(bundleContext);
 		Hashtable<String,Object> props = new Hashtable<>();
 		props.put("bundle", "fragments.tests");
-		bundleReg = getContext().registerService(Bundle.class,
-				getContext().getBundle(), props);
+		bundleReg = bundleContext.registerService(Bundle.class,
+				bundleContext.getBundle(), props);
 	}
 
-	protected void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() throws Exception {
 		bundleReg.unregister();
-		super.tearDown();
 	}
 
 	/**
@@ -70,27 +92,17 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.start()
 	 */
-	public void testFragmentLifecycle() throws Exception {
+	@Test
+	public void testFragmentLifecycle(
+			@InjectInstalledBundle(value = "fragments.tb1b.jar", start = false) Bundle tb1b
+			) throws Exception {
 		// Install fragment bundle
-		Bundle tb1b = getContext().installBundle(
-				getWebServer() + "fragments.tb1b.jar");
-		try {
-			// Try starting fragment
-			tb1b.start();
-			fail("Framework should throw BundleException for start().");
-		}
-		catch (BundleException e) {
-
-		}
-		try {
-			// Try stopping fragment
-			tb1b.stop();
-			fail("Framework should throw BundleException for stop().");
-		}
-		catch (BundleException e) {
-
-		}
-		tb1b.uninstall();
+		assertThatExceptionOfType(BundleException.class)
+				.as("Framework should throw BundleException for start().")
+				.isThrownBy(() -> tb1b.start());
+		assertThatExceptionOfType(BundleException.class)
+				.as("Framework should throw BundleException for stop().")
+				.isThrownBy(() -> tb1b.stop());
 	}
 
 	/**
@@ -102,16 +114,15 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.loadClass(String)
 	 */
+	@Test
 	public void testAppendClasspath01() throws Exception {
 		Class< ? > classObj1;
 		Class< ? > classObj2;
 
 		// Install fragment bundle
-		Bundle tb1b = getContext().installBundle(
-				getWebServer() + "fragments.tb1b.jar");
+		Bundle tb1b = bundleInstaller.installBundle("fragments.tb1b.jar", false);
 		// Install host
-		Bundle tb1a = getContext().installBundle(
-				getWebServer() + "fragments.tb1a.jar");
+		Bundle tb1a = bundleInstaller.installBundle("fragments.tb1a.jar", false);
 		tb1a.start();
 		try {
 			// Load a resource that exists in a jar in the classpath of the
@@ -130,8 +141,10 @@ public class TestControl extends DefaultTestBundleControl implements
 					.loadClass("org.osgi.test.cases.framework.fragments.tb1a.TestClass");
 
 			// Test that class loaders are the same
-			assertEquals("Class loader must be the same.", classObj2
-					.getClassLoader(), classObj1.getClassLoader());
+			assertThat(classObj1.getClassLoader())
+					.as("Class loader must be the same.")
+					.isEqualTo(classObj2
+					.getClassLoader());
 		}
 		finally {
 			tb1a.stop();
@@ -149,41 +162,40 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.getResource(String)
 	 */
-	public void testAppendClasspath02() throws Exception {
-
+	@Test
+	public void testAppendClasspath02(
+			@InjectInstalledBundle(value = "fragments.tb1g.jar", start = false) Bundle tb1g,
+			@InjectInstalledBundle(value = "fragments.tb1b.jar", start = false) Bundle tb1b,
+			@InjectInstalledBundle(value = "fragments.tb1a.jar", start = true) Bundle tb1a
+			) throws Exception {
 		// Install fragment bundles
-		Bundle tb1g = getContext().installBundle(
-				getWebServer() + "fragments.tb1g.jar");
-		Bundle tb1b = getContext().installBundle(
-				getWebServer() + "fragments.tb1b.jar");
 		// Install and start host bundle
-		Bundle tb1a = getContext().installBundle(
-				getWebServer() + "fragments.tb1a.jar");
-		tb1a.start();
 
 		try {
 			// Check bundle id order is as expected
-			assertTrue(
-					"Expecting bundle id for fragment bundle installed first to be smaller.",
-					tb1g.getBundleId() < tb1b.getBundleId());
+			assertThat(tb1g.getBundleId() < tb1b.getBundleId())
+					.as("Expecting bundle id for fragment bundle installed first to be smaller.")
+					.isTrue();
 
 			// Find resource
 			URL url = tb1a.getResource("resources/notinhost.txt");
-			assertNotNull(
-					"Expecting a URL that is not null because it exists.", url);
+			assertThat(url)
+					.as("Expecting a URL that is not null because it exists.")
+					.isNotNull();
 
 			// Check content within resource
 			InputStream ins = url.openStream();
 			try {
-				assertNotNull(
-						"Expecting to be able to open stream to resource.", ins);
+				assertThat(ins)
+						.as("Expecting to be able to open stream to resource.")
+						.isNotNull();
 
 				BufferedReader bufr = new BufferedReader(new InputStreamReader(
 						ins));
 				String line = bufr.readLine();
-				assertEquals(
-						"Expecting framework to recover resources in ascending bundle id order.",
-						"tb1g", line);
+				assertThat(line)
+						.as("Expecting framework to recover resources in ascending bundle id order.")
+						.isEqualTo("tb1g");
 			}
 			finally {
 				ins.close();
@@ -191,10 +203,6 @@ public class TestControl extends DefaultTestBundleControl implements
 		}
 		finally {
 			// Stop and uninstall
-			tb1a.stop();
-			tb1a.uninstall();
-			tb1b.uninstall();
-			tb1g.uninstall();
 		}
 	}
 
@@ -211,6 +219,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.getResource(String)
 	 */
+	@Test
 	public void testExistingResourceNotReplaced() throws Exception {
 		URL url;
 		InputStream ins;
@@ -219,32 +228,35 @@ public class TestControl extends DefaultTestBundleControl implements
 		String line;
 
 		// Install fragment bundle
-		Bundle tb1b = getContext().installBundle(
-				getWebServer() + "fragments.tb1b.jar");
+		Bundle tb1b = bundleInstaller.installBundle("fragments.tb1b.jar", false);
 		// Install and start host bundle
-		tb1a = getContext()
-				.installBundle(getWebServer() + "fragments.tb1a.jar");
+		tb1a = bundleInstaller.installBundle("fragments.tb1a.jar", false);
 		tb1a.start();
 
 		try {
 			// Find resource
 			url = tb1a.getResource("resources/resource.txt");
-			assertNotNull("Expecting a not null URL.", url);
+			assertThat(url)
+					.as("Expecting a not null URL.")
+					.isNotNull();
 
 			// Test that getPath returns absolute path
-			assertEquals("Absolute path expected.", "/resources/resource.txt",
-					url.getPath());
+			assertThat(url.getPath())
+					.as("Absolute path expected.")
+					.isEqualTo("/resources/resource.txt");
 
 			// Check content within resource
 			ins = url.openStream();
 			try {
-				assertNotNull("Expecting to open stream to resource", ins);
+				assertThat(ins)
+						.as("Expecting to open stream to resource")
+						.isNotNull();
 
 				bufr = new BufferedReader(new InputStreamReader(ins));
 				line = bufr.readLine();
-				assertEquals(
-						"Framework must not allow a fragment to replace any class or resource of a host bundle",
-						"tb1a", line);
+				assertThat(line)
+						.as("Framework must not allow a fragment to replace any class or resource of a host bundle")
+						.isEqualTo("tb1a");
 			}
 			finally {
 				ins.close();
@@ -264,33 +276,21 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
-	public void testFragmentCannotBeHost() throws Exception {
+	@Test
+	public void testFragmentCannotBeHost(
+			@InjectInstalledBundle(value = "fragments.tb1d.jar", start = false) Bundle tb1d,
+			@InjectInstalledBundle(value = "fragments.tb1b.jar", start = false) Bundle tb1b,
+			@InjectInstalledBundle(value = "fragments.tb1a.jar", start = true) Bundle tb1a
+			) throws Exception {
 		// Install fragment bundles
-		Bundle tb1d = getContext().installBundle(
-				getWebServer() + "fragments.tb1d.jar");
-		Bundle tb1b = getContext().installBundle(
-				getWebServer() + "fragments.tb1b.jar");
 		// Install host
-		Bundle tb1a = getContext().installBundle(
-				getWebServer() + "fragments.tb1a.jar");
-		tb1a.start();
 
-		try {
-			// Test that state of fragment tb1d is INSTALLED
-			assertEquals(
-					"Expecting the state of fragment bundle tb1d to be INSTALLED",
-					Bundle.INSTALLED, tb1d.getState());
-			// Test that state of fragment tb1b is RESOLVED
-			assertEquals(
-					"Expecting the state of fragment bundle tb1b to be RESOLVED",
-					Bundle.RESOLVED, tb1b.getState());
-		}
-		finally {
-			tb1a.stop();
-			tb1a.uninstall();
-			tb1b.uninstall();
-			tb1d.uninstall();
-		}
+		// Test that state of fragment tb1d is INSTALLED
+		assertThat(tb1d)
+				.as("Expecting the state of fragment bundle tb1d to be INSTALLED").isInState(Bundle.INSTALLED);
+		// Test that state of fragment tb1b is RESOLVED
+		assertThat(tb1b)
+				.as("Expecting the state of fragment bundle tb1b to be RESOLVED").isInState(Bundle.RESOLVED);
 	}
 
 	/**
@@ -299,41 +299,33 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
-	public void testFragmentMultipleHosts() throws Exception {
+	@Test
+	public void testFragmentMultipleHosts(
+			@InjectInstalledBundle(value = "fragments.tb3a.jar", start = false) Bundle tb3a,
+			@InjectInstalledBundle(value = "fragments.tb3c.jar", start = false) Bundle tb3c,
+			@InjectInstalledBundle(value = "fragments.tb3d.jar", start = false) Bundle tb3d
+			) throws Exception {
 		// Install and start host bundle version 1.0
-		Bundle tb3a = getContext().installBundle(
-				getWebServer() + "fragments.tb3a.jar");
 
 		// Install and start host bundle version 2.0
-		Bundle tb3c = getContext().installBundle(
-				getWebServer() + "fragments.tb3c.jar");
 
 		// Install fragment bundle
-		Bundle tb3d = getContext().installBundle(
-				getWebServer() + "fragments.tb3d.jar");
 
 		// Try recovering resource from host that is in classpath of fragment
-		try {
-			Wiring.resolveBundles(getContext(), tb3d);
-			tb3a.start();
-			tb3c.start();
-			Class< ? > a = tb3a
-					.loadClass("org.osgi.test.cases.framework.fragments.tb3d.SomeClass");
-			Class< ? > c = tb3c
-					.loadClass("org.osgi.test.cases.framework.fragments.tb3d.SomeClass");
-			assertEquals("class from fragment does not have the same name", a
-					.getName(), c.getName());
-			assertFalse(
-					"class from fragment not loaded by different class loaders",
-					a.equals(c));
-		}
-		finally {
-			tb3c.stop();
-			tb3c.uninstall();
-			tb3a.stop();
-			tb3a.uninstall();
-			tb3d.uninstall();
-		}
+		bundleContext.getBundle(0).adapt(FrameworkWiring.class).resolveBundles(Arrays.asList(tb3d));
+		tb3a.start();
+		tb3c.start();
+		Class< ? > a = tb3a
+				.loadClass("org.osgi.test.cases.framework.fragments.tb3d.SomeClass");
+		Class< ? > c = tb3c
+				.loadClass("org.osgi.test.cases.framework.fragments.tb3d.SomeClass");
+		assertThat(c.getName())
+				.as("class from fragment does not have the same name")
+				.isEqualTo(a
+				.getName());
+		assertThat(a.equals(c))
+				.as("class from fragment not loaded by different class loaders")
+				.isFalse();
 	}
 
 	/**
@@ -344,16 +336,15 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
+	@Test
 	public void testFragmentAttachmentDirective01() throws Exception {
 		// Install and start host bundle
-		Bundle tb3e = getContext().installBundle(
-				getWebServer() + "fragments.tb3e.jar");
+		Bundle tb3e = bundleInstaller.installBundle("fragments.tb3e.jar", false);
 		tb3e.start();
 
 		// Install fragment bundle
-		Bundle tb3d = getContext().installBundle(
-				getWebServer() + "fragments.tb3d.jar");
-		Wiring.resolveBundles(getContext(), tb3d);
+		Bundle tb3d = bundleInstaller.installBundle("fragments.tb3d.jar", false);
+		bundleContext.getBundle(0).adapt(FrameworkWiring.class).resolveBundles(Arrays.asList(tb3d));
 
 		// Try recovering resource from host that is in classpath of fragment
 		try {
@@ -379,16 +370,15 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
+	@Test
 	public void testFragmentAttachmentDirective02() throws Exception {
 		// Install and start host bundle
-		Bundle tb3f = getContext().installBundle(
-				getWebServer() + "fragments.tb3f.jar");
+		Bundle tb3f = bundleInstaller.installBundle("fragments.tb3f.jar", false);
 		tb3f.start();
 
 		// Install fragment bundle, host already resolved
-		Bundle tb3d = getContext().installBundle(
-				getWebServer() + "fragments.tb3d.jar");
-		Wiring.resolveBundles(getContext(), tb3d);
+		Bundle tb3d = bundleInstaller.installBundle("fragments.tb3d.jar", false);
+		bundleContext.getBundle(0).adapt(FrameworkWiring.class).resolveBundles(Arrays.asList(tb3d));
 
 		// Try recovering resource from host that is in classpath of fragment
 		try {
@@ -414,17 +404,16 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
+	@Test
 	public void testFragmentAttachmentDirective03() throws Exception {
 		// Install fragment bundle, host not yet resolved
-		Bundle tb3d = getContext().installBundle(
-				getWebServer() + "fragments.tb3d.jar");
+		Bundle tb3d = bundleInstaller.installBundle("fragments.tb3d.jar", false);
 
 		// Install and start host bundle
-		Bundle tb3f = getContext().installBundle(
-				getWebServer() + "fragments.tb3f.jar");
+		Bundle tb3f = bundleInstaller.installBundle("fragments.tb3f.jar", false);
 		tb3f.start();
 
-		Wiring.resolveBundles(getContext(), tb3d);
+		bundleContext.getBundle(0).adapt(FrameworkWiring.class).resolveBundles(Arrays.asList(tb3d));
 
 		// Try recovering resource from host that is in classpath of fragment
 		try {
@@ -454,21 +443,20 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
+	@Test
 	public void testAttachToResolvedHost01() throws Exception {
 		// Install and start host bundle
-		Bundle tb1a = getContext().installBundle(
-				getWebServer() + "fragments.tb1a.jar");
+		Bundle tb1a = bundleInstaller.installBundle("fragments.tb1a.jar", false);
 		tb1a.start();
 
 		// Install fragment bundle, host is already ACTIVE
-		Bundle tb1e = getContext().installBundle(
-				getWebServer() + "fragments.tb1e.jar");
-		Wiring.resolveBundles(getContext(), tb1e);
+		Bundle tb1e = bundleInstaller.installBundle("fragments.tb1e.jar", false);
+		bundleContext.getBundle(0).adapt(FrameworkWiring.class).resolveBundles(Arrays.asList(tb1e));
 
 		// Verify that fragment bundle is still in INSTALLED state
 		try {
-			assertEquals("Expecting fragment bundle to be in INSTALLED state.",
-					Bundle.INSTALLED, tb1e.getState());
+			assertThat(tb1e)
+					.as("Expecting fragment bundle to be in INSTALLED state.").isInState(Bundle.INSTALLED);
 		}
 		finally {
 			tb1a.stop();
@@ -485,25 +473,23 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
+	@Test
 	public void testAttachToResolvedHost02() throws Exception {
 		// Install and start host bundle
-		Bundle tb1a = getContext().installBundle(
-				getWebServer() + "fragments.tb1a.jar");
+		Bundle tb1a = bundleInstaller.installBundle("fragments.tb1a.jar", false);
 		tb1a.start();
 
 		// Install required bundle
-		Bundle tb1b = getContext().installBundle(
-				getWebServer() + "fragments.tb1b.jar");
+		Bundle tb1b = bundleInstaller.installBundle("fragments.tb1b.jar", false);
 
 		// Install fragment bundle, host is already ACTIVE
-		Bundle tb1f = getContext().installBundle(
-				getWebServer() + "fragments.tb1f.jar");
-		Wiring.resolveBundles(getContext(), tb1f);
+		Bundle tb1f = bundleInstaller.installBundle("fragments.tb1f.jar", false);
+		bundleContext.getBundle(0).adapt(FrameworkWiring.class).resolveBundles(Arrays.asList(tb1f));
 
 		// Verify that fragment bundle is still in INSTALLED state
 		try {
-			assertEquals("Expecting fragment bundle to be in INSTALLED state.",
-					Bundle.INSTALLED, tb1f.getState());
+			assertThat(tb1f)
+					.as("Expecting fragment bundle to be in INSTALLED state.").isInState(Bundle.INSTALLED);
 		}
 		finally {
 			tb1a.stop();
@@ -525,30 +511,29 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
+	@Test
 	public void testFragmentUpdate() throws Exception {
 		// Add BundleEvent listener
 		purgeEvents();
-		getContext().addBundleListener(this);
+		bundleContext.addBundleListener(this);
 
 		// Install the host bundle
-		Bundle tb1a = getContext().installBundle(
-				getWebServer() + "fragments.tb1a.jar");
+		Bundle tb1a = bundleInstaller.installBundle("fragments.tb1a.jar", false);
 
 		// Install fragment bundle
-		Bundle tb1g = getContext().installBundle(
-				getWebServer() + "fragments.tb1g.jar");
+		Bundle tb1g = bundleInstaller.installBundle("fragments.tb1g.jar", false);
 
-		Wiring.resolveBundles(getContext(), tb1g);
+		bundleContext.getBundle(0).adapt(FrameworkWiring.class).resolveBundles(Arrays.asList(tb1g));
 		// Start the host bundle
 		tb1a.start();
 
 		try {
 			// Verify that fragment bundle is in RESOLVED state
-			assertEquals("Expecting fragment bundle to be in RESOLVED state.",
-					Bundle.RESOLVED, tb1g.getState());
+			assertThat(tb1g)
+					.as("Expecting fragment bundle to be in RESOLVED state.").isInState(Bundle.RESOLVED);
 
 			// Update fragment bundle
-			InputStream in = getContext().getBundle().getResource(
+			InputStream in = bundleContext.getBundle().getResource(
 					"fragments.tb1h.jar").openStream();
 			tb1g.update(in);
 			in.close();
@@ -563,10 +548,10 @@ public class TestControl extends DefaultTestBundleControl implements
 			}
 
 			// Refresh the host bundle
-			Wiring.synchronousRefreshBundles(getContext(), new Bundle[] {tb1a});
+			FrameworkWirings.refreshBundles(bundleContext, new Bundle[] {tb1a});
 
 			// Verify if UNRESOLVED event was published for each bundle
-			Sleep.sleep(2000); // wait a while
+			Thread.sleep(2000); // wait a while
 			if (!hasEventOccurred(tb1a, BundleEvent.class,
 					BundleEvent.UNRESOLVED)
 					&& !hasEventOccurred(tb1g, BundleEvent.class,
@@ -575,20 +560,14 @@ public class TestControl extends DefaultTestBundleControl implements
 			}
 
 			// Test that class resource is not accessible
-			try {
-				tb1a
-						.loadClass("org.osgi.test.cases.framework.fragments.tb1g.TestClass");
-				fail("The class should not exist in the host.");
-			}
-			catch (ClassNotFoundException e) {
-
-			}
+			assertThatExceptionOfType(ClassNotFoundException.class).as("The class should not exist in the host.")
+					.isThrownBy(() -> { tb1a .loadClass("org.osgi.test.cases.framework.fragments.tb1g.TestClass"); });
 		}
 		finally {
 			tb1a.stop();
 			tb1a.uninstall();
 			tb1g.uninstall();
-			getContext().removeBundleListener(this);
+			bundleContext.removeBundleListener(this);
 			purgeEvents();
 		}
 
@@ -603,41 +582,25 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
-	public void testConflictingImportPackage() throws Exception {
+	@Test
+	public void testConflictingImportPackage(
+			@InjectInstalledBundle(value = "fragments.tb7c.jar", start = true) Bundle tb7c,
+			@InjectInstalledBundle(value = "fragments.tb7d.jar", start = true) Bundle tb7d,
+			@InjectInstalledBundle(value = "fragments.tb7b.jar", start = false) Bundle tb7b,
+			@InjectInstalledBundle(value = "fragments.tb7a.jar", start = false) Bundle tb7a
+			) throws Exception {
 		// Install and start bundles that export packages
-		Bundle tb7c = getContext().installBundle(
-				getWebServer() + "fragments.tb7c.jar");
-		tb7c.start();
-		Bundle tb7d = getContext().installBundle(
-				getWebServer() + "fragments.tb7d.jar");
-		tb7d.start();
 
 		// Install fragment bundle
-		Bundle tb7b = getContext().installBundle(
-				getWebServer() + "fragments.tb7b.jar");
 
 		// Install the host bundle
-		Bundle tb7a = getContext().installBundle(
-				getWebServer() + "fragments.tb7a.jar");
 
 		// Start the host bundle
 		tb7a.start();
 
-		try {
-			// Verify that fragment bundle is still in INSTALLED state
-			assertEquals("Expecting fragment bundle to be in INSTALLED state.",
-					Bundle.INSTALLED, tb7b.getState());
-		}
-		finally {
-			tb7a.stop();
-			tb7a.uninstall();
-			tb7c.stop();
-			tb7c.uninstall();
-			tb7d.stop();
-			tb7d.uninstall();
-			tb7b.uninstall();
-		}
-
+		// Verify that fragment bundle is still in INSTALLED state
+		assertThat(tb7b)
+				.as("Expecting fragment bundle to be in INSTALLED state.").isInState(Bundle.INSTALLED);
 	}
 
 	/**
@@ -649,43 +612,33 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
-	public void testConflictingExportPackage() throws Exception {
+	@Test
+	public void testConflictingExportPackage(
+			@InjectInstalledBundle(value = "fragments.tb7e.jar", start = false) Bundle tb7e,
+			@InjectInstalledBundle(value = "fragments.tb7c.jar", start = false) Bundle tb7c,
+			@InjectInstalledBundle(value = "fragments.tb7h.jar", start = false) Bundle tb7h
+			) throws Exception {
 		// Install fragment bundle
-		Bundle tb7e = getContext().installBundle(
-				getWebServer() + "fragments.tb7e.jar");
 
 		// Install the host bundle
-		Bundle tb7c = getContext().installBundle(
-				getWebServer() + "fragments.tb7c.jar");
 
 		// Start the host bundle
 		tb7c.start();
 
 		// Install the bundle that uses the package exported by the fragment
-		Bundle tb7h = getContext().installBundle(
-				getWebServer() + "fragments.tb7h.jar");
 
+		// Verify that fragment bundle is in RESOLVED state
+		assertThat(tb7e)
+				.as("Expecting fragment bundle to be in RESOLVED state.").isInState(Bundle.RESOLVED);
+
+		// Try starting the bundle that uses the package exported by the
+		// fragment
 		try {
-			// Verify that fragment bundle is in RESOLVED state
-			assertEquals("Expecting fragment bundle to be in RESOLVED state.",
-					Bundle.RESOLVED, tb7e.getState());
-
-			// Try starting the bundle that uses the package exported by the
-			// fragment
-			try {
-				tb7h.start();
-			}
-			catch (BundleException e) {
-				fail("Expecting the bundle to start.  The imported package from the fragment should resolve.");
-			}
+			tb7h.start();
 		}
-		finally {
-			tb7c.stop();
-			tb7c.uninstall();
-			tb7e.uninstall();
-			tb7h.uninstall();
+		catch (BundleException e) {
+			fail("Expecting the bundle to start.  The imported package from the fragment should resolve.");
 		}
-
 	}
 
 	/**
@@ -697,36 +650,25 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
-	public void testConflictingRequireBundle() throws Exception {
+	@Test
+	public void testConflictingRequireBundle(
+			@InjectInstalledBundle(value = "fragments.tb8b.jar", start = false) Bundle tb8bv1,
+			@InjectInstalledBundle(value = "fragments.tb8c.jar", start = false) Bundle tb8bv2,
+			@InjectInstalledBundle(value = "fragments.tb8d.jar", start = false) Bundle tb8d,
+			@InjectInstalledBundle(value = "fragments.tb8a.jar", start = false) Bundle tb8a
+			) throws Exception {
 		// Install required bundles
-		Bundle tb8bv1 = getContext().installBundle(
-				getWebServer() + "fragments.tb8b.jar");
-		Bundle tb8bv2 = getContext().installBundle(
-				getWebServer() + "fragments.tb8c.jar");
 
 		// Install the fragment bundle
-		Bundle tb8d = getContext().installBundle(
-				getWebServer() + "fragments.tb8d.jar");
 
 		// Install the host bundle
-		Bundle tb8a = getContext().installBundle(
-				getWebServer() + "fragments.tb8a.jar");
 
 		// Start the host bundle
 		tb8a.start();
 
-		try {
-			// Verify that fragment bundle is in INSTALLED state
-			assertEquals("Expecting fragment bundle to be in INSTALLED state.",
-					Bundle.INSTALLED, tb8d.getState());
-		}
-		finally {
-			tb8a.stop();
-			tb8a.uninstall();
-			tb8d.uninstall();
-			tb8bv1.uninstall();
-			tb8bv2.uninstall();
-		}
+		// Verify that fragment bundle is in INSTALLED state
+		assertThat(tb8d)
+				.as("Expecting fragment bundle to be in INSTALLED state.").isInState(Bundle.INSTALLED);
 	}
 
 	/**
@@ -744,6 +686,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.uninstall()
 	 */
+	@Test
 	public void testFragmentBundleDetach() throws Exception {
 		InputStream ins;
 		BufferedReader bufr;
@@ -751,79 +694,81 @@ public class TestControl extends DefaultTestBundleControl implements
 
 		// Add BundleListener
 		purgeEvents();
-		getContext().addBundleListener(this);
+		bundleContext.addBundleListener(this);
 
 		// Install fragment bundles
-		Bundle tb1b = getContext().installBundle(
-				getWebServer() + "fragments.tb1b.jar");
-		Bundle tb1g = getContext().installBundle(
-				getWebServer() + "fragments.tb1g.jar");
+		Bundle tb1b = bundleInstaller.installBundle("fragments.tb1b.jar", false);
+		Bundle tb1g = bundleInstaller.installBundle("fragments.tb1g.jar", false);
 
 		// Install the host bundle
-		Bundle tb1a = getContext().installBundle(
-				getWebServer() + "fragments.tb1a.jar");
+		Bundle tb1a = bundleInstaller.installBundle("fragments.tb1a.jar", false);
 
 		// Start the host bundle
 		tb1a.start();
 
 		try {
 			// Verify bundle events were published by the framework
-			Sleep.sleep(2000); // wait a while
-			assertTrue("Expecting BundleEvent of type RESOLVED.",
-					hasEventOccurred(tb1b, BundleEvent.class,
-							BundleEvent.RESOLVED));
-			assertTrue("Expecting BundleEvent of type RESOLVED.",
-					hasEventOccurred(tb1g, BundleEvent.class,
-							BundleEvent.RESOLVED));
-			assertTrue("Expecting BundleEvent of type RESOLVED.",
-					hasEventOccurred(tb1a, BundleEvent.class,
-							BundleEvent.RESOLVED));
+			Thread.sleep(2000); // wait a while
+			assertThat(hasEventOccurred(tb1b, BundleEvent.class,
+							BundleEvent.RESOLVED))
+					.as("Expecting BundleEvent of type RESOLVED.")
+					.isTrue();
+			assertThat(hasEventOccurred(tb1g, BundleEvent.class,
+							BundleEvent.RESOLVED))
+					.as("Expecting BundleEvent of type RESOLVED.")
+					.isTrue();
+			assertThat(hasEventOccurred(tb1a, BundleEvent.class,
+							BundleEvent.RESOLVED))
+					.as("Expecting BundleEvent of type RESOLVED.")
+					.isTrue();
 
 			// Verify that fragment bundles are in RESOLVED state
-			assertEquals("Expecting fragment bundle to be in RESOLVED state.",
-					Bundle.RESOLVED, tb1b.getState());
-			assertEquals("Expecting fragment bundle to be in RESOLVED state.",
-					Bundle.RESOLVED, tb1g.getState());
+			assertThat(tb1b)
+					.as("Expecting fragment bundle to be in RESOLVED state.").isInState(Bundle.RESOLVED);
+			assertThat(tb1g)
+					.as("Expecting fragment bundle to be in RESOLVED state.").isInState(Bundle.RESOLVED);
 
 			// Verify resource from tb1b is accessible
 			ins = tb1a.getResource("resources/notinhost.txt").openStream();
 			bufr = new BufferedReader(new InputStreamReader(ins));
 			line = bufr.readLine();
-			assertEquals("Expecting resource from tb1b to be accessible.",
-					"tb1b", line);
+			assertThat(line)
+					.as("Expecting resource from tb1b to be accessible.")
+					.isEqualTo("tb1b");
 			bufr.close();
 
 			// Detach / uninstall fragment bundle tb1b
 			tb1b.uninstall();
 
 			// Verify bundle event was published by the framework
-			Sleep.sleep(2000); // wait a while
-			assertTrue("Expecting BundleEvent of type UNRESOLVED.",
-					hasEventOccurred(tb1b, BundleEvent.class,
-							BundleEvent.UNRESOLVED));
+			Thread.sleep(2000); // wait a while
+			assertThat(hasEventOccurred(tb1b, BundleEvent.class,
+							BundleEvent.UNRESOLVED))
+					.as("Expecting BundleEvent of type UNRESOLVED.")
+					.isTrue();
 
 			// Verify that tb1b is in UNINSTALLED state
-			assertEquals(
-					"Expecting fragment bundle to be in UNINSTALLED state.",
-					Bundle.UNINSTALLED, tb1b.getState());
+			assertThat(tb1b)
+					.as("Expecting fragment bundle to be in UNINSTALLED state.").isInState(Bundle.UNINSTALLED);
 
 			// Refresh host bundle
-			Wiring.synchronousRefreshBundles(getContext(), tb1a);
-			Sleep.sleep(2000); // wait a while
+			FrameworkWirings.refreshBundles(bundleContext, tb1a);
+			Thread.sleep(2000); // wait a while
 
 			// Verify resource from tb1b is not accessible
 			ins = tb1a.getResource("resources/notinhost.txt").openStream();
 			bufr = new BufferedReader(new InputStreamReader(ins));
 			line = bufr.readLine();
-			assertEquals("Expecting resource from tb1b to be inaccessible.",
-					"tb1g", line);
+			assertThat(line)
+					.as("Expecting resource from tb1b to be inaccessible.")
+					.isEqualTo("tb1g");
 			bufr.close();
 		}
 		finally {
 			tb1a.stop();
 			tb1a.uninstall();
 			tb1g.uninstall();
-			getContext().removeBundleListener(this);
+			bundleContext.removeBundleListener(this);
 			purgeEvents();
 		}
 	}
@@ -853,7 +798,7 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * @param eventType Event type published
 	 */
 	public void addEvent(Bundle bundle, Class< ? > eventClass, int eventType) {
-		trace("Captured " + eventClass.getName() + " for bundle "
+		System.out.println("Captured " + eventClass.getName() + " for bundle "
 				+ bundle.getSymbolicName() + " of type " + eventType);
 		String key = bundle.getSymbolicName() + SEPARATOR
 				+ eventClass.getName() + SEPARATOR + eventType;
@@ -888,25 +833,23 @@ public class TestControl extends DefaultTestBundleControl implements
 	 * If a bundle is updated from a host to a fragment, after update, the
 	 * bundle must not be active.
 	 */
-	public void testHostBecomesFragment() throws Exception {
+	@Test
+	public void testHostBecomesFragment(
+			@InjectInstalledBundle(value = "fragments.tb20a.jar", start = false) Bundle tb20a
+			) throws Exception {
 		// Install host bundle
-		Bundle tb20a = getContext().installBundle(
-				getWebServer() + "fragments.tb20a.jar");
-		try {
-			// Try starting host
-			tb20a.start();
-			assertTrue("tb20a failed to start for start().",
-					(tb20a.getState() & Bundle.ACTIVE) != 0);
-			// Update to a fragment bundle
-			InputStream tb20b = getContext().getBundle()
-					.getResource("fragments.tb20b.jar").openStream();
-			tb20a.update(tb20b);
-			// make sure not active
-			assertTrue("tb20a updated to fragment started!",
-					(tb20a.getState() & Bundle.ACTIVE) == 0);
-		}
-		finally {
-			tb20a.uninstall();
-		}
+		// Try starting host
+		tb20a.start();
+		assertThat(tb20a)
+				.as("tb20a failed to start for start().")
+				.isInState(Bundle.ACTIVE);
+		// Update to a fragment bundle
+		InputStream tb20b = bundleContext.getBundle()
+				.getResource("fragments.tb20b.jar").openStream();
+		tb20a.update(tb20b);
+		// make sure not active
+		assertThat(tb20a)
+				.as("tb20a updated to fragment started!")
+				.isNotInState(Bundle.ACTIVE);
 	}
 }

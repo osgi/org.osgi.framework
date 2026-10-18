@@ -18,7 +18,8 @@
 
 package org.osgi.test.cases.framework.secure.wiring.tb1;
 
-import static junit.framework.TestCase.fail;
+import static org.junit.jupiter.api.Assertions.fail;
+
 
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleActivator;

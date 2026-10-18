@@ -18,9 +18,16 @@
 
 package org.osgi.test.cases.framework.junit.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+
 import java.util.Hashtable;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkEvent;
 import org.osgi.framework.FrameworkListener;
 import org.osgi.framework.InvalidSyntaxException;
@@ -28,41 +35,62 @@ import org.osgi.framework.ServiceException;
 import org.osgi.framework.ServiceFactory;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
-import org.osgi.test.support.OSGiTestCase;
-import org.osgi.test.support.OSGiTestCaseProperties;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.cases.framework.junit.tck.TckProperties;
 
-public class ServiceExceptionTests extends OSGiTestCase {
+public class ServiceExceptionTests {
 
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	private String testName;
+
+	@BeforeEach
+	public void captureTestName(TestInfo testInfo) {
+		testName = testInfo.getTestMethod().get().getName();
+	}
+
+	/** The name of the running test method, as TestCase.getName() gave it. */
+	private String getName() {
+		return testName;
+	}
+
+	@Test
 	public void testServiceException01() {
 		// test a service factory which returns wrong object types
 		ServiceExceptionServiceFactory wrongObjectFactory = new ServiceExceptionServiceFactory("A String"); //$NON-NLS-1$
 		Hashtable<String,Object> props = new Hashtable<>();
 		props.put("name", getName()); //$NON-NLS-1$ 
-		ServiceRegistration< ? > reg = getContext().registerService(
+		ServiceRegistration< ? > reg = bundleContext.registerService(
 				Runnable.class.getName(), wrongObjectFactory, props);
 		ServiceExceptionFrameworkListener listener = new ServiceExceptionFrameworkListener(
-				getContext().getBundle(), null, ServiceException.FACTORY_ERROR);
-		getContext().addFrameworkListener(listener);
+				bundleContext.getBundle(), null, ServiceException.FACTORY_ERROR);
+		bundleContext.addFrameworkListener(listener);
 		try {
 			ServiceReference< ? >[] refs = null;
 			try {
-				refs = getContext().getServiceReferences(
+				refs = bundleContext.getServiceReferences(
 						Runnable.class.getName(),
 						"(name=" + getName() + ")"); //$NON-NLS-1$ //$NON-NLS-2$
 			} catch (InvalidSyntaxException e) {
 				fail("Unexpected syntax error", e); //$NON-NLS-1$
 			}
-			assertNotNull("service refs is null", refs); //$NON-NLS-1$
-			assertEquals("Wrong number of references", 1, refs.length); //$NON-NLS-1$
+			assertThat(refs)
+					.as("service refs is null")
+				.isNotNull(); //$NON-NLS-1$
+			assertThat(refs.length)
+					.as("Wrong number of references").isOne(); //$NON-NLS-1$
 			Runnable service = null;
 			try {
-				service = (Runnable) getContext().getService(refs[0]);
+				service = (Runnable) bundleContext.getService(refs[0]);
 			} catch (ClassCastException e) {
 				fail("Unexpected cast exception", e); //$NON-NLS-1$
 			}
-			assertNull("service is not null", service); //$NON-NLS-1$
+			assertThat(service)
+					.as("service is not null")
+				.isNull(); //$NON-NLS-1$
 			listener.waitForEvent("Failed to fire ServiceException"); //$NON-NLS-1$
-			getContext().ungetService(refs[0]);
+			bundleContext.ungetService(refs[0]);
 			Error error = wrongObjectFactory.getUngetFailure();
 			if (error != null)
 				throw error;
@@ -70,40 +98,46 @@ public class ServiceExceptionTests extends OSGiTestCase {
 			if (reg != null)
 				reg.unregister();
 			if (listener != null)
-				getContext().removeFrameworkListener(listener);
+				bundleContext.removeFrameworkListener(listener);
 		}
 	}
 
+	@Test
 	public void testServiceException02() {
 		// test a service factory which returns null objects
 		ServiceExceptionServiceFactory nullObjectFactory = new ServiceExceptionServiceFactory(null);
 		Hashtable<String,Object> props = new Hashtable<>();
 		props.put("name", getName()); //$NON-NLS-1$ 
-		ServiceRegistration< ? > reg = getContext().registerService(
+		ServiceRegistration< ? > reg = bundleContext.registerService(
 				Runnable.class.getName(), nullObjectFactory, props);
 		ServiceExceptionFrameworkListener listener = new ServiceExceptionFrameworkListener(
-				getContext().getBundle(), null, ServiceException.FACTORY_ERROR);
-		getContext().addFrameworkListener(listener);
+				bundleContext.getBundle(), null, ServiceException.FACTORY_ERROR);
+		bundleContext.addFrameworkListener(listener);
 		try {
 			ServiceReference< ? >[] refs = null;
 			try {
-				refs = getContext().getServiceReferences(
+				refs = bundleContext.getServiceReferences(
 						Runnable.class.getName(),
 						"(name=" + getName() + ")"); //$NON-NLS-1$ //$NON-NLS-2$
 			} catch (InvalidSyntaxException e) {
 				fail("Unexpected syntax error", e); //$NON-NLS-1$
 			}
-			assertNotNull("service refs is null", refs); //$NON-NLS-1$
-			assertEquals("Wrong number of references", 1, refs.length); //$NON-NLS-1$
+			assertThat(refs)
+					.as("service refs is null")
+				.isNotNull(); //$NON-NLS-1$
+			assertThat(refs.length)
+					.as("Wrong number of references").isOne(); //$NON-NLS-1$
 			Runnable service = null;
 			try {
-				service = (Runnable) getContext().getService(refs[0]);
+				service = (Runnable) bundleContext.getService(refs[0]);
 			} catch (ClassCastException e) {
 				fail("Unexpected cast exception", e); //$NON-NLS-1$
 			}
-			assertNull("service is not null", service); //$NON-NLS-1$
+			assertThat(service)
+					.as("service is not null")
+				.isNull(); //$NON-NLS-1$
 			listener.waitForEvent("Failed to fire ServiceException"); //$NON-NLS-1$
-			getContext().ungetService(refs[0]);
+			bundleContext.ungetService(refs[0]);
 			Error error = nullObjectFactory.getUngetFailure();
 			if (error != null)
 				throw error;
@@ -111,42 +145,48 @@ public class ServiceExceptionTests extends OSGiTestCase {
 			if (reg != null)
 				reg.unregister();
 			if (listener != null)
-				getContext().removeFrameworkListener(listener);
+				bundleContext.removeFrameworkListener(listener);
 		}
 	}
 
+	@Test
 	public void testServiceException03() {
 		// test a service factory which throws a RuntimeException
 		RuntimeException cause = new RuntimeException(getName());
 		ServiceExceptionServiceFactory runtimeExceptionFactory = new ServiceExceptionServiceFactory(cause);
 		Hashtable<String,Object> props = new Hashtable<>();
 		props.put("name", getName()); //$NON-NLS-1$ 
-		ServiceRegistration< ? > reg = getContext().registerService(
+		ServiceRegistration< ? > reg = bundleContext.registerService(
 				Runnable.class.getName(), runtimeExceptionFactory, props);
 		ServiceExceptionFrameworkListener listener = new ServiceExceptionFrameworkListener(
-				getContext().getBundle(), cause,
+				bundleContext.getBundle(), cause,
 				ServiceException.FACTORY_EXCEPTION);
-		getContext().addFrameworkListener(listener);
+		bundleContext.addFrameworkListener(listener);
 		try {
 			ServiceReference< ? >[] refs = null;
 			try {
-				refs = getContext().getServiceReferences(
+				refs = bundleContext.getServiceReferences(
 						Runnable.class.getName(),
 						"(name=" + getName() + ")"); //$NON-NLS-1$ //$NON-NLS-2$
 			} catch (InvalidSyntaxException e) {
 				fail("Unexpected syntax error", e); //$NON-NLS-1$
 			}
-			assertNotNull("service refs is null", refs); //$NON-NLS-1$
-			assertEquals("Wrong number of references", 1, refs.length); //$NON-NLS-1$
+			assertThat(refs)
+					.as("service refs is null")
+				.isNotNull(); //$NON-NLS-1$
+			assertThat(refs.length)
+					.as("Wrong number of references").isOne(); //$NON-NLS-1$
 			Runnable service = null;
 			try {
-				service = (Runnable) getContext().getService(refs[0]);
+				service = (Runnable) bundleContext.getService(refs[0]);
 			} catch (ClassCastException e) {
 				fail("Unexpected cast exception", e); //$NON-NLS-1$
 			}
-			assertNull("service is not null", service); //$NON-NLS-1$
+			assertThat(service)
+					.as("service is not null")
+				.isNull(); //$NON-NLS-1$
 			listener.waitForEvent("Failed to fire ServiceException"); //$NON-NLS-1$
-			getContext().ungetService(refs[0]);
+			bundleContext.ungetService(refs[0]);
 			Error error = runtimeExceptionFactory.getUngetFailure();
 			if (error != null)
 				throw error;
@@ -154,42 +194,48 @@ public class ServiceExceptionTests extends OSGiTestCase {
 			if (reg != null)
 				reg.unregister();
 			if (listener != null)
-				getContext().removeFrameworkListener(listener);
+				bundleContext.removeFrameworkListener(listener);
 		}
 	}
 
+	@Test
 	public void testServiceException04() {
 		// test a service factory which throws an Error
 		Error cause = new Error(getName());
 		ServiceExceptionServiceFactory errorFactory = new ServiceExceptionServiceFactory(cause);
 		Hashtable<String,Object> props = new Hashtable<>();
 		props.put("name", getName()); //$NON-NLS-1$ 
-		ServiceRegistration< ? > reg = getContext().registerService(
+		ServiceRegistration< ? > reg = bundleContext.registerService(
 				Runnable.class.getName(), errorFactory, props);
 		ServiceExceptionFrameworkListener listener = new ServiceExceptionFrameworkListener(
-				getContext().getBundle(), cause,
+				bundleContext.getBundle(), cause,
 				ServiceException.FACTORY_EXCEPTION);
-		getContext().addFrameworkListener(listener);
+		bundleContext.addFrameworkListener(listener);
 		try {
 			ServiceReference< ? >[] refs = null;
 			try {
-				refs = getContext().getServiceReferences(
+				refs = bundleContext.getServiceReferences(
 						Runnable.class.getName(),
 						"(name=" + getName() + ")"); //$NON-NLS-1$ //$NON-NLS-2$
 			} catch (InvalidSyntaxException e) {
 				fail("Unexpected syntax error", e); //$NON-NLS-1$
 			}
-			assertNotNull("service refs is null", refs); //$NON-NLS-1$
-			assertEquals("Wrong number of references", 1, refs.length); //$NON-NLS-1$
+			assertThat(refs)
+					.as("service refs is null")
+				.isNotNull(); //$NON-NLS-1$
+			assertThat(refs.length)
+					.as("Wrong number of references").isOne(); //$NON-NLS-1$
 			Runnable service = null;
 			try {
-				service = (Runnable) getContext().getService(refs[0]);
+				service = (Runnable) bundleContext.getService(refs[0]);
 			} catch (ClassCastException e) {
 				fail("Unexpected cast exception", e); //$NON-NLS-1$
 			}
-			assertNull("service is not null", service); //$NON-NLS-1$
+			assertThat(service)
+					.as("service is not null")
+				.isNull(); //$NON-NLS-1$
 			listener.waitForEvent("Failed to fire ServiceException"); //$NON-NLS-1$
-			getContext().ungetService(refs[0]);
+			bundleContext.ungetService(refs[0]);
 			Error error = errorFactory.getUngetFailure();
 			if (error != null)
 				throw error;
@@ -197,7 +243,7 @@ public class ServiceExceptionTests extends OSGiTestCase {
 			if (reg != null)
 				reg.unregister();
 			if (listener != null)
-				getContext().removeFrameworkListener(listener);
+				bundleContext.removeFrameworkListener(listener);
 		}
 	}
 
@@ -235,7 +281,7 @@ public class ServiceExceptionTests extends OSGiTestCase {
 		}
 	}
 
-	static final long	waitTime	= 10000l * OSGiTestCaseProperties
+	static final long	waitTime	= 10000l * TckProperties
 													.getScaling();
 	class ServiceExceptionFrameworkListener implements FrameworkListener {
 		private final Bundle registrationBundle;

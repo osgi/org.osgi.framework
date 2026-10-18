@@ -17,16 +17,22 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.launch.junit;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.osgi.test.assertj.bundle.BundleAssert.assertThat;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.Constants;
 import org.osgi.framework.launch.Framework;
 import org.osgi.framework.wiring.FrameworkWiring;
-import org.osgi.test.support.compatibility.DefaultTestBundleControl;
 
 /**
  * Test cases for testing fragment bundles and extension bundles.
@@ -34,12 +40,14 @@ import org.osgi.test.support.compatibility.DefaultTestBundleControl;
  * @author $Id$
  */
 public class ExtensionBundleTests extends LaunchTest {
+
 	private static final String	class6	= "org.osgi.test.cases.framework.launch.fragments.tb6.FooTB6";
 	private static final String	class21	= "org.osgi.test.cases.framework.launch.fragments.tb21.FooTB21";
 
 	private Framework framework;
-	
-	protected void setUp() throws Exception {
+
+	@BeforeEach
+	public void setUp() throws Exception {
 		super.setUp();
 		Map<String, String> configuration = new HashMap<String, String>();
 		configuration.put(Constants.FRAMEWORK_STORAGE,
@@ -50,11 +58,12 @@ public class ExtensionBundleTests extends LaunchTest {
 		tb20.start();
 	}
 
-	protected void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() throws Exception {
 		stopFramework(framework);
 		super.tearDown();
 	}
-	
+
 	/**
 	 * Tests a fragment bundle where extension directive is not system.bundle.
 	 * The installation of the fragment must fail.
@@ -62,18 +71,13 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
+	@Test
 	public void testBadExtensionBundle() throws Exception {
 		// installing bad extension bundle
-		try {
-			Bundle tb4 = installBundle(framework, "/fragments.tb4.jar");
-			// installation should fail
-			DefaultTestBundleControl.failException(
-					"Expected installation failure " + tb4.getLocation(),
-					BundleException.class);
-		}
-		catch (BundleException e) {
-			// expected
-		}
+		// installation should fail
+		assertThatExceptionOfType(BundleException.class)
+				.as("Expected installation failure of /fragments.tb4.jar")
+				.isThrownBy(() -> installBundle(framework, "/fragments.tb4.jar"));
 	}
 
 	/**
@@ -84,6 +88,7 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
+	@Test
 	public void testFrameworkExtensionBundle() throws Exception {
 		if ("true".equals(framework.getBundleContext().getProperty(
 				Constants.SUPPORTS_FRAMEWORK_EXTENSION))) {
@@ -91,28 +96,22 @@ public class ExtensionBundleTests extends LaunchTest {
 			framework.adapt(FrameworkWiring.class).resolveBundles(
 					Collections.singleton(tb6));
 			startFramework(framework);
-			assertTrue("expected framework extension bundle to be resolved",
-					(tb6.getState() & Bundle.RESOLVED) != 0);
+			assertThat(tb6)
+					.as("expected framework extension bundle to be resolved")
+				.isInState(Bundle.RESOLVED);
 			// check if classloader is framework classloader
 			Class< ? > c = framework.loadClass(class6);
-			assertEquals(
-					"expected class to be loaded by the framework classloader",
-					c.getClassLoader(), framework.getBundleContext().getClass()
-							.getClassLoader());
+			assertThat(framework.getBundleContext().getClass()
+							.getClassLoader())
+					.as("expected class to be loaded by the framework classloader")
+					.isEqualTo(c.getClassLoader());
 		}
 		else {
-			try {
-				// tries to install extension bundle
-				installBundle(framework, "/fragments.tb6.jar");
-				// installation should fail
-				DefaultTestBundleControl.failException(
-						"framework extension bundle instalation should fail",
-						BundleException.class);
-			}
-			catch (BundleException e) {
-				DefaultTestBundleControl
-						.trace("framework extension bundles not supported");
-			}
+			// installing an extension bundle must fail
+			assertThatExceptionOfType(BundleException.class)
+					.as("framework extension bundle instalation should fail")
+					.isThrownBy(() -> installBundle(framework, "/fragments.tb6.jar"));
+			System.out.println("framework extension bundles not supported");
 		}
 	}
 
@@ -124,6 +123,7 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
+	@Test
 	public void testFrameworkExtensionBundleLoadClass() throws Exception {
 		String message = "expected class in extension bundle cannot be loaded";
 		if ("true".equals(framework.getBundleContext().getProperty(
@@ -132,22 +132,15 @@ public class ExtensionBundleTests extends LaunchTest {
 			framework.adapt(FrameworkWiring.class).resolveBundles(
 					Collections.singleton(tb6));
 			startFramework(framework);
-			assertTrue("expected framework extension bundle to be resolved",
-					(tb6.getState() & Bundle.RESOLVED) != 0);
-			try {
-				tb6.loadClass(class6);
-				// should fail, since extension bundles are not able to load
-				// classes directly
-				DefaultTestBundleControl.failException(message, 
-						ClassNotFoundException.class);
-			}
-			catch (Exception e) {
-				DefaultTestBundleControl.assertException(message, 
-						ClassNotFoundException.class, e);
-			}
+			assertThat(tb6)
+					.as("expected framework extension bundle to be resolved")
+				.isInState(Bundle.RESOLVED);
+			assertThatExceptionOfType(ClassNotFoundException.class)
+					.as(message)
+					.isThrownBy(() -> tb6.loadClass(class6));
 		}
 		else {
-			DefaultTestBundleControl.trace(
+			System.out.println(
 					"framework extension bundles not supported");
 		}
 	}
@@ -160,6 +153,7 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
+	@Test
 	public void testFrameworkExtensionDefault() throws Exception {
 		if ("true".equals(framework.getBundleContext().getProperty(
 				Constants.SUPPORTS_FRAMEWORK_EXTENSION))) {
@@ -167,17 +161,18 @@ public class ExtensionBundleTests extends LaunchTest {
 			framework.adapt(FrameworkWiring.class).resolveBundles(
 					Collections.singleton(tb21));
 			startFramework(framework);
-			assertTrue("expected framework extension bundle to be resolved",
-					(tb21.getState() & Bundle.RESOLVED) != 0);
+			assertThat(tb21)
+					.as("expected framework extension bundle to be resolved")
+				.isInState(Bundle.RESOLVED);
 			// check if classloader is framework classloader
 			Class< ? > c = framework.loadClass(class21);
-			assertEquals(
-					"expected class to be loaded by the framework classloader",
-					c.getClassLoader(), framework.getBundleContext().getClass()
-							.getClassLoader());
+			assertThat(framework.getBundleContext().getClass()
+							.getClassLoader())
+					.as("expected class to be loaded by the framework classloader")
+					.isEqualTo(c.getClassLoader());
 		}
 		else {
-			DefaultTestBundleControl.trace(
+			System.out.println(
 					"framework extension bundles not supported");
 		}
 	}
@@ -190,29 +185,17 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
+	@Test
 	public void testFrameworkExtensionNativeCode() throws Exception {
 		if ("true".equals(framework.getBundleContext().getProperty(
 				Constants.SUPPORTS_FRAMEWORK_EXTENSION))) {
 			String message = "expected extension bundle with Bundle-NativeCode to fail to install";
-			Bundle tb22 = null;
-			try {
-				tb22 = installBundle(framework, "/fragments.tb22.jar");
-				// should fail, since extension bundles are not able to
-				// declare native code headers
-				DefaultTestBundleControl.failException(message, 
-						BundleException.class);
-			}
-			catch (Exception e) {
-				DefaultTestBundleControl.assertException(message, 
-						BundleException.class, e);
-			} finally {
-				if (tb22 != null) {
-					tb22.uninstall();
-				}
-			}
+			assertThatExceptionOfType(BundleException.class)
+					.as(message)
+					.isThrownBy(() -> installBundle(framework, "/fragments.tb22.jar"));
 		}
 		else {
-			DefaultTestBundleControl.trace(
+			System.out.println(
 					"framework extension bundles not supported");
 		}
 	}
@@ -225,24 +208,17 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
+	@Test
 	public void testFrameworkExtensionRequireBundle() throws Exception {
 		if ("true".equals(framework.getBundleContext().getProperty(
 				Constants.SUPPORTS_FRAMEWORK_EXTENSION))) {
 			String message = "expected extension bundle with Require-Bundle to fail to install";
-			try {
-				installBundle(framework, "/fragments.tb10.jar");
-				// should fail, since extension bundles are not able to
-				// require bundles
-				DefaultTestBundleControl.failException(message, 
-						BundleException.class);
-			}
-			catch (Exception e) {
-				DefaultTestBundleControl.assertException(message, 
-						BundleException.class, e);
-			}
+			assertThatExceptionOfType(BundleException.class)
+					.as(message)
+					.isThrownBy(() -> installBundle(framework, "/fragments.tb10.jar"));
 		}
 		else {
-			DefaultTestBundleControl.trace(
+			System.out.println(
 					"framework extension bundles not supported");
 		}
 	}

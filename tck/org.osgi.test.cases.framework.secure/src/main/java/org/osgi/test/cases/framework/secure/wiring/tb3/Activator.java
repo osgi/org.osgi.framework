@@ -18,7 +18,7 @@
 
 package org.osgi.test.cases.framework.secure.wiring.tb3;
 
-import static junit.framework.TestCase.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Arrays;
 

@@ -17,6 +17,11 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.launch.junit;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.fail;
+import static org.osgi.test.assertj.bundle.BundleAssert.assertThat;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -38,8 +43,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Properties;
 import java.util.ServiceLoader;
 import java.util.Set;
@@ -49,6 +54,9 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.Constants;
 import org.osgi.framework.launch.Framework;
@@ -58,7 +66,6 @@ import org.osgi.framework.wiring.BundleRevision;
 import org.osgi.framework.wiring.BundleWire;
 import org.osgi.framework.wiring.BundleWiring;
 import org.osgi.resource.Namespace;
-import org.osgi.test.support.sleep.Sleep;
 
 public class MultiReleaseJarTestCase extends LaunchTest {
 
@@ -73,8 +80,7 @@ public class MultiReleaseJarTestCase extends LaunchTest {
 	private Map<String,String>	configuration;
 	private Map<String,String>	originalProperties	= new HashMap<String,String>();
 
-
-	@Override
+	@BeforeEach
 	public void setUp() throws Exception {
 		super.setUp();
 		for (String prop : getJavaVersionConfiguration().keySet()) {
@@ -88,7 +94,7 @@ public class MultiReleaseJarTestCase extends LaunchTest {
 		mrBundle.start();
 	}
 
-	@Override
+	@AfterEach
 	public void tearDown() throws Exception {
 		stopFramework(framework);
 		super.tearDown();
@@ -531,37 +537,91 @@ public class MultiReleaseJarTestCase extends LaunchTest {
 		return classbytes;
 	}
 
-
+	@Test
 	public void testMultiReleaseClassLoad() throws Exception {
-		assertEquals("Wrong class.", "BASEXXX", loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClassBase", false));
-		assertEquals("Wrong class.", "BASEXXX", loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClass8", false));
-		assertEquals("Wrong class.",  CNFE, loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClassAdd8", true));
-		assertEquals("Wrong class.", "BASE099", loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClass99", false));
-		assertEquals("Wrong class.", "ADD099" , loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClassAdd99", true));
-		assertEquals("Wrong class.", "BASE100", loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClass100", false));
-		assertEquals("Wrong class.", "ADD100" , loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClassAdd100", true));
-		assertEquals("Wrong class.", "BASEXXX", loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClass101", false));
-		assertEquals("Wrong class.",  CNFE, loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClassAdd101", true));
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClassBase", false))
+				.as("Wrong class.")
+				.isEqualTo("BASEXXX");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClass8", false))
+				.as("Wrong class.")
+				.isEqualTo("BASEXXX");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClassAdd8", true))
+				.as("Wrong class.")
+				.isEqualTo(CNFE);
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClass99", false))
+				.as("Wrong class.")
+				.isEqualTo("BASE099");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClassAdd99", true))
+				.as("Wrong class.")
+				.isEqualTo("ADD099");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClass100", false))
+				.as("Wrong class.")
+				.isEqualTo("BASE100");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClassAdd100", true))
+				.as("Wrong class.")
+				.isEqualTo("ADD100");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClass101", false))
+				.as("Wrong class.")
+				.isEqualTo("BASEXXX");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClassAdd101", true))
+				.as("Wrong class.")
+				.isEqualTo(CNFE);
 
-		assertEquals("Wrong class.", "BASEXXX", loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub.TestClassBase", false));
-		assertEquals("Wrong class.", "BASEXXX", loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub.TestClass8", false));
-		assertEquals("Wrong class.", CNFE, loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClassAdd8", true));
-		assertEquals("Wrong class.", "BASE099" , loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub.TestClass99", false));
-	    assertEquals("Wrong class.", "ADD099" , loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub.TestClassAdd99", true));
-		assertEquals("Wrong class.", "BASE100" , loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub.TestClass100", false));
-		assertEquals("Wrong class.", "ADD100" , loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub.TestClassAdd100", true));
-		assertEquals("Wrong class.", "BASEXXX", loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub.TestClass101", false));
-		assertEquals("Wrong class.",  CNFE, loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub.TestClassAdd101", true));
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub.TestClassBase", false))
+				.as("Wrong class.")
+				.isEqualTo("BASEXXX");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub.TestClass8", false))
+				.as("Wrong class.")
+				.isEqualTo("BASEXXX");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClassAdd8", true))
+				.as("Wrong class.")
+				.isEqualTo(CNFE);
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub.TestClass99", false))
+				.as("Wrong class.")
+				.isEqualTo("BASE099");
+	    assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub.TestClassAdd99", true))
+	    		.as("Wrong class.")
+	    		.isEqualTo("ADD099");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub.TestClass100", false))
+				.as("Wrong class.")
+				.isEqualTo("BASE100");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub.TestClassAdd100", true))
+				.as("Wrong class.")
+				.isEqualTo("ADD100");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub.TestClass101", false))
+				.as("Wrong class.")
+				.isEqualTo("BASEXXX");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub.TestClassAdd101", true))
+				.as("Wrong class.")
+				.isEqualTo(CNFE);
 
-		assertEquals("Wrong class.", "BASEXXX", loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub2.TestClassBase", false));
-		assertEquals("Wrong class.", "BASEXXX", loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub2.TestClass8", false));
-		assertEquals("Wrong class.", CNFE, loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClassAdd8", true));
-		assertEquals("Wrong class.", "BASE099" , loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub2.TestClass99", false));
-		assertEquals("Wrong class.", "ADD099" , loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub2.TestClassAdd99", true));
-		assertEquals("Wrong class.", "BASE100" , loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub2.TestClass100", false));
-		assertEquals("Wrong class.", "ADD100" , loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub2.TestClassAdd100", true));
-		assertEquals("Wrong class.", "BASEXXX", loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub2.TestClass101", false));
-		assertEquals("Wrong class.",  CNFE, loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub2.TestClassAdd101", true));
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub2.TestClassBase", false))
+				.as("Wrong class.")
+				.isEqualTo("BASEXXX");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub2.TestClass8", false))
+				.as("Wrong class.")
+				.isEqualTo("BASEXXX");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClassAdd8", true))
+				.as("Wrong class.")
+				.isEqualTo(CNFE);
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub2.TestClass99", false))
+				.as("Wrong class.")
+				.isEqualTo("BASE099");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub2.TestClassAdd99", true))
+				.as("Wrong class.")
+				.isEqualTo("ADD099");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub2.TestClass100", false))
+				.as("Wrong class.")
+				.isEqualTo("BASE100");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub2.TestClassAdd100", true))
+				.as("Wrong class.")
+				.isEqualTo("ADD100");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub2.TestClass101", false))
+				.as("Wrong class.")
+				.isEqualTo("BASEXXX");
+		assertThat(loadClass("org.osgi.test.cases.framework.launch.mrjars.test.sub2.TestClassAdd101", true))
+				.as("Wrong class.")
+				.isEqualTo(CNFE);
 	}
 
 	private String loadClass(String name, boolean cnfeExpected) throws Exception {
@@ -575,42 +635,98 @@ public class MultiReleaseJarTestCase extends LaunchTest {
 		}
 	}
 
-
+	@Test
 	public void testMultiReleaseGetResource() throws Exception {
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResourceBase.txt"));
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResource8.txt"));
-		assertEquals("Wrong resource.",  RNF, readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd8.txt"));
-		assertEquals("Wrong resource.", "RESOURCE 099" , readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResource99.txt"));
-		assertEquals("Wrong resource.", "ADD 099", readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd99.txt"));
-		assertEquals("Wrong resource.", "RESOURCE 100", readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResource100.txt"));
-		assertEquals("Wrong resource.", "ADD 100", readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd100.txt"));
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResource101.txt"));
-		assertEquals("Wrong resource.",  RNF, readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd101.txt"));
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResourceBase.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResource8.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd8.txt"))
+				.as("Wrong resource.")
+				.isEqualTo(RNF);
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResource99.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE 099");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd99.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("ADD 099");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResource100.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE 100");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd100.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("ADD 100");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResource101.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd101.txt"))
+				.as("Wrong resource.")
+				.isEqualTo(RNF);
 
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResourceBase.txt"));
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResource8.txt"));
-		assertEquals("Wrong resource.",  RNF, readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd8.txt"));
-		assertEquals("Wrong resource.", "RESOURCE 099", readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResource99.txt"));
-		assertEquals("Wrong resource.", "ADD 099", readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResourceAdd99.txt"));
-		assertEquals("Wrong resource.", "RESOURCE 100", readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResource100.txt"));
-		assertEquals("Wrong resource.", "ADD 100", readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResourceAdd100.txt"));
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResource101.txt"));
-		assertEquals("Wrong resource.",  RNF, readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResourceAdd101.txt"));
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResourceBase.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResource8.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd8.txt"))
+				.as("Wrong resource.")
+				.isEqualTo(RNF);
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResource99.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE 099");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResourceAdd99.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("ADD 099");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResource100.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE 100");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResourceAdd100.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("ADD 100");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResource101.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResourceAdd101.txt"))
+				.as("Wrong resource.")
+				.isEqualTo(RNF);
 
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResourceBase.txt"));
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResource8.txt"));
-		assertEquals("Wrong resource.",  RNF, readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd8.txt"));
-		assertEquals("Wrong resource.", "RESOURCE 099", readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResource99.txt"));
-		assertEquals("Wrong resource.", "ADD 099" , readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResourceAdd99.txt"));
-		assertEquals("Wrong resource.", "RESOURCE 100", readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResource100.txt"));
-		assertEquals("Wrong resource.", "ADD 100", readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResourceAdd100.txt"));
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResource101.txt"));
-		assertEquals("Wrong resource.",  RNF, readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResourceAdd101.txt"));
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResourceBase.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResource8.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd8.txt"))
+				.as("Wrong resource.")
+				.isEqualTo(RNF);
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResource99.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE 099");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResourceAdd99.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("ADD 099");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResource100.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE 100");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResourceAdd100.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("ADD 100");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResource101.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResource("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResourceAdd101.txt"))
+				.as("Wrong resource.")
+				.isEqualTo(RNF);
 	}
 	
 	private String readResource(String name) throws Exception {
 		BundleWiring wiring = mrBundle.adapt(BundleWiring.class);
-		assertNotNull("No bundle wiring!", wiring);
+		assertThat(wiring)
+				.as("No bundle wiring!")
+				.isNotNull();
 		URL url = wiring.getClassLoader().getResource(name);
 		String result = readURL(url);
 
@@ -621,8 +737,11 @@ public class MultiReleaseJarTestCase extends LaunchTest {
 				fail("listResources found path for '" + name + "'");
 			}
 		} else {
-			assertEquals("Found too many resource paths for '" + name + "'", 1, resourcePaths.size());
-			assertEquals("Wrong path listed.", name, resourcePaths.iterator().next());
+			assertThat(resourcePaths)
+					.as("Found too many resource paths for '" + name + "'").hasSize(1);
+			assertThat(resourcePaths.iterator().next())
+					.as("Wrong path listed.")
+					.isEqualTo(name);
 			assertURLCopy(result, url);
 		}
 		return result;
@@ -632,7 +751,7 @@ public class MultiReleaseJarTestCase extends LaunchTest {
 		Class<?> testClassBase = mrBundle.loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestClassBase");
 		URL copy = (URL) testClassBase.getDeclaredMethod("createURL", String.class).invoke(null, url.toExternalForm());
 		String copyResult = readURL(copy);
-		assertEquals(expected, copyResult);
+		assertThat(copyResult).isEqualTo(expected);
 	}
 
 	private String readURL(URL url) throws IOException {
@@ -648,55 +767,127 @@ public class MultiReleaseJarTestCase extends LaunchTest {
 		}
 	}
 
-	
+	@Test
 	public void testMultiReleaseGetEntry() throws Exception {
-		assertEquals("Wrong resource.", "RESOURCE XXX", getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResourceBase.txt"));
-		assertEquals("Wrong resource.", "RESOURCE XXX", getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResource8.txt"));
-		assertEquals("Wrong resource.",  RNF, getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd8.txt"));
-		assertEquals("Wrong resource.", "RESOURCE XXX", getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResource99.txt"));
-		assertEquals("Wrong resource.",  RNF, getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd99.txt"));
-		assertEquals("Wrong resource.", "RESOURCE XXX", getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResource100.txt"));
-		assertEquals("Wrong resource.",  RNF, getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd100.txt"));
-		assertEquals("Wrong resource.", "RESOURCE XXX", getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResource101.txt"));
-		assertEquals("Wrong resource.",  RNF, getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd101.txt"));
+		assertThat(getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResourceBase.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResource8.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd8.txt"))
+				.as("Wrong resource.")
+				.isEqualTo(RNF);
+		assertThat(getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResource99.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd99.txt"))
+				.as("Wrong resource.")
+				.isEqualTo(RNF);
+		assertThat(getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResource100.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd100.txt"))
+				.as("Wrong resource.")
+				.isEqualTo(RNF);
+		assertThat(getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResource101.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(getEntry("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd101.txt"))
+				.as("Wrong resource.")
+				.isEqualTo(RNF);
 	}
 
 	private String getEntry(String path) throws Exception {
 		URL url = mrBundle.getEntry(path);
 		return readURL(url);
 	}
-	
-	
+
+	@Test
 	public void testMultiReleaseGetResources() throws Exception {
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResourceBase.txt"));
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResource8.txt"));
-		assertEquals("Wrong resource.",  RNF, readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd8.txt"));
-		assertEquals("Wrong resource.", "RESOURCE 099", readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResource99.txt"));
-		assertEquals("Wrong resource.", "ADD 099", readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd99.txt"));
-		assertEquals("Wrong resource.", "RESOURCE 100", readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResource100.txt"));
-		assertEquals("Wrong resource.", "ADD 100", readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd100.txt"));
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResource101.txt"));
-		assertEquals("Wrong resource.",  RNF, readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd101.txt"));
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResourceBase.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResource8.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd8.txt"))
+				.as("Wrong resource.")
+				.isEqualTo(RNF);
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResource99.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE 099");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd99.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("ADD 099");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResource100.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE 100");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd100.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("ADD 100");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResource101.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd101.txt"))
+				.as("Wrong resource.")
+				.isEqualTo(RNF);
 
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResourceBase.txt"));
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResource8.txt"));
-		assertEquals("Wrong resource.",  RNF, readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd8.txt"));
-		assertEquals("Wrong resource.", "RESOURCE 099", readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResource99.txt"));
-		assertEquals("Wrong resource.", "ADD 099", readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResourceAdd99.txt"));
-		assertEquals("Wrong resource.", "RESOURCE 100", readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResource100.txt"));
-		assertEquals("Wrong resource.", "ADD 100", readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResourceAdd100.txt"));
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResource101.txt"));
-		assertEquals("Wrong resource.",  RNF, readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResourceAdd101.txt"));
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResourceBase.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResource8.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd8.txt"))
+				.as("Wrong resource.")
+				.isEqualTo(RNF);
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResource99.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE 099");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResourceAdd99.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("ADD 099");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResource100.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE 100");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResourceAdd100.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("ADD 100");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResource101.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub/testResourceAdd101.txt"))
+				.as("Wrong resource.")
+				.isEqualTo(RNF);
 
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResourceBase.txt"));
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResource8.txt"));
-		assertEquals("Wrong resource.",  RNF, readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd8.txt"));
-		assertEquals("Wrong resource.", "RESOURCE 099", readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResource99.txt"));
-		assertEquals("Wrong resource.", "ADD 099", readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResourceAdd99.txt"));
-		assertEquals("Wrong resource.", "RESOURCE 100", readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResource100.txt"));
-		assertEquals("Wrong resource.", "ADD 100", readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResourceAdd100.txt"));
-		assertEquals("Wrong resource.", "RESOURCE XXX", readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResource101.txt"));
-		assertEquals("Wrong resource.",  RNF, readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResourceAdd101.txt"));
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResourceBase.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResource8.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd8.txt"))
+				.as("Wrong resource.")
+				.isEqualTo(RNF);
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResource99.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE 099");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResourceAdd99.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("ADD 099");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResource100.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE 100");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResourceAdd100.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("ADD 100");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResource101.txt"))
+				.as("Wrong resource.")
+				.isEqualTo("RESOURCE XXX");
+		assertThat(readResources("org/osgi/test/cases/framework/launch/mrjars/test/sub2/testResourceAdd101.txt"))
+				.as("Wrong resource.")
+				.isEqualTo(RNF);
 	}
 
 	private String readResources(String name) throws IOException {
@@ -705,10 +896,12 @@ public class MultiReleaseJarTestCase extends LaunchTest {
 		if (urls.isEmpty()) {
 			return RNF;
 		}
-		assertEquals("Wrong number of resources.", 1, urls.size());
+		assertThat(urls)
+				.as("Wrong number of resources.").hasSize(1);
 		return readURL(urls.get(0));
 	}
-	
+
+	@Test
 	public void testMultiReleaseGetEntryPaths() throws Exception {
 		Set<String> expectedEntryPaths = new HashSet<String>();
 		
@@ -730,13 +923,17 @@ public class MultiReleaseJarTestCase extends LaunchTest {
 		int count = 0;
 		while(entries.hasMoreElements()) {
 			String entry = entries.nextElement();
-			assertTrue("Expected entry not found", expectedEntryPaths.contains(entry));
+			assertThat(expectedEntryPaths.contains(entry))
+					.as("Expected entry not found")
+					.isTrue();
 			count++;
 		}
-		assertEquals("Number of entries not as expected", expectedEntryPaths.size(), count);
+		assertThat(count)
+				.as("Number of entries not as expected")
+				.isEqualTo(expectedEntryPaths.size());
 	}
-	
 
+	@Test
 	public void testMultiReleaseListResources() throws Exception {
 		Collection<String> expected = new ArrayList<String>();
 		Collection<String> expectedRecurse = new ArrayList<String>();
@@ -783,14 +980,16 @@ public class MultiReleaseJarTestCase extends LaunchTest {
 		Object[] foundArray = found.toArray();
 		Arrays.sort(expectedArray);
 		Arrays.sort(foundArray);
-		assertTrue("Wrong resource listing.", Arrays.equals(expectedArray, foundArray));
+		assertThat(Arrays.equals(expectedArray, foundArray))
+				.as("Wrong resource listing.")
+				.isTrue();
 	}
 
+	@Test
 	public void testFindEntries() throws Exception {
 		assertFindEntries(mrBundle, "org/osgi/test/cases/framework/launch/mrjars/test", "*.txt", false, 5);
 		assertFindEntries(mrBundle, "org/osgi/test/cases/framework/launch/mrjars", "*.txt", true, 5);
 	}
-
 
 	private void assertFindEntries(Bundle bundle, String path, String pattern,
 			boolean recurse, int expectedNum) throws Exception {
@@ -803,18 +1002,22 @@ public class MultiReleaseJarTestCase extends LaunchTest {
 		Enumeration<URL> entries = bundle.findEntries(path, pattern, recurse);
 		int numFound = 0;
 		if (expectedNum > 0)
-			assertNotNull(entries);
+			assertThat(entries).isNotNull();
 		else {
-			assertNull(entries);
+			assertThat(entries).isNull();
 			return;
 		}
 		
 		while (entries.hasMoreElements()) {
 			URL url = entries.nextElement();
-			assertEquals("Wrong resource.", "RESOURCE XXX", readURL(url));
+			assertThat(readURL(url))
+					.as("Wrong resource.")
+					.isEqualTo("RESOURCE XXX");
 			numFound++;
 		}
-		assertEquals("Unexpected number of entries", expectedNum, numFound);
+		assertThat(numFound)
+				.as("Unexpected number of entries")
+				.isEqualTo(expectedNum);
 	}
 
 	private void assertWiringFindEntries(Bundle bundle, String path, String pattern, boolean recurse, int expectedNum) throws IOException {
@@ -822,15 +1025,22 @@ public class MultiReleaseJarTestCase extends LaunchTest {
 		List<URL> entries = wiring.findEntries(path, pattern,
 				recurse ? BundleWiring.FINDENTRIES_RECURSE : 0);
 		int numFound = 0;
-		assertNotNull("Entries should not be null.", entries);
+		assertThat(entries)
+				.as("Entries should not be null.")
+				.isNotNull();
 		for(int i=0; i< entries.size(); i++) {
 			URL url = entries.get(i);
-			assertEquals("Wrong resource.", "RESOURCE XXX", readURL(url));
+			assertThat(readURL(url))
+					.as("Wrong resource.")
+					.isEqualTo("RESOURCE XXX");
 			numFound++;
 		}
-		assertEquals("Unexpected number of entries", expectedNum, numFound);
+		assertThat(numFound)
+				.as("Unexpected number of entries")
+				.isEqualTo(expectedNum);
 	}
 
+	@Test
 	public void testMultiReleaseBundleManifestChangeRuntime() throws Exception {
 		String[] rv = {"8","99","100","101"};
 		String location = mrBundle.getLocation();
@@ -857,16 +1067,25 @@ public class MultiReleaseJarTestCase extends LaunchTest {
 		try {
 			startFramework(framework2);
 			Bundle mrBundle = framework2.getBundleContext().getBundle(location);
-			assertNotNull("No mrBundle found: " + rv, mrBundle);
-			assertEquals("Wrong state of mrBundle: " + rv, Bundle.ACTIVE, mrBundle.getState());
+			assertThat(mrBundle)
+					.as("No mrBundle found: " + rv)
+					.isNotNull();
+			assertThat(mrBundle)
+					.as("Wrong state of mrBundle: " + rv).isInState(Bundle.ACTIVE);
 
 			List<BundleWire> capWires = mrBundle.adapt(BundleWiring.class).getRequiredWires(expectedCap);
-			assertEquals("Wrong number of capability wires: " + rv, 1, capWires.size());
+			assertThat(capWires.size())
+					.as("Wrong number of capability wires: " + rv)
+					.isEqualTo(1);
 
 			List<BundleRequirement> pkgReqs = mrBundle.adapt(BundleRevision.class).getDeclaredRequirements(PackageNamespace.PACKAGE_NAMESPACE);
-			assertEquals("Wrong number of package requiremens: " + rv, 1, pkgReqs.size());
+			assertThat(pkgReqs.size())
+					.as("Wrong number of package requiremens: " + rv)
+					.isEqualTo(1);
 			String filter = pkgReqs.get(0).getDirectives().get(Namespace.REQUIREMENT_FILTER_DIRECTIVE);
-			assertTrue("Wrong package filter: " + rv + " " + filter, filter.contains(expectedPkg));
+			assertThat(filter.contains(expectedPkg))
+					.as("Wrong package filter: " + rv + " " + filter)
+					.isTrue();
 
 		} finally {
 			try {
@@ -877,58 +1096,66 @@ public class MultiReleaseJarTestCase extends LaunchTest {
 		}
 	}
 
-
+	@Test
 	public void testMultiReleasePreventMetaInfServiceVersions() throws Exception {
 		Class<?> testServiceClass = mrBundle.loadClass("org.osgi.test.cases.framework.launch.mrjars.test.TestService");
 		ServiceLoader<?> loader = ServiceLoader.load(testServiceClass, mrBundle.adapt(BundleWiring.class).getClassLoader());
 		Object testService = loader.iterator().next();
-		assertEquals("Wrong service found.", "SERVICE_BASE", testService.toString());	
+		assertThat(testService)
+				.as("Wrong service found.").hasToString("SERVICE_BASE");	
 	}
 
-
+	@Test
 	public void testMultiReleasePreventMetaInfResourceURLs() throws Exception {
 		URL existingResource = mrBundle.getResource("org/osgi/test/cases/framework/launch/mrjars/test/testResourceAdd99.txt");
-		assertNotNull("Did not find Java 99 added resource.", existingResource);
+		assertThat(existingResource)
+				.as("Did not find Java 99 added resource.")
+				.isNotNull();
 		URL metaInfResource = new URL(existingResource, "/META-INF/addedFor99.txt");
-		try {
-			metaInfResource.openStream().close();
-			fail("Expected error opening versioned META-INF resource.");
-		} catch (IOException e) {
-				// expected
-		}
+		assertThatExceptionOfType(IOException.class)
+				.as("Expected error opening versioned META-INF resource.")
+				.isThrownBy(() -> metaInfResource.openStream().close());
 	}
 
-
+	@Test
 	public void testMultiReleasePreventMetaInfVersionListing() throws Exception {
 		Collection<String> list = mrBundle.adapt(BundleWiring.class)
 				.listResources("/META-INF/", "*.txt", 0);
-		assertTrue("Found versioned META-INF resources: " + list,
-				list.isEmpty());
+		assertThat(list)
+				.as("Found versioned META-INF resources: " + list).isEmpty();
 	}
 
+	@Test
 	public void testChangeJavaVersionLastModified() throws Exception {
 		String originalLocation = mrBundle.getLocation();
 		long originalLastModified = mrBundle.getLastModified();
 		stopFramework(framework);
-		Sleep.sleep(250); // Sleep to ensure we go past 1 ms granularity on timestamps
+		Thread.sleep(250); // Sleep to ensure we go past 1 ms granularity on timestamps
 
 		Framework framework2 = createFramework(getFrameworkConfiguration("99", false));
 		startFramework(framework2);
 		Bundle b2 = framework2.getBundleContext().getBundle(originalLocation);
-		assertNotNull(b2);
-		assertEquals("bundle location changed after update in java version.", originalLocation, b2.getLocation());
-		assertFalse("bundle last modified did not change.", originalLastModified == b2.getLastModified());
+		assertThat(b2).isNotNull();
+		assertThat(b2.getLocation())
+				.as("bundle location changed after update in java version.")
+				.isEqualTo(originalLocation);
+		assertThat(originalLastModified == b2.getLastModified())
+				.as("bundle last modified did not change.")
+				.isFalse();
 		stopFramework(framework2);
-		Sleep.sleep(250); // Sleep to ensure we go past 1 ms granularity on timestamps
+		Thread.sleep(250); // Sleep to ensure we go past 1 ms granularity on timestamps
 
 		Framework framework3 = createFramework(getFrameworkConfiguration("99", false));
 		startFramework(framework3);
 		Bundle b3 = framework3.getBundleContext().getBundle(originalLocation);
-		assertNotNull(b3);
-		assertEquals("bundle location changed after in java version.", b2.getLocation(), b3.getLocation());
-		assertTrue("bundle last modified changed.", b2.getLastModified() == b3.getLastModified());
+		assertThat(b3).isNotNull();
+		assertThat(b3.getLocation())
+				.as("bundle location changed after in java version.")
+				.isEqualTo(b2.getLocation());
+		assertThat(b2.getLastModified() == b3.getLastModified())
+				.as("bundle last modified changed.")
+				.isTrue();
 	}
-
 
 	public void readFile(InputStream in, File file) throws IOException {
 		FileOutputStream fos = null;

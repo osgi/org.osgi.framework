@@ -18,15 +18,21 @@
 
 package org.osgi.test.cases.framework.junit.permissions;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.osgi.test.assertj.permission.PermissionAssertions.assertThat;
+
 import java.security.Permission;
 import java.security.PermissionCollection;
 import java.util.PropertyPermission;
 
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.BundlePermission;
-import org.osgi.test.support.PermissionTestCase;
 
-public class BundlePermissionTests extends PermissionTestCase {
+public class BundlePermissionTests {
 
+	@Test
 	public void testInvalid() {
 		invalidBundlePermission("a.b.c", "x");
 		invalidBundlePermission("a.b.c", "   host  ,  x   ");
@@ -48,6 +54,7 @@ public class BundlePermissionTests extends PermissionTestCase {
 		invalidBundlePermission("a.b.c", "   fragmen"); 
 	}
 
+	@Test
 	public void testActions() {
 		Permission op = new PropertyPermission("java.home", "read"); 
 
@@ -64,121 +71,122 @@ public class BundlePermissionTests extends PermissionTestCase {
 		BundlePermission p16 = new BundlePermission("com.foo.service1",
 				"    HosT    "); 
 
-		assertImplies(p11, p11);
-		assertImplies(p11, p12);
-		assertImplies(p11, p13);
-		assertImplies(p11, p14);
-		assertNotImplies(p11, p15);
-		assertNotImplies(p11, p16);
+		assertThat(p11).implies(p11);
+		assertThat(p11).implies(p12);
+		assertThat(p11).implies(p13);
+		assertThat(p11).implies(p14);
+		assertThat(p11).doesNotImply(p15);
+		assertThat(p11).doesNotImply(p16);
 
-		assertImplies(p12, p11);
-		assertImplies(p12, p12);
-		assertImplies(p12, p13);
-		assertImplies(p12, p14);
-		assertNotImplies(p12, p15);
-		assertNotImplies(p12, p16);
+		assertThat(p12).implies(p11);
+		assertThat(p12).implies(p12);
+		assertThat(p12).implies(p13);
+		assertThat(p12).implies(p14);
+		assertThat(p12).doesNotImply(p15);
+		assertThat(p12).doesNotImply(p16);
 
-		assertImplies(p13, p11);
-		assertImplies(p13, p12);
-		assertImplies(p13, p13);
-		assertImplies(p13, p14);
-		assertNotImplies(p13, p15);
-		assertNotImplies(p13, p16);
+		assertThat(p13).implies(p11);
+		assertThat(p13).implies(p12);
+		assertThat(p13).implies(p13);
+		assertThat(p13).implies(p14);
+		assertThat(p13).doesNotImply(p15);
+		assertThat(p13).doesNotImply(p16);
 
-		assertImplies(p14, p14);
-		assertNotImplies(p14, p11);
-		assertNotImplies(p14, p12);
-		assertNotImplies(p14, p13);
+		assertThat(p14).implies(p14);
+		assertThat(p14).doesNotImply(p11);
+		assertThat(p14).doesNotImply(p12);
+		assertThat(p14).doesNotImply(p13);
 		
-		assertImplies(p15, p15);
-		assertNotImplies(p15, p11);
-		assertNotImplies(p15, p12);
-		assertNotImplies(p15, p13);
+		assertThat(p15).implies(p15);
+		assertThat(p15).doesNotImply(p11);
+		assertThat(p15).doesNotImply(p12);
+		assertThat(p15).doesNotImply(p13);
 
-		assertImplies(p16, p16);
-		assertNotImplies(p16, p11);
-		assertNotImplies(p16, p12);
-		assertNotImplies(p16, p13);
+		assertThat(p16).implies(p16);
+		assertThat(p16).doesNotImply(p11);
+		assertThat(p16).doesNotImply(p12);
+		assertThat(p16).doesNotImply(p13);
 
-		assertNotImplies(p11, op);
+		assertThat(p11).doesNotImply(op);
 
-		assertEquals(p11, p11);
-		assertEquals(p11, p12);
-		assertEquals(p11, p13);
-		assertEquals(p12, p11);
-		assertEquals(p12, p12);
-		assertEquals(p12, p13);
-		assertEquals(p13, p11);
-		assertEquals(p13, p12);
-		assertEquals(p13, p13);
-		assertEquals(p14, p14);
-		assertEquals(p15, p15);
-		assertEquals(p16, p16);
+		assertThat(p11).isEqualTo(p11).hasSameHashCodeAs(p11);
+		assertThat(p11).isEqualTo(p12).hasSameHashCodeAs(p12);
+		assertThat(p11).isEqualTo(p13).hasSameHashCodeAs(p13);
+		assertThat(p12).isEqualTo(p11).hasSameHashCodeAs(p11);
+		assertThat(p12).isEqualTo(p12).hasSameHashCodeAs(p12);
+		assertThat(p12).isEqualTo(p13).hasSameHashCodeAs(p13);
+		assertThat(p13).isEqualTo(p11).hasSameHashCodeAs(p11);
+		assertThat(p13).isEqualTo(p12).hasSameHashCodeAs(p12);
+		assertThat(p13).isEqualTo(p13).hasSameHashCodeAs(p13);
+		assertThat(p14).isEqualTo(p14).hasSameHashCodeAs(p14);
+		assertThat(p15).isEqualTo(p15).hasSameHashCodeAs(p15);
+		assertThat(p16).isEqualTo(p16).hasSameHashCodeAs(p16);
 
-		assertNotEquals(p11, p14);
-		assertNotEquals(p12, p14);
-		assertNotEquals(p13, p14);
-		assertNotEquals(p13, p15);
-		assertNotEquals(p13, p16);
-		assertNotEquals(p14, p11);
-		assertNotEquals(p14, p12);
-		assertNotEquals(p14, p13);
-		assertNotEquals(p14, p15);
-		assertNotEquals(p14, p16);
+		assertThat(p11).isNotEqualTo(p14).doesNotHaveSameHashCodeAs(p14);
+		assertThat(p12).isNotEqualTo(p14).doesNotHaveSameHashCodeAs(p14);
+		assertThat(p13).isNotEqualTo(p14).doesNotHaveSameHashCodeAs(p14);
+		assertThat(p13).isNotEqualTo(p15).doesNotHaveSameHashCodeAs(p15);
+		assertThat(p13).isNotEqualTo(p16).doesNotHaveSameHashCodeAs(p16);
+		assertThat(p14).isNotEqualTo(p11).doesNotHaveSameHashCodeAs(p11);
+		assertThat(p14).isNotEqualTo(p12).doesNotHaveSameHashCodeAs(p12);
+		assertThat(p14).isNotEqualTo(p13).doesNotHaveSameHashCodeAs(p13);
+		assertThat(p14).isNotEqualTo(p15).doesNotHaveSameHashCodeAs(p15);
+		assertThat(p14).isNotEqualTo(p16).doesNotHaveSameHashCodeAs(p16);
 
 		PermissionCollection pc = p13.newPermissionCollection();
 
-		checkEnumeration(pc.elements(), true);
+		assertThat(pc).hasNoElements();
 
-		assertNotImplies(pc, p11);
+		assertThat(pc).doesNotImply(p11);
 
-		assertAddPermission(pc, p14);
-		assertImplies(pc, p14);
-		assertNotImplies(pc, p11);
-		assertNotImplies(pc, p12);
-		assertNotImplies(pc, p13);
+		assertThat(pc).accepts(p14);
+		assertThat(pc).implies(p14);
+		assertThat(pc).doesNotImply(p11);
+		assertThat(pc).doesNotImply(p12);
+		assertThat(pc).doesNotImply(p13);
 
-		assertAddPermission(pc, p13);
-		assertImplies(pc, p11);
-		assertImplies(pc, p12);
-		assertImplies(pc, p13);
-		assertImplies(pc, p14);
+		assertThat(pc).accepts(p13);
+		assertThat(pc).implies(p11);
+		assertThat(pc).implies(p12);
+		assertThat(pc).implies(p13);
+		assertThat(pc).implies(p14);
 
-		assertNotAddPermission(pc, op);
-		assertSerializable(pc);
+		assertThat(pc).rejects(op);
+		assertThat(pc).isSerializable();
 
 		pc = p13.newPermissionCollection();
 
-		assertAddPermission(pc, p13);
-		assertImplies(pc, p11);
-		assertImplies(pc, p12);
-		assertImplies(pc, p13);
-		assertImplies(pc, p14);
-		assertSerializable(pc);
+		assertThat(pc).accepts(p13);
+		assertThat(pc).implies(p11);
+		assertThat(pc).implies(p12);
+		assertThat(pc).implies(p13);
+		assertThat(pc).implies(p14);
+		assertThat(pc).isSerializable();
 
 		pc = p11.newPermissionCollection();
 
-		assertAddPermission(pc, p11);
-		assertImplies(pc, p11);
-		assertImplies(pc, p12);
-		assertImplies(pc, p13);
-		assertImplies(pc, p14);
+		assertThat(pc).accepts(p11);
+		assertThat(pc).implies(p11);
+		assertThat(pc).implies(p12);
+		assertThat(pc).implies(p13);
+		assertThat(pc).implies(p14);
 
 		pc.setReadOnly();
 
-		assertNotAddPermission(pc, p12);
+		assertThat(pc).rejects(p12);
 
-		checkEnumeration(pc.elements(), false);
+		assertThat(pc).hasElements();
 
-		assertSerializable(p11);
-		assertSerializable(p12);
-		assertSerializable(p13);
-		assertSerializable(p14);
-		assertSerializable(p15);
-		assertSerializable(p16);
-		assertSerializable(pc);
+		assertThat(p11).isSerializable();
+		assertThat(p12).isSerializable();
+		assertThat(p13).isSerializable();
+		assertThat(p14).isSerializable();
+		assertThat(p15).isSerializable();
+		assertThat(p16).isSerializable();
+		assertThat(pc).isSerializable();
 	}
 
+	@Test
 	public void testNames() {
 		BundlePermission p21 = new BundlePermission("com.foo.service2",
 				"host");
@@ -187,148 +195,149 @@ public class BundlePermissionTests extends PermissionTestCase {
 		BundlePermission p24 = new BundlePermission("org.foo.service2", "host");
 		BundlePermission p25 = new BundlePermission("*", "host"); 
 
-		assertImplies(p21, p21);
-		assertImplies(p22, p21);
-		assertImplies(p23, p21);
-		assertNotImplies(p24, p21);
-		assertImplies(p25, p21);
+		assertThat(p21).implies(p21);
+		assertThat(p22).implies(p21);
+		assertThat(p23).implies(p21);
+		assertThat(p24).doesNotImply(p21);
+		assertThat(p25).implies(p21);
 
-		assertImplies(p22, p22);
-		assertImplies(p23, p22);
-		assertNotImplies(p24, p22);
-		assertImplies(p25, p22);
+		assertThat(p22).implies(p22);
+		assertThat(p23).implies(p22);
+		assertThat(p24).doesNotImply(p22);
+		assertThat(p25).implies(p22);
 
-		assertImplies(p23, p23);
-		assertNotImplies(p24, p23);
-		assertImplies(p25, p23);
+		assertThat(p23).implies(p23);
+		assertThat(p24).doesNotImply(p23);
+		assertThat(p25).implies(p23);
 
-		assertNotImplies(p24, p25);
-		assertImplies(p25, p25);
+		assertThat(p24).doesNotImply(p25);
+		assertThat(p25).implies(p25);
 
-		assertImplies(p25, p24);
+		assertThat(p25).implies(p24);
 
-		assertNotImplies(p21, p22);
-		assertNotImplies(p21, p23);
-		assertNotImplies(p21, p24);
-		assertNotImplies(p21, p25);
+		assertThat(p21).doesNotImply(p22);
+		assertThat(p21).doesNotImply(p23);
+		assertThat(p21).doesNotImply(p24);
+		assertThat(p21).doesNotImply(p25);
 
-		assertNotImplies(p22, p23);
-		assertNotImplies(p22, p24);
-		assertNotImplies(p22, p25);
+		assertThat(p22).doesNotImply(p23);
+		assertThat(p22).doesNotImply(p24);
+		assertThat(p22).doesNotImply(p25);
 
-		assertNotImplies(p23, p24);
-		assertNotImplies(p23, p25);
+		assertThat(p23).doesNotImply(p24);
+		assertThat(p23).doesNotImply(p25);
 
 		PermissionCollection pc = p21.newPermissionCollection();
 
-		assertAddPermission(pc, p21);
-		assertImplies(pc, p21);
-		assertNotImplies(pc, p22);
-		assertNotImplies(pc, p23);
-		assertNotImplies(pc, p24);
-		assertNotImplies(pc, p25);
+		assertThat(pc).accepts(p21);
+		assertThat(pc).implies(p21);
+		assertThat(pc).doesNotImply(p22);
+		assertThat(pc).doesNotImply(p23);
+		assertThat(pc).doesNotImply(p24);
+		assertThat(pc).doesNotImply(p25);
 
-		assertAddPermission(pc, p22);
-		assertImplies(pc, p21);
-		assertImplies(pc, p22);
-		assertNotImplies(pc, p23);
-		assertNotImplies(pc, p24);
-		assertNotImplies(pc, p25);
+		assertThat(pc).accepts(p22);
+		assertThat(pc).implies(p21);
+		assertThat(pc).implies(p22);
+		assertThat(pc).doesNotImply(p23);
+		assertThat(pc).doesNotImply(p24);
+		assertThat(pc).doesNotImply(p25);
 
-		assertAddPermission(pc, p23);
-		assertImplies(pc, p21);
-		assertImplies(pc, p22);
-		assertImplies(pc, p23);
-		assertNotImplies(pc, p24);
-		assertNotImplies(pc, p25);
+		assertThat(pc).accepts(p23);
+		assertThat(pc).implies(p21);
+		assertThat(pc).implies(p22);
+		assertThat(pc).implies(p23);
+		assertThat(pc).doesNotImply(p24);
+		assertThat(pc).doesNotImply(p25);
 
-		assertAddPermission(pc, p24);
-		assertImplies(pc, p21);
-		assertImplies(pc, p22);
-		assertImplies(pc, p23);
-		assertImplies(pc, p24);
-		assertNotImplies(pc, p25);
+		assertThat(pc).accepts(p24);
+		assertThat(pc).implies(p21);
+		assertThat(pc).implies(p22);
+		assertThat(pc).implies(p23);
+		assertThat(pc).implies(p24);
+		assertThat(pc).doesNotImply(p25);
 
-		assertAddPermission(pc, p25);
-		assertImplies(pc, p21);
-		assertImplies(pc, p22);
-		assertImplies(pc, p23);
-		assertImplies(pc, p25);
-		assertImplies(pc, p24);
-		assertSerializable(pc);
+		assertThat(pc).accepts(p25);
+		assertThat(pc).implies(p21);
+		assertThat(pc).implies(p22);
+		assertThat(pc).implies(p23);
+		assertThat(pc).implies(p25);
+		assertThat(pc).implies(p24);
+		assertThat(pc).isSerializable();
 
 		pc = p22.newPermissionCollection();
 
-		assertAddPermission(pc, p22);
-		assertImplies(pc, p21);
-		assertImplies(pc, p22);
-		assertNotImplies(pc, p23);
-		assertNotImplies(pc, p24);
-		assertNotImplies(pc, p25);
-		assertSerializable(pc);
+		assertThat(pc).accepts(p22);
+		assertThat(pc).implies(p21);
+		assertThat(pc).implies(p22);
+		assertThat(pc).doesNotImply(p23);
+		assertThat(pc).doesNotImply(p24);
+		assertThat(pc).doesNotImply(p25);
+		assertThat(pc).isSerializable();
 
 		pc = p23.newPermissionCollection();
 
-		assertAddPermission(pc, p23);
-		assertImplies(pc, p21);
-		assertImplies(pc, p22);
-		assertImplies(pc, p23);
-		assertNotImplies(pc, p24);
-		assertNotImplies(pc, p25);
-		assertSerializable(pc);
+		assertThat(pc).accepts(p23);
+		assertThat(pc).implies(p21);
+		assertThat(pc).implies(p22);
+		assertThat(pc).implies(p23);
+		assertThat(pc).doesNotImply(p24);
+		assertThat(pc).doesNotImply(p25);
+		assertThat(pc).isSerializable();
 
 		pc = p24.newPermissionCollection();
 
-		assertAddPermission(pc, p24);
-		assertNotImplies(pc, p21);
-		assertNotImplies(pc, p22);
-		assertNotImplies(pc, p23);
-		assertImplies(pc, p24);
-		assertNotImplies(pc, p25);
-		assertSerializable(pc);
+		assertThat(pc).accepts(p24);
+		assertThat(pc).doesNotImply(p21);
+		assertThat(pc).doesNotImply(p22);
+		assertThat(pc).doesNotImply(p23);
+		assertThat(pc).implies(p24);
+		assertThat(pc).doesNotImply(p25);
+		assertThat(pc).isSerializable();
 
 		pc = p25.newPermissionCollection();
 		
-		assertAddPermission(pc, p25);
-		assertImplies(pc, p21);
-		assertImplies(pc, p22);
-		assertImplies(pc, p23);
-		assertImplies(pc, p24);
-		assertImplies(pc, p25);
+		assertThat(pc).accepts(p25);
+		assertThat(pc).implies(p21);
+		assertThat(pc).implies(p22);
+		assertThat(pc).implies(p23);
+		assertThat(pc).implies(p24);
+		assertThat(pc).implies(p25);
 
-		assertSerializable(p21);
-		assertSerializable(p22);
-		assertSerializable(p23);
-		assertSerializable(p24);
-		assertSerializable(p25);
-		assertSerializable(pc);
+		assertThat(p21).isSerializable();
+		assertThat(p22).isSerializable();
+		assertThat(p23).isSerializable();
+		assertThat(p24).isSerializable();
+		assertThat(p25).isSerializable();
+		assertThat(pc).isSerializable();
 	}
-	
+
+	@Test
 	public void testActionImplications() {
 		BundlePermission provide = new BundlePermission("*", "provide");
 		BundlePermission require = new BundlePermission("*", "require");
 		BundlePermission host = new BundlePermission("*", "host");
 		BundlePermission fragment = new BundlePermission("*", "fragment");
 
-		assertImplies(provide, provide);
-		assertImplies(provide, require);
-		assertNotImplies(provide, host);
-		assertNotImplies(provide, fragment);
+		assertThat(provide).implies(provide);
+		assertThat(provide).implies(require);
+		assertThat(provide).doesNotImply(host);
+		assertThat(provide).doesNotImply(fragment);
 		
-		assertNotImplies(require, provide);
-		assertImplies(require, require);
-		assertNotImplies(require, host);
-		assertNotImplies(require, fragment);
+		assertThat(require).doesNotImply(provide);
+		assertThat(require).implies(require);
+		assertThat(require).doesNotImply(host);
+		assertThat(require).doesNotImply(fragment);
 
-		assertNotImplies(host, provide);
-		assertNotImplies(host, require);
-		assertImplies(host, host);
-		assertNotImplies(host, fragment);
+		assertThat(host).doesNotImply(provide);
+		assertThat(host).doesNotImply(require);
+		assertThat(host).implies(host);
+		assertThat(host).doesNotImply(fragment);
 
-		assertNotImplies(fragment, provide);
-		assertNotImplies(fragment, require);
-		assertNotImplies(fragment, host);
-		assertImplies(fragment, fragment);
+		assertThat(fragment).doesNotImply(provide);
+		assertThat(fragment).doesNotImply(require);
+		assertThat(fragment).doesNotImply(host);
+		assertThat(fragment).implies(fragment);
 		
 		BundlePermission comfoohost = new BundlePermission("com.foo.*", "host");
 		BundlePermission comfoobarfragment = new BundlePermission(
@@ -336,19 +345,15 @@ public class BundlePermissionTests extends PermissionTestCase {
 		BundlePermission all = new BundlePermission("com.foo.bar.baz",
 				"provide,require,host,fragment");
 		PermissionCollection pc = provide.newPermissionCollection();
-		assertAddPermission(pc, provide);
-		assertAddPermission(pc, comfoohost);
-		assertAddPermission(pc, comfoobarfragment);
-		assertImplies(pc, all);
+		assertThat(pc).accepts(provide);
+		assertThat(pc).accepts(comfoohost);
+		assertThat(pc).accepts(comfoobarfragment);
+		assertThat(pc).implies(all);
 	}
 	
 	private static void invalidBundlePermission(String name, String actions) {
-		try {
-			BundlePermission p = new BundlePermission(name, actions);
-			fail(p + " created with invalid arguments"); 
-		}
-		catch (IllegalArgumentException e) {
-			// expected
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("permission created with invalid arguments")
+				.isThrownBy(() -> new BundlePermission(name, actions));
 	}
 }
