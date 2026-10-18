@@ -17,6 +17,9 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.launch.junit;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.osgi.test.assertj.bundle.BundleAssert.assertThat;
+
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -31,6 +34,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.Constants;
@@ -48,8 +54,7 @@ import org.osgi.framework.wiring.BundleRevision;
 import org.osgi.framework.wiring.BundleWire;
 import org.osgi.framework.wiring.BundleWiring;
 import org.osgi.framework.wiring.FrameworkWiring;
-import org.osgi.test.support.OSGiTestCaseProperties;
-import org.osgi.test.support.compatibility.DefaultTestBundleControl;
+import org.osgi.test.cases.framework.launch.junit.tck.TckProperties;
 
 /**
  * Test cases for testing fragment bundles and extension bundles.
@@ -57,6 +62,7 @@ import org.osgi.test.support.compatibility.DefaultTestBundleControl;
  * @author $Id$
  */
 public class ExtensionDependencyTests extends LaunchTest {
+
 	private static final String	EXTENSION_TEST_NAMESPACE	= "extension.test";
 
 	private static final String	V1					= ".v1";
@@ -89,8 +95,9 @@ public class ExtensionDependencyTests extends LaunchTest {
 
 	private Framework framework;
 	private int					originalExtensionCount;
-	
-	protected void setUp() throws Exception {
+
+	@BeforeEach
+	public void setUp() throws Exception {
 		super.setUp();
 		framework = createFramework(true);
 		originalExtensionCount = getExtensionCount(framework);
@@ -105,7 +112,8 @@ public class ExtensionDependencyTests extends LaunchTest {
 		return newFramework;
 	}
 
-	protected void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() throws Exception {
 		stopFramework(framework);
 		super.tearDown();
 	}
@@ -118,6 +126,7 @@ public class ExtensionDependencyTests extends LaunchTest {
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
+	@Test
 	public void testFrameworkExtensionRefresh() throws Exception {
 		if (!isFrameworkExtensionSupported()) {
 			return;
@@ -126,8 +135,9 @@ public class ExtensionDependencyTests extends LaunchTest {
 				EXTENSION_1_V1_JAR)
 				.get(0);
 		int currentExtensionCount = getExtensionCount(framework);
-		assertEquals("Wrong number of fragments.",
-				originalExtensionCount + 1, currentExtensionCount);
+		assertThat(currentExtensionCount)
+				.as("Wrong number of fragments.")
+				.isEqualTo(originalExtensionCount + 1);
 
 		Future<FrameworkEvent> stopFuture = waitForStop(framework);
 
@@ -143,10 +153,12 @@ public class ExtensionDependencyTests extends LaunchTest {
 
 		// make sure there are no fragments attached
 		currentExtensionCount = getExtensionCount(framework);
-		assertEquals("Wrong number of fragments.", originalExtensionCount,
-				currentExtensionCount);
+		assertThat(currentExtensionCount)
+				.as("Wrong number of fragments.")
+				.isEqualTo(originalExtensionCount);
 	}
 
+	@Test
 	public void testMultipleVersions() throws BundleException, IOException,
 			InterruptedException, ExecutionException, ClassNotFoundException {
 		if (!isFrameworkExtensionSupported()) {
@@ -157,8 +169,9 @@ public class ExtensionDependencyTests extends LaunchTest {
 				EXTENSION_1_V1_JAR).get(0);
 
 		int currentExtensionCount = getExtensionCount(framework);
-		assertEquals("Wrong number of fragments.",
-				originalExtensionCount + 1, currentExtensionCount);
+		assertThat(currentExtensionCount)
+				.as("Wrong number of fragments.")
+				.isEqualTo(originalExtensionCount + 1);
 
 		assertExtensionClass(EXTENSION_1_CLASS_NAME, EXTENSION_2_RESOURCE);
 
@@ -178,8 +191,9 @@ public class ExtensionDependencyTests extends LaunchTest {
 
 		reCreateFramework();
 		currentExtensionCount = getExtensionCount(framework);
-		assertEquals("Wrong number of fragments.", originalExtensionCount + 1,
-				currentExtensionCount);
+		assertThat(currentExtensionCount)
+				.as("Wrong number of fragments.")
+				.isEqualTo(originalExtensionCount + 1);
 
 		Bundle extensionA_V3 = framework.getBundleContext()
 				.getBundle(location_V3);
@@ -190,6 +204,7 @@ public class ExtensionDependencyTests extends LaunchTest {
 		assertExtensionClass(EXTENSION_1_CLASS_NAME, EXTENSION_2_RESOURCE);
 	}
 
+	@Test
 	public void testImportPackage()
 			throws BundleException, IOException, InvalidSyntaxException {
 		if (!isFrameworkExtensionSupported()) {
@@ -205,8 +220,9 @@ public class ExtensionDependencyTests extends LaunchTest {
 
 		// make sure the build included package and ee requirements for
 		// extension2
-		assertFalse("No package requirements found.", extension2
-				.getRequirements(PackageNamespace.PACKAGE_NAMESPACE).isEmpty());
+		assertThat(extension2
+				.getRequirements(PackageNamespace.PACKAGE_NAMESPACE))
+				.as("No package requirements found.").isNotEmpty();
 
 		// make sure both extensions are attached and the host and ee
 		// requirements wired
@@ -224,16 +240,20 @@ public class ExtensionDependencyTests extends LaunchTest {
 		// system bundle can only export packages.
 		List<BundleWire> packageWires = hostWiring
 				.getRequiredWires(PackageNamespace.PACKAGE_NAMESPACE);
-		assertEquals("Found some package wires: " + packageWires, 0,
-				packageWires.size());
+		assertThat(packageWires)
+				.as("Found some package wires: " + packageWires).hasSize(0);
 
 		// ensure the service from extension 2 is registered
 		ServiceReference< ? >[] serviceRef = framework.getBundleContext()
 				.getServiceReferences((String) null, "(test=tb2)");
-		assertNotNull("No service found.", serviceRef);
-		assertEquals("Wrong number of services.", 1, serviceRef.length);
+		assertThat(serviceRef)
+				.as("No service found.")
+				.isNotNull();
+		assertThat(serviceRef.length)
+				.as("Wrong number of services.").isOne();
 	}
 
+	@Test
 	public void testRequireCapabilityFromExtension()
 			throws BundleException, IOException {
 		if (!isFrameworkExtensionSupported()) {
@@ -248,6 +268,7 @@ public class ExtensionDependencyTests extends LaunchTest {
 				EXTENSION_TEST_NAMESPACE);
 	}
 
+	@Test
 	public void testNormalBundleRequireCapabilityFromExtension()
 			throws BundleException, IOException {
 		if (!isFrameworkExtensionSupported()) {
@@ -263,8 +284,9 @@ public class ExtensionDependencyTests extends LaunchTest {
 		}
 		framework.adapt(FrameworkWiring.class).resolveBundles(installed);
 		for (Bundle bundle : installed) {
-			assertTrue("Expected bundle to resolve: " + bundle,
-					(bundle.getState() & Bundle.RESOLVED) != 0);
+			assertThat(bundle)
+					.as("Expected bundle to resolve: " + bundle)
+				.isInState(Bundle.RESOLVED);
 		}
 
 		Bundle normalBundle = installed.get(1);
@@ -281,20 +303,30 @@ public class ExtensionDependencyTests extends LaunchTest {
 				.getRequirements(EXTENSION_TEST_NAMESPACE)
 				.get(0);
 
-		assertEquals("Wrong provider", provider.getResource(),
-				extensionWire.getProvider());
-		assertEquals("Wrong requirer", requirer.getResource(),
-				extensionWire.getRequirer());
-		assertEquals("Wrong provider wiring", provider,
-				extensionWire.getProviderWiring());
-		assertEquals("Wrong requirer wiring", requirer,
-				extensionWire.getRequirerWiring());
-		assertEquals("Wrong capability", capability, extensionWire.getCapability());
-		assertEquals("Wrong requirement", requirement, extensionWire.getRequirement());
-		assertTrue("Requirement does not match capability",
-				extensionWire.getRequirement().matches(extensionWire.getCapability()));
+		assertThat(extensionWire.getProvider())
+				.as("Wrong provider")
+				.isEqualTo(provider.getResource());
+		assertThat(extensionWire.getRequirer())
+				.as("Wrong requirer")
+				.isEqualTo(requirer.getResource());
+		assertThat(extensionWire.getProviderWiring())
+				.as("Wrong provider wiring")
+				.isEqualTo(provider);
+		assertThat(extensionWire.getRequirerWiring())
+				.as("Wrong requirer wiring")
+				.isEqualTo(requirer);
+		assertThat(extensionWire.getCapability())
+				.as("Wrong capability")
+				.isEqualTo(capability);
+		assertThat(extensionWire.getRequirement())
+				.as("Wrong requirement")
+				.isEqualTo(requirement);
+		assertThat(extensionWire.getRequirement().matches(extensionWire.getCapability()))
+				.as("Requirement does not match capability")
+				.isTrue();
 	}
 
+	@Test
 	public void testMissingCapabilityFromExtension()
 			throws BundleException, IOException, InvalidSyntaxException {
 		if (!isFrameworkExtensionSupported()) {
@@ -304,12 +336,14 @@ public class ExtensionDependencyTests extends LaunchTest {
 				EXTENSION_3_V1_JAR);
 		Bundle extension3 = extensions.get(0);
 
-		assertEquals("Wrong number of fragments.", originalExtensionCount,
-				getExtensionCount(framework));
+		assertThat(getExtensionCount(framework))
+				.as("Wrong number of fragments.")
+				.isEqualTo(originalExtensionCount);
 
 		installAndResolve(framework, true, EXTENSION_1_V1_JAR);
-		assertEquals("Wrong number of fragments.", originalExtensionCount + 1,
-				getExtensionCount(framework));
+		assertThat(getExtensionCount(framework))
+				.as("Wrong number of fragments.")
+				.isEqualTo(originalExtensionCount + 1);
 
 		installAndResolve(framework, true, EXTENSION_2_V1_JAR);
 		// request extension3 to resolve incase it was not pulled in by the
@@ -317,8 +351,9 @@ public class ExtensionDependencyTests extends LaunchTest {
 		framework.adapt(FrameworkWiring.class)
 				.resolveBundles(Collections.singleton(extension3));
 
-		assertEquals("Wrong number of fragments.", originalExtensionCount + 3,
-				getExtensionCount(framework));
+		assertThat(getExtensionCount(framework))
+				.as("Wrong number of fragments.")
+				.isEqualTo(originalExtensionCount + 3);
 		BundleWiring hostWiring = framework.adapt(BundleWiring.class);
 		assertWires(hostWiring, extension3.adapt(BundleWiring.class),
 				EXTENSION_TEST_NAMESPACE);
@@ -326,16 +361,23 @@ public class ExtensionDependencyTests extends LaunchTest {
 		// ensure the service from extension 2 is registered
 		ServiceReference< ? >[] serviceRef = framework.getBundleContext()
 				.getServiceReferences((String) null, "(test=tb2)");
-		assertNotNull("No service found.", serviceRef);
-		assertEquals("Wrong number of services.", 1, serviceRef.length);
+		assertThat(serviceRef)
+				.as("No service found.")
+				.isNotNull();
+		assertThat(serviceRef.length)
+				.as("Wrong number of services.").isOne();
 
 		// ensure the service from extension 3 is registered
 		serviceRef = framework.getBundleContext()
 				.getServiceReferences((String) null, "(test=tb3)");
-		assertNotNull("No service found.", serviceRef);
-		assertEquals("Wrong number of services.", 1, serviceRef.length);
+		assertThat(serviceRef)
+				.as("No service found.")
+				.isNotNull();
+		assertThat(serviceRef.length)
+				.as("Wrong number of services.").isOne();
 	}
 
+	@Test
 	public void testRequireIdentity() throws BundleException, IOException {
 		if (!isFrameworkExtensionSupported()) {
 			return;
@@ -343,8 +385,9 @@ public class ExtensionDependencyTests extends LaunchTest {
 		List<Bundle> extensions = installAndResolve(framework, true,
 				EXTENSION_1_V1_JAR,
 				EXTENSION_4_V1_JAR);
-		assertEquals("Wrong number of fragments.", originalExtensionCount + 2,
-				getExtensionCount(framework));
+		assertThat(getExtensionCount(framework))
+				.as("Wrong number of fragments.")
+				.isEqualTo(originalExtensionCount + 2);
 		Bundle extension1 = extensions.get(0);
 		Bundle extension4 = extensions.get(1);
 
@@ -353,22 +396,20 @@ public class ExtensionDependencyTests extends LaunchTest {
 		BundleWiring extension4Wiring = extension4.adapt(BundleWiring.class);
 		// The osgi.identity capability is not payload.
 		// Check that extension1 wiring is providing the wires.
-		assertEquals("Framework is providing another identity.", 1,
-				fwkBundleWiring
-						.getCapabilities(IdentityNamespace.IDENTITY_NAMESPACE)
-						.size());
-		assertEquals("Extension4 wiring is requireing another identity.", 0,
-				extension4Wiring
-						.getRequiredWires(IdentityNamespace.IDENTITY_NAMESPACE)
-						.size());
+		assertThat(fwkBundleWiring
+				.getCapabilities(IdentityNamespace.IDENTITY_NAMESPACE))
+				.as("Framework is providing another identity.").hasSize(1);
+		assertThat(extension4Wiring
+				.getRequiredWires(IdentityNamespace.IDENTITY_NAMESPACE))
+				.as("Extension4 wiring is requireing another identity.").hasSize(0);
 		List<BundleWire> identityRequiredWires = fwkBundleWiring
 				.getRequiredWires(IdentityNamespace.IDENTITY_NAMESPACE);
-		assertEquals("Wrong number of required wires found.", 1,
-				identityRequiredWires.size());
-		assertEquals("Wrong wires found.",
-				extension1Wiring.getProvidedResourceWires(
-						IdentityNamespace.IDENTITY_NAMESPACE),
-				identityRequiredWires);
+		assertThat(identityRequiredWires)
+				.as("Wrong number of required wires found.").hasSize(1);
+		assertThat(identityRequiredWires)
+				.as("Wrong wires found.")
+				.isEqualTo(extension1Wiring.getProvidedResourceWires(
+						IdentityNamespace.IDENTITY_NAMESPACE));
 	}
 
 	private void assertExtensionClass(String extensionAClassName,
@@ -378,8 +419,9 @@ public class ExtensionDependencyTests extends LaunchTest {
 				.getClassLoader();
 		Class< ? > extensionClass = fwkClassLoader
 				.loadClass(extensionAClassName);
-		assertNotNull("Failed to find extension class: " + extensionAClassName,
-				extensionClass);
+		assertThat(extensionClass)
+				.as("Failed to find extension class: " + extensionAClassName)
+				.isNotNull();
 
 		// make sure there is only one resource found;
 		// trying to make sure the other versions are not on the classpath
@@ -389,8 +431,8 @@ public class ExtensionDependencyTests extends LaunchTest {
 						.hasMoreElements();) {
 			resourceList.add(resources.nextElement());
 		}
-		assertEquals("Wrong number of resources found.", 1,
-				resourceList.size());
+		assertThat(resourceList)
+				.as("Wrong number of resources found.").hasSize(1);
 	}
 
 	private static int getExtensionCount(Framework framework) {
@@ -417,14 +459,16 @@ public class ExtensionDependencyTests extends LaunchTest {
 		framework.adapt(FrameworkWiring.class).resolveBundles(installed);
 		for (Bundle bundle : installed) {
 			if (expectResolve) {
-				assertTrue("Expected bundle to resolve: " + bundle,
-						(bundle.getState() & Bundle.RESOLVED) != 0);
+				assertThat(bundle)
+						.as("Expected bundle to resolve: " + bundle)
+				.isInState(Bundle.RESOLVED);
 				assertWires(framework.adapt(BundleWiring.class),
 						bundle.adapt(BundleWiring.class),
 						HostNamespace.HOST_NAMESPACE);
 			} else {
-				assertTrue("Expected bundle to not resolve: " + bundle,
-						(bundle.getState() & Bundle.INSTALLED) != 0);
+				assertThat(bundle)
+						.as("Expected bundle to not resolve: " + bundle)
+				.isInState(Bundle.INSTALLED);
 			}
 		}
 		return installed;
@@ -435,19 +479,25 @@ public class ExtensionDependencyTests extends LaunchTest {
 		boolean payloadReq = !(ExecutionEnvironmentNamespace.EXECUTION_ENVIRONMENT_NAMESPACE
 				.equals(namespace)
 				|| HostNamespace.HOST_NAMESPACE.equals(namespace));
-		assertNotNull("No host wiring!", hostWiring);
-		assertNotNull("No fragment wiring!", fragmentWiring);
+		assertThat(hostWiring)
+				.as("No host wiring!")
+				.isNotNull();
+		assertThat(fragmentWiring)
+				.as("No fragment wiring!")
+				.isNotNull();
 		List<BundleRequirement> fragmentReqs = fragmentWiring.getRevision()
 				.getDeclaredRequirements(namespace);
-		assertFalse("No requirements found by fragment.",
-				fragmentReqs.isEmpty());
+		assertThat(fragmentReqs)
+				.as("No requirements found by fragment.").isNotEmpty();
 		List<BundleWire> providedWires = hostWiring
 				.getProvidedWires(namespace);
-		assertFalse("No provided wires found.", providedWires.isEmpty());
+		assertThat(providedWires)
+				.as("No provided wires found.").isNotEmpty();
 		List<BundleWire> requiredWires = payloadReq
 				? hostWiring.getRequiredWires(namespace)
 				: fragmentWiring.getRequiredWires(namespace);
-		assertFalse("No required wires found.", requiredWires.isEmpty());
+		assertThat(requiredWires)
+				.as("No required wires found.").isNotEmpty();
 		int numFound = 0;
 		for (BundleWire requiredWire : requiredWires) {
 			if (fragmentReqs.contains(requiredWire.getRequirement())) {
@@ -456,20 +506,22 @@ public class ExtensionDependencyTests extends LaunchTest {
 				}
 			}
 		}
-		assertEquals(
-				"The expected wires are not found: " + providedWires
-						+ requiredWires,
-				fragmentReqs.size(), numFound);
+		assertThat(numFound)
+				.as("The expected wires are not found: " + providedWires
+						+ requiredWires)
+				.isEqualTo(fragmentReqs.size());
 	}
 
 	private static void assertSystemRefreshedEvent(
 			Future<FrameworkEvent> stopFuture)
 			throws InterruptedException, ExecutionException {
 		FrameworkEvent stopEvent = stopFuture.get();
-		assertNotNull("No event found.", stopEvent);
-		assertEquals("Wrong event: " + stopEvent,
-				FrameworkEvent.STOPPED_SYSTEM_REFRESHED,
-				stopEvent.getType());
+		assertThat(stopEvent)
+				.as("No event found.")
+				.isNotNull();
+		assertThat(stopEvent.getType())
+				.as("Wrong event: " + stopEvent)
+				.isEqualTo(FrameworkEvent.STOPPED_SYSTEM_REFRESHED);
 	}
 
 	private static Future<FrameworkEvent> waitForStop(
@@ -478,7 +530,7 @@ public class ExtensionDependencyTests extends LaunchTest {
 				new Callable<FrameworkEvent>() {
 					@Override
 					public FrameworkEvent call() throws Exception {
-						return framework.waitForStop(OSGiTestCaseProperties.getTimeout() * OSGiTestCaseProperties.getScaling());
+						return framework.waitForStop(TckProperties.getTimeout() * TckProperties.getScaling());
 					}
 				});
 		new Thread(stoppedFuture, "Waiting for stop.").start();
@@ -490,8 +542,7 @@ public class ExtensionDependencyTests extends LaunchTest {
 				Constants.SUPPORTS_FRAMEWORK_EXTENSION))) {
 			return true;
 		}
-		DefaultTestBundleControl
-				.trace("framework extension bundles not supported");
+		System.out.println("framework extension bundles not supported");
 		return false;
 	}
 }

@@ -17,11 +17,13 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.junit.frameworkutil;
 
+import static java.util.Collections.list;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
@@ -31,14 +33,14 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.FrameworkUtil;
 
 public class DictionariesTestCase {
@@ -51,7 +53,7 @@ public class DictionariesTestCase {
 	Map<String,String>			asMapEmpty;
 	Dictionary<String,String>	asDictionaryEmpty;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		dict = new TestDictionary<>();
 		dict.put("key1", "value1");
@@ -102,11 +104,11 @@ public class DictionariesTestCase {
 	@Test
 	public void values() {
 		assertThat(asMap.values().isEmpty()).isEqualTo(dict.isEmpty());
-		assertThat(asMap.values().size()).isEqualTo(dict.size());
+		assertThat(asMap.values()).hasSize(dict.size());
 		assertThat(asMap.values()).containsExactlyInAnyOrderElementsOf(
-				Collections.list(dict.elements()));
+				list(dict.elements()));
 
-		assertThat(Collections.list(asDictionary.elements()))
+		assertThat(list(asDictionary.elements()))
 				.hasSize(map.size())
 				.containsExactlyInAnyOrderElementsOf(map.values());
 	}
@@ -114,7 +116,7 @@ public class DictionariesTestCase {
 	@Test
 	public void empty() {
 		assertThat(asMap.isEmpty()).isEqualTo(dict.isEmpty());
-		assertThat(asMapEmpty.isEmpty()).isTrue();
+		assertThat(asMapEmpty).isEmpty();
 
 		assertThat(asDictionary.isEmpty()).isEqualTo(map.isEmpty());
 		assertThat(asDictionaryEmpty.isEmpty()).isTrue();
@@ -122,7 +124,7 @@ public class DictionariesTestCase {
 
 	@Test
 	public void size() {
-		assertThat(asMap.size()).isEqualTo(dict.size());
+		assertThat(asMap).hasSize(dict.size());
 		assertThat(asMapEmpty.size()).isZero();
 
 		assertThat(asDictionary.size()).isEqualTo(map.size());
@@ -133,7 +135,7 @@ public class DictionariesTestCase {
 	public void get() {
 		assertThat(asMap.get("foo")).isNull();
 		assertThat(asMapEmpty.get("foo")).isNull();
-		for (String key : Collections.list(dict.keys())) {
+		for (String key : list(dict.keys())) {
 			assertThat(asMap.get(key)).isSameAs(dict.get(key));
 		}
 
@@ -151,11 +153,11 @@ public class DictionariesTestCase {
 		assertThat(asMap.put("key1", "value11")).isSameAs(value);
 		assertThat(asMap.get("key1")).isSameAs(dict.get("key1"))
 				.isEqualTo("value11");
-		assertThat(asMap.size()).isEqualTo(dict.size()).isEqualTo(size);
+		assertThat(asMap).hasSize(dict.size()).hasSize(size);
 		assertThat(asMap.put("key6", "value6")).isNull();
 		assertThat(asMap.get("key6")).isSameAs(dict.get("key6"))
 				.isEqualTo("value6");
-		assertThat(asMap.size()).isEqualTo(dict.size()).isEqualTo(size + 1);
+		assertThat(asMap).hasSize(dict.size()).hasSize(size + 1);
 
 		size = map.size();
 		value = map.get("key1");
@@ -191,7 +193,7 @@ public class DictionariesTestCase {
 			assertThat(asDictionary.remove(key)).isEqualTo(value);
 			assertThat(asDictionary.get(key)).isNull();
 			assertThat(asDictionary.size()).isEqualTo(map.size());
-			assertThat(map.containsKey(key)).isFalse();
+			assertThat(map).doesNotContainKey(key);
 		}
 		assertThat(asDictionary.isEmpty()).isTrue();
 		assertThat(asDictionary.size()).isZero();
@@ -199,41 +201,33 @@ public class DictionariesTestCase {
 
 	@Test
 	public void null_checks() {
-		assertThatNullPointerException().isThrownBy(() -> {
-			FrameworkUtil.asMap(null);
-		});
-		assertThatNullPointerException().isThrownBy(() -> {
-			FrameworkUtil.asDictionary(null);
-		});
+		assertThatThrownBy(() ->
+				FrameworkUtil.asMap(null)).isInstanceOf(NullPointerException.class);
+		assertThatThrownBy(() ->
+				FrameworkUtil.asDictionary(null)).isInstanceOf(NullPointerException.class);
 		Map<String,String> nullKeyMap = new HashMap<>();
 		nullKeyMap.put(null, "value");
-		assertThatNullPointerException().isThrownBy(() -> {
-			FrameworkUtil.asDictionary(nullKeyMap);
-		});
+		assertThatThrownBy(() ->
+				FrameworkUtil.asDictionary(nullKeyMap)).isInstanceOf(NullPointerException.class);
 		Map<String,String> nullValueMap = new HashMap<>();
 		nullValueMap.put("key", null);
-		assertThatNullPointerException().isThrownBy(() -> {
-			FrameworkUtil.asDictionary(nullValueMap);
-		});
+		assertThatThrownBy(() ->
+				FrameworkUtil.asDictionary(nullValueMap)).isInstanceOf(NullPointerException.class);
 
-		assertThat(asMap.containsKey(null)).isFalse();
+		assertThat(asMap).doesNotContainKey(null);
 		assertThat(asMap.get(null)).isNull();
 		assertThat(asMap.remove(null)).isNull();
 		assertThat(asDictionary.get(null)).isNull();
 		assertThat(asDictionary.remove(null)).isNull();
 
-		assertThatNullPointerException().isThrownBy(() -> {
-			asMap.put(null, "value1");
-		});
-		assertThatNullPointerException().isThrownBy(() -> {
-			asMap.put("key1", null);
-		});
-		assertThatNullPointerException().isThrownBy(() -> {
-			asDictionary.put(null, "value1");
-		});
-		assertThatNullPointerException().isThrownBy(() -> {
-			asDictionary.put("key1", null);
-		});
+		assertThatNullPointerException().isThrownBy(() ->
+			asMap.put(null, "value1"));
+		assertThatNullPointerException().isThrownBy(() ->
+			asMap.put("key1", null));
+		assertThatNullPointerException().isThrownBy(() ->
+			asDictionary.put(null, "value1"));
+		assertThatNullPointerException().isThrownBy(() ->
+			asDictionary.put("key1", null));
 
 		Entry<String,String> nullKeyEntry = new SimpleEntry<>(null, "value");
 		assertThat(asMap.entrySet().contains(nullKeyEntry)).isFalse();
@@ -242,32 +236,28 @@ public class DictionariesTestCase {
 		assertThat(asMap.entrySet().contains(nullValueEntry)).isFalse();
 		assertThat(asMap.entrySet().remove(nullValueEntry)).isFalse();
 		Entry<String,String> entry = asMap.entrySet().iterator().next();
-		assertThatNullPointerException().isThrownBy(() -> {
-			entry.setValue(null);
-		});
+		assertThatNullPointerException().isThrownBy(() ->
+			entry.setValue(null));
 	}
 
 	@Test
 	public void no_null_key_or_value_map() {
 		Map<String,String> noNullKeyValueMap = new ConcurrentHashMap<>();
-		assertThatNullPointerException().isThrownBy(() -> {
-			noNullKeyValueMap.containsKey(null);
-		});
-		assertThatNullPointerException().isThrownBy(() -> {
-			noNullKeyValueMap.containsValue(null);
-		});
-		assertThatCode(() -> {
-			FrameworkUtil.asDictionary(noNullKeyValueMap);
-		}).doesNotThrowAnyException();
+		assertThatNullPointerException().isThrownBy(() ->
+			noNullKeyValueMap.containsKey(null));
+		assertThatNullPointerException().isThrownBy(() ->
+			noNullKeyValueMap.containsValue(null));
+		assertThatCode(() ->
+			FrameworkUtil.asDictionary(noNullKeyValueMap)).doesNotThrowAnyException();
 	}
 
 	@Test
 	public void containsKey() {
 		Object o = Integer.valueOf(1);
-		assertThat(asMap.containsKey(o)).isFalse();
-		assertThat(asMap.containsKey("foo")).isFalse();
-		for (String key : Collections.list(dict.keys())) {
-			assertThat(asMap.containsKey(key)).isTrue();
+		assertThat(asMap.containsKey(o)).isFalse(); // key of another type
+		assertThat(asMap).doesNotContainKey("foo");
+		for (String key : list(dict.keys())) {
+			assertThat(asMap).containsKey(key);
 		}
 	}
 
@@ -286,22 +276,22 @@ public class DictionariesTestCase {
 		asMap.clear();
 		assertThat(asMap.size()).isZero();
 		assertThat(dict.size()).isZero();
-		assertThat(asMap.isEmpty()).isTrue();
+		assertThat(asMap).isEmpty();
 		assertThat(dict.isEmpty()).isTrue();
 	}
 
 	@Test
 	public void entrySet() {
 		assertThat(asMap.entrySet().isEmpty()).isEqualTo(dict.isEmpty());
-		assertThat(asMap.entrySet().size()).isEqualTo(dict.size());
+		assertThat(asMap.entrySet()).hasSize(dict.size());
 		assertThat(asMap.entrySet()).allMatch(
 				entry -> dict.get(entry.getKey()) == entry.getValue());
 		assertThat(asMap.entrySet()).extracting(Entry::getKey)
 				.containsExactlyInAnyOrderElementsOf(
-						Collections.list(dict.keys()));
+						list(dict.keys()));
 		assertThat(asMap.entrySet()).extracting(Entry::getValue)
 				.containsExactlyInAnyOrderElementsOf(
-						Collections.list(dict.elements()));
+						list(dict.elements()));
 	}
 
 	@Test
@@ -345,9 +335,9 @@ public class DictionariesTestCase {
 		Set<Entry<String,String>> entrySet = asMap.entrySet();
 		entrySet.clear();
 		assertThat(entrySet.size()).isZero();
-		assertThat(entrySet.isEmpty()).isTrue();
+		assertThat(entrySet).isEmpty();
 		assertThat(asMap.size()).isZero();
-		assertThat(asMap.isEmpty()).isTrue();
+		assertThat(asMap).isEmpty();
 		assertThat(dict.size()).isZero();
 		assertThat(dict.isEmpty()).isTrue();
 	}
@@ -357,24 +347,20 @@ public class DictionariesTestCase {
 		Set<Entry<String,String>> entrySet = asMap.entrySet();
 		Iterator<Entry<String,String>> iterator = entrySet.iterator();
 		while (iterator.hasNext()) {
-			assertThatIllegalStateException().isThrownBy(() -> {
-				iterator.remove();
-			});
+			assertThatThrownBy(() ->
+					iterator.remove()).isInstanceOf(IllegalStateException.class);
 			Entry<String,String> next = iterator.next();
 			assertThat(dict.get(next.getKey())).isSameAs(next.getValue());
 			iterator.remove();
 			assertThat(dict.get(next.getKey())).isNull();
-			assertThatIllegalStateException().isThrownBy(() -> {
-				iterator.remove();
-			});
+			assertThatIllegalStateException().isThrownBy(() ->
+				iterator.remove());
 		}
 		assertThatExceptionOfType(NoSuchElementException.class)
-				.isThrownBy(() -> {
-					iterator.next();
-				});
-		assertThatIllegalStateException().isThrownBy(() -> {
-			iterator.remove();
-		});
+				.isThrownBy(() ->
+					iterator.next());
+		assertThatIllegalStateException().isThrownBy(() ->
+			iterator.remove());
 		assertThat(entrySet.size()).isZero();
 		assertThat(entrySet.isEmpty()).isTrue();
 		assertThat(asMap.size()).isZero();
@@ -432,9 +418,9 @@ public class DictionariesTestCase {
 		Set<String> keySet = asMap.keySet();
 		keySet.clear();
 		assertThat(keySet.size()).isZero();
-		assertThat(keySet.isEmpty()).isTrue();
+		assertThat(keySet).isEmpty();
 		assertThat(asMap.size()).isZero();
-		assertThat(asMap.isEmpty()).isTrue();
+		assertThat(asMap).isEmpty();
 		assertThat(dict.size()).isZero();
 		assertThat(dict.isEmpty()).isTrue();
 	}
@@ -444,24 +430,20 @@ public class DictionariesTestCase {
 		Set<String> keySet = asMap.keySet();
 		Iterator<String> iterator = keySet.iterator();
 		while (iterator.hasNext()) {
-			assertThatIllegalStateException().isThrownBy(() -> {
-				iterator.remove();
-			});
+			assertThatThrownBy(() ->
+					iterator.remove()).isInstanceOf(IllegalStateException.class);
 			String next = iterator.next();
 			assertThat(dict.get(next)).isNotNull();
 			iterator.remove();
 			assertThat(dict.get(next)).isNull();
-			assertThatIllegalStateException().isThrownBy(() -> {
-				iterator.remove();
-			});
+			assertThatIllegalStateException().isThrownBy(() ->
+				iterator.remove());
 		}
 		assertThatExceptionOfType(NoSuchElementException.class)
-				.isThrownBy(() -> {
-					iterator.next();
-				});
-		assertThatIllegalStateException().isThrownBy(() -> {
-			iterator.remove();
-		});
+				.isThrownBy(() ->
+					iterator.next());
+		assertThatIllegalStateException().isThrownBy(() ->
+			iterator.remove());
 		assertThat(keySet.size()).isZero();
 		assertThat(keySet.isEmpty()).isTrue();
 		assertThat(asMap.size()).isZero();

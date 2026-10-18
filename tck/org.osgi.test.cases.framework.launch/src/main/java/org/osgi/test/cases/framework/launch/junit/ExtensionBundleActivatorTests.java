@@ -17,6 +17,9 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.launch.junit;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -26,6 +29,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
@@ -51,6 +57,7 @@ public class ExtensionBundleActivatorTests extends LaunchTest {
 			.unmodifiableCollection(Arrays.asList("/extensions.tb3.jar",
 					"/extensions.tb2.jar", "/extensions.tb1.jar"));
 
+	@BeforeEach
 	public void setUp() throws Exception {
 		super.setUp();
 		if (framework != null) {
@@ -80,6 +87,7 @@ public class ExtensionBundleActivatorTests extends LaunchTest {
 		return;
 	}
 
+	@AfterEach
 	public void tearDown() {
 		System.getProperties().remove(RESULTS);
 		stopFramework(framework);
@@ -102,16 +110,25 @@ public class ExtensionBundleActivatorTests extends LaunchTest {
 		return results;
 	}
 
+	@Test
 	public void testPostInit() {
-		assertNotNull("No results found for test.", POST_INIT_RESULTS);
+		assertThat(POST_INIT_RESULTS)
+				.as("No results found for test.")
+				.isNotNull();
 
 		List<String> tb1Results = POST_INIT_RESULTS.get(TB1_TEST);
 		List<String> tb2Results = POST_INIT_RESULTS.get(TB2_TEST);
 		List<String> tb3Results = POST_INIT_RESULTS.get(TB3_TEST);
 
-		assertNotNull("No results found for tb1", tb1Results);
-		assertNotNull("No results found for tb2", tb2Results);
-		assertNotNull("No results found for tb3", tb3Results);
+		assertThat(tb1Results)
+				.as("No results found for tb1")
+				.isNotNull();
+		assertThat(tb2Results)
+				.as("No results found for tb2")
+				.isNotNull();
+		assertThat(tb3Results)
+				.as("No results found for tb3")
+				.isNotNull();
 
 		List<String> expectedTests = Arrays.asList(
 				"START",
@@ -133,6 +150,7 @@ public class ExtensionBundleActivatorTests extends LaunchTest {
 		assertTestResults(expectedTests, tb3Results);
 	}
 
+	@Test
 	public void testActivator() throws Exception {
 		initFramework(framework);
 		BundleContext context = framework.getBundleContext();
@@ -173,6 +191,7 @@ public class ExtensionBundleActivatorTests extends LaunchTest {
 
 	}
 
+	@Test
 	public void testException() throws Exception {
 		initFramework(framework);
 
@@ -202,6 +221,7 @@ public class ExtensionBundleActivatorTests extends LaunchTest {
 		final FrameworkEvent e;
 	}
 
+	@Test
 	public void testListeners() throws Exception {
 		final List<ListenerEvent> events = new ArrayList<ListenerEvent>();
 		FrameworkListener l1 = new FrameworkListener() {
@@ -238,13 +258,25 @@ public class ExtensionBundleActivatorTests extends LaunchTest {
 				tb3 = hostWire.getRequirer().getBundle();
 			}
 		}
-		assertNotNull("No resolved tb2.", tb2);
-		assertNotNull("No resolved tb3.", tb3);
+		assertThat(tb2)
+				.as("No resolved tb2.")
+				.isNotNull();
+		assertThat(tb3)
+				.as("No resolved tb3.")
+				.isNotNull();
 
-		assertEquals("Wrong listener.", l1, popListener(tb2, events));
-		assertEquals("Wrong listener.", l2, popListener(tb2, events));
-		assertEquals("Wrong listener.", l1, popListener(tb3, events));
-		assertEquals("Wrong listener.", l2, popListener(tb3, events));
+		assertThat(popListener(tb2, events))
+				.as("Wrong listener.")
+				.isEqualTo(l1);
+		assertThat(popListener(tb2, events))
+				.as("Wrong listener.")
+				.isEqualTo(l2);
+		assertThat(popListener(tb3, events))
+				.as("Wrong listener.")
+				.isEqualTo(l1);
+		assertThat(popListener(tb3, events))
+				.as("Wrong listener.")
+				.isEqualTo(l2);
 		stopFramework(framework);
 	}
 
@@ -254,12 +286,13 @@ public class ExtensionBundleActivatorTests extends LaunchTest {
 			ListenerEvent event = iEvents.next();
 			if (tb.equals(event.e.getBundle())) {
 				Throwable t = event.e.getThrowable();
-				assertTrue(
-						"Event throwable is not a BundleException: "
-								+ t.getClass(), t instanceof BundleException);
-				assertEquals("Wrong BundleException type.",
-						BundleException.ACTIVATOR_ERROR,
-						((BundleException) t).getType());
+				assertThat(t instanceof BundleException)
+						.as("Event throwable is not a BundleException: "
+								+ t.getClass())
+						.isTrue();
+				assertThat(((BundleException) t).getType())
+						.as("Wrong BundleException type.")
+						.isEqualTo(BundleException.ACTIVATOR_ERROR);
 				iEvents.remove();
 				return event.l;
 			}

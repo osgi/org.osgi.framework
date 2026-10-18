@@ -18,8 +18,11 @@
 
 package org.osgi.test.cases.framework.junit.wiring;
 
-import static org.osgi.test.support.OSGiTestCaseProperties.getScaling;
-import static org.osgi.test.support.OSGiTestCaseProperties.getTimeout;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+import static org.osgi.test.assertj.bundle.BundleAssert.assertThat;
+import static org.osgi.test.cases.framework.junit.tck.TckProperties.getScaling;
+import static org.osgi.test.cases.framework.junit.tck.TckProperties.getTimeout;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -28,6 +31,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.opentest4j.AssertionFailedError;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.Constants;
@@ -42,12 +48,11 @@ import org.osgi.framework.wiring.BundleRevision;
 import org.osgi.resource.Namespace;
 import org.osgi.resource.Requirement;
 import org.osgi.resource.Resource;
-import org.osgi.test.support.wiring.Wiring;
-
-import junit.framework.AssertionFailedError;
+import org.osgi.test.common.wiring.FrameworkWirings;
 
 public class FrameworkWiringTests extends WiringTest {
-	protected void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() throws Exception {
 		for (Iterator<Bundle> iBundles = bundles.iterator(); iBundles.hasNext();)
 			try {
 				iBundles.next().uninstall();
@@ -56,10 +61,11 @@ public class FrameworkWiringTests extends WiringTest {
 			} catch (IllegalStateException e) {
 				// happens if the test uninstalls the bundle itself
 			}
-		Wiring.synchronousRefreshBundles(getContext(), bundles);
+		FrameworkWirings.refreshBundles(bundleContext, bundles);
 		bundles.clear();
 	}
 
+	@Test
 	public void testRefreshListeners() {
 		Bundle tb1 = install("resolver.tb1.v110.jar");
 		Bundle tb2 = install("resolver.tb2.jar");
@@ -78,7 +84,9 @@ public class FrameworkWiringTests extends WiringTest {
 							try {
 								called[0] = true;
 								called.notify();
-								assertEquals("Unexpected event type", FrameworkEvent.PACKAGES_REFRESHED, event.getType());
+								assertThat(event.getType())
+										.as("Unexpected event type")
+				.isEqualTo(FrameworkEvent.PACKAGES_REFRESHED);
 							} catch (AssertionFailedError e) {
 								if (error[0] == null)
 									error[0] = e;
@@ -106,6 +114,7 @@ public class FrameworkWiringTests extends WiringTest {
 		}
 	}
 
+	@Test
 	public void testResolveBundles() {
 		Bundle tb1 = install("resolver.tb1.v110.jar");
 		Bundle tb2 = install("resolver.tb2.jar");
@@ -114,15 +123,21 @@ public class FrameworkWiringTests extends WiringTest {
 		Bundle tb5 = install("resolver.tb5.jar");
 
 		Collection<Bundle> testBundles = Arrays.asList(new Bundle[]{tb1, tb2, tb3, tb4, tb5});
-		assertTrue(frameworkWiring.resolveBundles(testBundles));
+		assertThat(frameworkWiring.resolveBundles(testBundles)).isTrue();
 
-		assertEquals("Wrong state for bundle: " + tb1, Bundle.RESOLVED, tb1.getState());
-		assertEquals("Wrong state for bundle: " + tb2, Bundle.RESOLVED, tb2.getState());
-		assertEquals("Wrong state for bundle: " + tb3, Bundle.RESOLVED, tb3.getState());
-		assertEquals("Wrong state for bundle: " + tb4, Bundle.RESOLVED, tb4.getState());
-		assertEquals("Wrong state for bundle: " + tb5, Bundle.RESOLVED, tb5.getState());
+		assertThat(tb1)
+				.as("Wrong state for bundle: " + tb1).isInState(Bundle.RESOLVED);
+		assertThat(tb2)
+				.as("Wrong state for bundle: " + tb2).isInState(Bundle.RESOLVED);
+		assertThat(tb3)
+				.as("Wrong state for bundle: " + tb3).isInState(Bundle.RESOLVED);
+		assertThat(tb4)
+				.as("Wrong state for bundle: " + tb4).isInState(Bundle.RESOLVED);
+		assertThat(tb5)
+				.as("Wrong state for bundle: " + tb5).isInState(Bundle.RESOLVED);
 	}
 
+	@Test
 	public void testDependencyClosure() {
 		Bundle tb1 = install("resolver.tb1.v110.jar");
 		Bundle tb2 = install("resolver.tb2.jar");
@@ -131,24 +146,41 @@ public class FrameworkWiringTests extends WiringTest {
 		Bundle tb5 = install("resolver.tb5.jar");
 
 		Collection<Bundle> testBundles = Arrays.asList(new Bundle[]{tb1, tb2, tb3, tb4, tb5});
-		assertTrue(frameworkWiring.resolveBundles(testBundles));
+		assertThat(frameworkWiring.resolveBundles(testBundles)).isTrue();
 
 		Collection<Bundle> closure = frameworkWiring.getDependencyClosure(Arrays.asList(new Bundle[]{tb1}));
-		assertEquals("Wrong number in closure", 5, closure.size());
-		assertTrue("Wrong bundles in closure: " + closure, closure.containsAll(testBundles));
-		assertTrue("Wrong bundles in closure: " + closure, testBundles.containsAll(closure));
+		assertThat(closure.size())
+				.as("Wrong number in closure")
+				.isEqualTo(5);
+		assertThat(closure.containsAll(testBundles))
+				.as("Wrong bundles in closure: " + closure)
+				.isTrue();
+		assertThat(testBundles.containsAll(closure))
+				.as("Wrong bundles in closure: " + closure)
+				.isTrue();
 
 		closure = frameworkWiring.getDependencyClosure(Arrays.asList(new Bundle[]{tb2}));
-		assertEquals("Wrong number in closure", 1, closure.size());
-		assertTrue("Wrong bundle in closure", closure.contains(tb2));
+		assertThat(closure.size())
+				.as("Wrong number in closure")
+				.isEqualTo(1);
+		assertThat(closure.contains(tb2))
+				.as("Wrong bundle in closure")
+				.isTrue();
 
 		// Test fragment, this pulls in the host which pulls in everything else
 		closure = frameworkWiring.getDependencyClosure(Arrays.asList(new Bundle[]{tb4}));
-		assertEquals("Wrong number in closure", 5, closure.size());
-		assertTrue("Wrong bundles in closure: " + closure, closure.containsAll(testBundles));
-		assertTrue("Wrong bundles in closure: " + closure, testBundles.containsAll(closure));
+		assertThat(closure.size())
+				.as("Wrong number in closure")
+				.isEqualTo(5);
+		assertThat(closure.containsAll(testBundles))
+				.as("Wrong bundles in closure: " + closure)
+				.isTrue();
+		assertThat(testBundles.containsAll(closure))
+				.as("Wrong bundles in closure: " + closure)
+				.isTrue();
 	}
 
+	@Test
 	public void testRemovalPending() {
 		Bundle tb1 = install("resolver.tb1.v110.jar");
 		Bundle tb2 = install("resolver.tb2.jar");
@@ -157,14 +189,15 @@ public class FrameworkWiringTests extends WiringTest {
 		Bundle tb5 = install("resolver.tb5.jar");
 
 		Collection<Bundle> testBundles = Arrays.asList(new Bundle[]{tb1, tb2, tb3, tb4, tb5});
-		assertTrue(frameworkWiring.resolveBundles(testBundles));
+		assertThat(frameworkWiring.resolveBundles(testBundles)).isTrue();
 
 		// TODO should investigate why other tests are not cleaning up their uninstalled bundles
 		// for now doing a refresh of all removal pending to ensure a clean state
-		Wiring.synchronousRefreshBundles(getContext());
+		FrameworkWirings.refreshBundles(bundleContext);
 		// Need to make sure there are no removal pendings already present.
 		Collection<Bundle> removals = frameworkWiring.getRemovalPendingBundles();
-		assertEquals("Removal pendings are left over: " + removals.toString(), 0, removals.size());
+		assertThat(removals)
+				.as("Removal pendings are left over: " + removals.toString()).hasSize(0);
 		try {
 			tb1.uninstall();
 		} catch (BundleException e) {
@@ -172,13 +205,23 @@ public class FrameworkWiringTests extends WiringTest {
 		}
 
 		removals = frameworkWiring.getRemovalPendingBundles();
-		assertEquals("Wrong number of removals", 1, removals.size());
-		assertTrue("Wrong bundle in removals", removals.contains(tb1));
+		assertThat(removals.size())
+				.as("Wrong number of removals")
+				.isEqualTo(1);
+		assertThat(removals.contains(tb1))
+				.as("Wrong bundle in removals")
+				.isTrue();
 
 		Collection<Bundle> closure = frameworkWiring.getDependencyClosure(removals);
-		assertEquals("Wrong number in closure", 5, closure.size());
-		assertTrue("Wrong bundles in closure: " + closure, closure.containsAll(testBundles));
-		assertTrue("Wrong bundles in closure: " + closure, testBundles.containsAll(closure));
+		assertThat(closure.size())
+				.as("Wrong number in closure")
+				.isEqualTo(5);
+		assertThat(closure.containsAll(testBundles))
+				.as("Wrong bundles in closure: " + closure)
+				.isTrue();
+		assertThat(testBundles.containsAll(closure))
+				.as("Wrong bundles in closure: " + closure)
+				.isTrue();
 
 		try {
 			tb4.uninstall();
@@ -187,21 +230,34 @@ public class FrameworkWiringTests extends WiringTest {
 		}
 
 		removals = frameworkWiring.getRemovalPendingBundles();
-		assertEquals("Wrong number of removals", 2, removals.size());
-		assertTrue("Wrong bundle in removals", removals.contains(tb1));
-		assertTrue("Wrong bundle in removals", removals.contains(tb4));
+		assertThat(removals.size())
+				.as("Wrong number of removals")
+				.isEqualTo(2);
+		assertThat(removals.contains(tb1))
+				.as("Wrong bundle in removals")
+				.isTrue();
+		assertThat(removals.contains(tb4))
+				.as("Wrong bundle in removals")
+				.isTrue();
 
 		closure = frameworkWiring.getDependencyClosure(removals);
-		assertEquals("Wrong number in closure", 5, closure.size());
-		assertTrue("Wrong bundles in closure: " + closure, closure.containsAll(testBundles));
-		assertTrue("Wrong bundles in closure: " + closure, testBundles.containsAll(closure));
+		assertThat(closure.size())
+				.as("Wrong number in closure")
+				.isEqualTo(5);
+		assertThat(closure.containsAll(testBundles))
+				.as("Wrong bundles in closure: " + closure)
+				.isTrue();
+		assertThat(testBundles.containsAll(closure))
+				.as("Wrong bundles in closure: " + closure)
+				.isTrue();
 	}
 
+	@Test
 	public void testFindResources() {
 		Bundle tb4 = install("resolver.tb4.jar");
 		Bundle tb1 = install("resolver.tb1.v110.jar");
 
-		BundleRevision systemRevision = getContext().getBundle(
+		BundleRevision systemRevision = bundleContext.getBundle(
 				Constants.SYSTEM_BUNDLE_LOCATION).adapt(BundleRevision.class);
 
 		// Get the system bundle identity, not that the alias system.bundle
@@ -211,69 +267,89 @@ public class FrameworkWiringTests extends WiringTest {
 		Collection<BundleCapability> systemIdentities = findProviders(
 				IdentityNamespace.IDENTITY_NAMESPACE,
 				systemRevision.getSymbolicName());
-		assertEquals("Wrong number of system identity capabilities.", 1,
-				systemIdentities.size());
+		assertThat(systemIdentities)
+				.as("Wrong number of system identity capabilities.").hasSize(1);
 		BundleCapability systemIdentity = systemIdentities.iterator().next();
-		assertEquals("Wrong provider.", systemRevision,
-				systemIdentity.getRevision());
+		assertThat(systemIdentity.getRevision())
+				.as("Wrong provider.")
+				.isEqualTo(systemRevision);
 
 		// Use a BundleRequirement to look up capabilities.
 		BundleRevision tb1Revision = tb1.adapt(BundleRevision.class);
 		BundleRevision tb4Revision = tb4.adapt(BundleRevision.class);
 		List<BundleRequirement> hostReqs = tb4Revision
 				.getDeclaredRequirements(HostNamespace.HOST_NAMESPACE);
-		assertEquals("Wrong number of host reqs.", 1, hostReqs.size());
+		assertThat(hostReqs)
+				.as("Wrong number of host reqs.").hasSize(1);
 		Collection<BundleCapability> hostCaps = frameworkWiring
 				.findProviders(hostReqs.get(0));
-		assertEquals("Wrong number of host capabilities.", 1, hostCaps.size());
-		assertEquals("Wrong provider.", tb1Revision, hostCaps.iterator().next()
-				.getRevision());
+		assertThat(hostCaps)
+				.as("Wrong number of host capabilities.").hasSize(1);
+		assertThat(hostCaps.iterator().next()
+				.getRevision())
+				.as("Wrong provider.")
+				.isEqualTo(tb1Revision);
 
 		// Make sure non effective capabilities are returned
 		Collection<BundleCapability> nonEffective = findProviders(
 				"test.effective", null);
-		assertEquals("Wrong number of capabilities.", 1, nonEffective.size());
-		assertEquals("Wrong provider.", tb1Revision, nonEffective.iterator()
-				.next().getRevision());
+		assertThat(nonEffective)
+				.as("Wrong number of capabilities.").hasSize(1);
+		assertThat(nonEffective.iterator()
+				.next().getRevision())
+				.as("Wrong provider.")
+				.isEqualTo(tb1Revision);
 
 		// Search for a package
 		Collection<BundleCapability> packageCaps = findProviders(
 				PackageNamespace.PACKAGE_NAMESPACE,
 				"org.osgi.test.cases.framework.resolver.tb1");
-		assertEquals("Wrong number of capabilities.", 1, packageCaps.size());
-		assertEquals("Wrong provider.", tb1Revision, packageCaps.iterator()
-				.next().getRevision());
+		assertThat(packageCaps)
+				.as("Wrong number of capabilities.").hasSize(1);
+		assertThat(packageCaps.iterator()
+				.next().getRevision())
+				.as("Wrong provider.")
+				.isEqualTo(tb1Revision);
 
 		// Search for a capability from a fragment
 		Collection<BundleCapability> fragmentCaps = findProviders(
 				"test.fragment", null);
-		assertEquals("Wrong number of capabilities.", 1, fragmentCaps.size());
-		assertEquals("Wrong provider.", tb4Revision, fragmentCaps.iterator()
-				.next().getRevision());
+		assertThat(fragmentCaps)
+				.as("Wrong number of capabilities.").hasSize(1);
+		assertThat(fragmentCaps.iterator()
+				.next().getRevision())
+				.as("Wrong provider.")
+				.isEqualTo(tb4Revision);
 
 		// Search for capabilities that have multiple matches
 		Collection<BundleCapability> multipleCaps = findProviders(
 				"test.multiple", null);
-		assertEquals("Wrong number of capabilities.", 2, multipleCaps.size());
+		assertThat(multipleCaps)
+				.as("Wrong number of capabilities.").hasSize(2);
 		for (BundleCapability multipleCap : multipleCaps) {
-			assertEquals("Wrong provider.", tb1Revision,
-					multipleCap.getRevision());
+			assertThat(multipleCap.getRevision())
+					.as("Wrong provider.")
+				.isEqualTo(tb1Revision);
 		}
 
 		// Use wild card matching to search for identity
 		Collection<BundleCapability> multipleIdentities = findProviders(
 				IdentityNamespace.IDENTITY_NAMESPACE,
 				"org.osgi.test.cases.framework.resolver.*");
-		assertEquals("Wrong number of capabilities.", 2,
-				multipleIdentities.size());
+		assertThat(multipleIdentities)
+				.as("Wrong number of capabilities.").hasSize(2);
 		boolean foundTb1 = false;
 		boolean foundTb4 = false;
 		for (BundleCapability identity : multipleIdentities) {
 			foundTb1 |= tb1Revision.equals(identity.getRevision());
 			foundTb4 |= tb4Revision.equals(identity.getRevision());
 		}
-		assertTrue("Did not find tb1 identity.", foundTb1);
-		assertTrue("Did not find tb4 identity.", foundTb4);
+		assertThat(foundTb1)
+				.as("Did not find tb1 identity.")
+				.isTrue();
+		assertThat(foundTb4)
+				.as("Did not find tb4 identity.")
+				.isTrue();
 	}
 
 	private Collection<BundleCapability> findProviders(String namespace,

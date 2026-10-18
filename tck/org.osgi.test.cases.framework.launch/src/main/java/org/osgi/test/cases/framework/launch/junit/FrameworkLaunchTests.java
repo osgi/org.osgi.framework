@@ -17,6 +17,11 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.launch.junit;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.fail;
+import static org.osgi.test.assertj.bundle.BundleAssert.assertThat;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
@@ -28,23 +33,26 @@ import java.util.StringTokenizer;
 
 import javax.net.SocketFactory;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.Constants;
 import org.osgi.framework.FrameworkEvent;
 import org.osgi.framework.ServiceReference;
+import org.osgi.framework.Version;
 import org.osgi.framework.launch.Framework;
 import org.osgi.framework.namespace.PackageNamespace;
 import org.osgi.framework.startlevel.FrameworkStartLevel;
 import org.osgi.framework.wiring.BundleCapability;
+import org.osgi.framework.wiring.BundleRevision;
 import org.osgi.framework.wiring.BundleWire;
 import org.osgi.framework.wiring.BundleWiring;
 import org.osgi.framework.wiring.FrameworkWiring;
-import org.osgi.test.support.sleep.Sleep;
-import org.osgi.test.support.wiring.Wiring;
 
 public class FrameworkLaunchTests extends LaunchTest {
+
 	private static final String PACKAGE_ADMIN = "org.osgi.service.packageadmin.PackageAdmin";
 	private static final String STARTLEVEL = "org.osgi.service.startlevel.StartLevel";
 	private static final String PERMISSION_ADMIN = "org.osgi.service.permissionadmin.PermissionAdmin";
@@ -64,7 +72,7 @@ public class FrameworkLaunchTests extends LaunchTest {
 		Thread waitForStop = waitForStopThread(framework, 10000, result, failureException);
 		waitForStop.start();
 		try {
-			Sleep.sleep(500);
+			Thread.sleep(500);
 			framework.update();
 		} catch (BundleException e) {
 			fail("Failed to update the framework", e); //$NON-NLS-1$
@@ -79,17 +87,21 @@ public class FrameworkLaunchTests extends LaunchTest {
 		}
 		if (failureException[0] != null)
 			fail("Error occurred while waiting", failureException[0]); //$NON-NLS-1$
-		assertNotNull("Wait for stop event is null", result[0]); //$NON-NLS-1$
+		assertThat(result[0])
+				.as("Wait for stop event is null")
+				.isNotNull(); //$NON-NLS-1$
 
 		// if the framework was not STARTING or ACTIVE then we assume the waitForStop returned immediately with a FrameworkEvent.STOPPED
 		int expectedFrameworkEvent = (previousState & (Bundle.STARTING | Bundle.ACTIVE)) != 0 ? FrameworkEvent.STOPPED_UPDATE : FrameworkEvent.STOPPED;
-		assertEquals("Wait for stop event type is wrong", expectedFrameworkEvent, result[0].getType()); //$NON-NLS-1$
+		assertThat(result[0].getType())
+				.as("Wait for stop event type is wrong")
+				.isEqualTo(expectedFrameworkEvent); //$NON-NLS-1$
 
 		// hack; not sure how to listen for when a framework is done starting back up.
 		for (int i = 0; i < 20; i++) {
 			if (framework.getState() != previousState) {
 				try {
-					Sleep.sleep(100);
+					Thread.sleep(100);
 				}
 				catch (InterruptedException e) {
 					// nothing
@@ -98,7 +110,9 @@ public class FrameworkLaunchTests extends LaunchTest {
 				break;
 			}
 		}
-		assertEquals("Not back at previous state after update", previousState, framework.getState());
+		assertThat(framework.getState())
+				.as("Not back at previous state after update")
+				.isEqualTo(previousState);
 	}
 
 	private Object getService(Framework framework, String serviceClass) {
@@ -124,7 +138,9 @@ public class FrameworkLaunchTests extends LaunchTest {
 		if (ep == null)
 			return;
 		BundleWiring wiring = ep.getRevision().getWiring();
-		assertNotNull("exported package is not wired", wiring);
+		assertThat(wiring)
+				.as("exported package is not wired")
+				.isNotNull();
 		List<BundleWire> wires = wiring
 				.getProvidedWires(PackageNamespace.PACKAGE_NAMESPACE);
 		for (BundleWire wire : wires) {
@@ -137,22 +153,26 @@ public class FrameworkLaunchTests extends LaunchTest {
 		fail("Bundle is not an importer of the package: " + ep);
 	}
 
+	@Test
 	public void testBasicCreate() {
 		createFramework(getConfiguration(getName()));
 	}
 
+	@Test
 	public void testInitStop() {
 		Framework framework = createFramework(getConfiguration(getName()));
         initFramework(framework);
 		stopFramework(framework);
 	}
 
+	@Test
 	public void testStartStop() {
 		Framework framework = createFramework(getConfiguration(getName()));
 		startFramework(framework);
 		stopFramework(framework);
 	}
 
+	@Test
 	public void testRestarts() {
 		Framework framework = createFramework(getConfiguration(getName()));
 		// first stop without init/start
@@ -171,6 +191,7 @@ public class FrameworkLaunchTests extends LaunchTest {
 		stopFramework(framework);
 	}
 
+	@Test
 	public void testUpdate() {
 		Framework framework = createFramework(getConfiguration(getName()));
 
@@ -191,6 +212,7 @@ public class FrameworkLaunchTests extends LaunchTest {
 		updateFramework(framework);
 	}
 
+	@Test
 	public void testStartLevel() {
 		Map<String, String> configuration = getConfiguration(getName());
 		configuration.put(Constants.FRAMEWORK_BEGINNING_STARTLEVEL, "25");
@@ -198,12 +220,15 @@ public class FrameworkLaunchTests extends LaunchTest {
 		initFramework(framework);
 		FrameworkStartLevel fsl = framework.getBundleContext().getBundle()
 				.adapt(FrameworkStartLevel.class);
-		assertNotNull(fsl);
+		assertThat(fsl).isNotNull();
 		startFramework(framework);
-		assertEquals("Wrong start level after start", 25, fsl.getStartLevel());
+		assertThat(fsl.getStartLevel())
+				.as("Wrong start level after start")
+				.isEqualTo(25);
 		stopFramework(framework);
 	}
 
+	@Test
 	public void testSystemServices() {
 		Framework framework = createFramework(getConfiguration(getName()));
 		startFramework(framework);
@@ -218,32 +243,42 @@ public class FrameworkLaunchTests extends LaunchTest {
 		// check that the available system services are available when framework is initialized
 		initFramework(framework);
 		if (hasPackageAdmin)
-			assertNotNull("PackageAdmin", getService(framework, PACKAGE_ADMIN));
+			assertThat(getService(framework, PACKAGE_ADMIN))
+					.as("PackageAdmin")
+					.isNotNull();
 		if (hasStartLevel)
-			assertNotNull("StartLevel", getService(framework, STARTLEVEL));
+			assertThat(getService(framework, STARTLEVEL))
+					.as("StartLevel")
+					.isNotNull();
 		if (hasPermissionAdmin)
-			assertNotNull("PermissionAdmin", getService(framework, PERMISSION_ADMIN));
+			assertThat(getService(framework, PERMISSION_ADMIN))
+					.as("PermissionAdmin")
+					.isNotNull();
 		if (hasCondPermAdmin)
-			assertNotNull("ConditionalPermissionAdmin", getService(framework, CONDPERM_ADMIN));
+			assertThat(getService(framework, CONDPERM_ADMIN))
+					.as("ConditionalPermissionAdmin")
+					.isNotNull();
 		stopFramework(framework);
 	}
 
+	@Test
 	public void testAdaptations() {
 		Framework framework = createFramework(getConfiguration(getName()));
 		startFramework(framework);
 		Bundle systemBundle = framework.getBundleContext().getBundle();
-		assertNotNull(systemBundle.adapt(FrameworkStartLevel.class));
-		assertNotNull(systemBundle.adapt(FrameworkWiring.class));
+		assertThat(systemBundle.adapt(FrameworkStartLevel.class)).isNotNull();
+		assertThat(systemBundle.adapt(FrameworkWiring.class)).isNotNull();
 		stopFramework(framework);
 		// check that the available adaptations are available when framework is
 		// initialized
 		initFramework(framework);
 		systemBundle = framework.getBundleContext().getBundle();
-		assertNotNull(systemBundle.adapt(FrameworkStartLevel.class));
-		assertNotNull(systemBundle.adapt(FrameworkWiring.class));
+		assertThat(systemBundle.adapt(FrameworkStartLevel.class)).isNotNull();
+		assertThat(systemBundle.adapt(FrameworkWiring.class)).isNotNull();
 		stopFramework(framework);
 	}
 
+	@Test
 	public void testStorageArea() throws BundleException, IOException {
 		String testBundleLocation = "/launch.tb4.jar";
 		// install a bundle into a framework
@@ -258,10 +293,15 @@ public class FrameworkLaunchTests extends LaunchTest {
 		framework = createFramework(getConfiguration(getName(), false));
 		initFramework(framework);
 		testBundle = framework.getBundleContext().getBundle(id);
-		assertNotNull("Missing installed bundle", testBundle);
-		assertEquals("Wrong bundle", testBundleLocation, testBundle.getLocation());
+		assertThat(testBundle)
+				.as("Missing installed bundle")
+				.isNotNull();
+		assertThat(testBundle.getLocation())
+				.as("Wrong bundle")
+				.isEqualTo(testBundleLocation);
 		startFramework(framework);
-		assertEquals("Wrong state for test bundle.", Bundle.ACTIVE, testBundle.getState());
+		assertThat(testBundle)
+				.as("Wrong state for test bundle.").isInState(Bundle.ACTIVE);
 		stopFramework(framework);
 
 		// create another framework with same storage area using clean ONFIRSTINIT; make sure bundle is not there
@@ -270,8 +310,11 @@ public class FrameworkLaunchTests extends LaunchTest {
 		framework = createFramework(configuration);
 		initFramework(framework);
 		Bundle[] bundles = framework.getBundleContext().getBundles();
-		assertNotNull("No bundles", bundles);
-		assertEquals("Wrong number of bundles", 1, bundles.length);
+		assertThat(bundles)
+				.as("No bundles")
+				.isNotNull();
+		assertThat(bundles.length)
+				.as("Wrong number of bundles").isOne();
 		testBundle = installBundle(framework, testBundleLocation);
 		id = testBundle.getBundleId();
 		testBundle.start();
@@ -280,20 +323,31 @@ public class FrameworkLaunchTests extends LaunchTest {
 		// test that second init does not clean
 		initFramework(framework);
 		testBundle = framework.getBundleContext().getBundle(id);
-		assertNotNull("Missing installed bundle", testBundle);
-		assertEquals("Wrong bundle", testBundleLocation, testBundle.getLocation());
+		assertThat(testBundle)
+				.as("Missing installed bundle")
+				.isNotNull();
+		assertThat(testBundle.getLocation())
+				.as("Wrong bundle")
+				.isEqualTo(testBundleLocation);
 		startFramework(framework);
-		assertEquals("Wrong state for test bundle.", Bundle.ACTIVE, testBundle.getState());
+		assertThat(testBundle)
+				.as("Wrong state for test bundle.").isInState(Bundle.ACTIVE);
 
 		// update the framework and make sure the bundle is still installed and active
 		updateFramework(framework);
 		testBundle = framework.getBundleContext().getBundle(id);
-		assertNotNull("Missing installed bundle", testBundle);
-		assertEquals("Wrong bundle", testBundleLocation, testBundle.getLocation());
-		assertEquals("Wrong state for test bundle.", Bundle.ACTIVE, testBundle.getState());
+		assertThat(testBundle)
+				.as("Missing installed bundle")
+				.isNotNull();
+		assertThat(testBundle.getLocation())
+				.as("Wrong bundle")
+				.isEqualTo(testBundleLocation);
+		assertThat(testBundle)
+				.as("Wrong state for test bundle.").isInState(Bundle.ACTIVE);
 		stopFramework(framework);
 	}
 
+	@Test
 	public void testSystemPackagesExtra() throws BundleException, IOException {
 		String pkg1 = "org.osgi.tests.pkg1";
 		String pkg2 = "org.osgi.tests.pkg2";
@@ -302,17 +356,21 @@ public class FrameworkLaunchTests extends LaunchTest {
 		Framework framework = createFramework(configuration);
 
 		startFramework(framework);
-		BundleCapability ep1 = Wiring.getExportedPackage(
-				framework.getBundleContext(), pkg1);
-		BundleCapability ep2 = Wiring.getExportedPackage(
-				framework.getBundleContext(), pkg2);
+		BundleCapability ep1 = exportedPackage(framework.getBundleContext(), pkg1);
+		BundleCapability ep2 = exportedPackage(framework.getBundleContext(), pkg2);
 
-		assertNotNull("pkg1 is null", ep1);
-		assertEquals("Wrong Exporter", 0, ep1.getRevision().getBundle()
-				.getBundleId());
-		assertNotNull("pkg2 is null", ep2);
-		assertEquals("Wrong Exporter", 0, ep2.getRevision().getBundle()
-				.getBundleId());
+		assertThat(ep1)
+				.as("pkg1 is null")
+				.isNotNull();
+		assertThat(ep1.getRevision().getBundle()
+				.getBundleId())
+				.as("Wrong Exporter").isZero();
+		assertThat(ep2)
+				.as("pkg2 is null")
+				.isNotNull();
+		assertThat(ep2.getRevision().getBundle()
+				.getBundleId())
+				.as("Wrong Exporter").isZero();
 		Bundle testBundle = installBundle(framework, "/launch.tb1.jar");
 		try {
 			testBundle.start();
@@ -324,6 +382,7 @@ public class FrameworkLaunchTests extends LaunchTest {
 		stopFramework(framework);
 	}
 
+	@Test
 	public void testLibraryExtensions() throws BundleException, IOException {
 		Map<String, String> configuration = getConfiguration(getName());
 		configuration.put(Constants.FRAMEWORK_LIBRARY_EXTENSIONS, "1,test");
@@ -353,6 +412,7 @@ public class FrameworkLaunchTests extends LaunchTest {
 		stopFramework(framework);
 	}
 
+	@Test
 	public void testWaitForStop() {
 		Framework framework = createFramework(getConfiguration(getName()));
 		startFramework(framework);
@@ -363,12 +423,17 @@ public class FrameworkLaunchTests extends LaunchTest {
 		catch (InterruptedException e) {
 			fail("Unexpected interuption", e);
 		}
-		assertNotNull("Wait for stop event is null", event);
-		assertEquals("Wrong event type", FrameworkEvent.WAIT_TIMEDOUT, event
-				.getType());
+		assertThat(event)
+				.as("Wait for stop event is null")
+				.isNotNull();
+		assertThat(event
+				.getType())
+				.as("Wrong event type")
+				.isEqualTo(FrameworkEvent.WAIT_TIMEDOUT);
 		stopFramework(framework);
 	}
 
+	@Test
 	public void testBootDelegation() throws BundleException, IOException {
 		Class< ? > vmClass = null;
 		try {
@@ -402,12 +467,17 @@ public class FrameworkLaunchTests extends LaunchTest {
 			fail("Unexpected CNFE", e);
 		}
 		if (fromBoot)
-			assertEquals("Unexpected class", vmClass, testClass);
+			assertThat(testClass)
+					.as("Unexpected class")
+					.isEqualTo(vmClass);
 		else
-			assertFalse("Unexpected class", vmClass.equals(testClass));
+			assertThat(vmClass.equals(testClass))
+					.as("Unexpected class")
+					.isFalse();
 		stopFramework(framework);
 	}
 
+	@Test
 	public void testParentClassLoader() throws BundleException, IOException {
 		Map<String, String> configuration = getConfiguration(getName());
 		configuration.put(Constants.FRAMEWORK_BOOTDELEGATION, "*");
@@ -451,10 +521,11 @@ public class FrameworkLaunchTests extends LaunchTest {
 		stopFramework(framework);
 	}
 
+	@Test
 	public void testExecPermission() throws BundleException, IOException {
 		File testOutputFile = new File(rootStorageArea, getName() + File.separator + "execPermissions.out");
 		Map<String, String> configuration = getConfiguration(getName());
-		String osName = getProperty("os.name");
+		String osName = System.getProperty("os.name");
 		if (osName.toLowerCase().indexOf("windows") >= 0)
 			configuration.put(Constants.FRAMEWORK_EXECPERMISSION, "cmd.exe /c copy ${abspath} " + testOutputFile.getAbsolutePath());
 		else
@@ -466,9 +537,11 @@ public class FrameworkLaunchTests extends LaunchTest {
 		Bundle testBundle = installBundle(framework, "/launch.tb2.jar");
 		testBundle.start();
 		stopFramework(framework);
-		assertTrue("File does not exist: " + testOutputFile.getAbsolutePath(), testOutputFile.exists());
+		assertThat(testOutputFile)
+				.as("File does not exist: " + testOutputFile.getAbsolutePath()).exists();
 	}
 
+	@Test
 	public void testMultipBSNVersion() throws IOException, BundleException{
 		// explicitly set bsnversion to multiple
 		Map<String, String> configurationMulti = getConfiguration(getName()
@@ -491,7 +564,9 @@ public class FrameworkLaunchTests extends LaunchTest {
 			installBundle(frameworkSingleBSN1, "/launch.tb4.jar", "launch.tb4.b");
 			fail("Should fail installing duplicate bundle.");
 		} catch (BundleException e) {
-			assertEquals("Wrong exception type.", BundleException.DUPLICATE_BUNDLE_ERROR, e.getType());
+			assertThat(e.getType())
+					.as("Wrong exception type.")
+					.isEqualTo(BundleException.DUPLICATE_BUNDLE_ERROR);
 			// expected
 		}
 		stopFramework(frameworkSingleBSN1);
@@ -507,12 +582,15 @@ public class FrameworkLaunchTests extends LaunchTest {
 			installBundle(frameworkSingleBSN2, "/launch.tb4.jar", "launch.tb4.b");
 			fail("Should fail installing duplicate bundle.");
 		} catch (BundleException e) {
-			assertEquals("Wrong exception type.", BundleException.DUPLICATE_BUNDLE_ERROR, e.getType());
+			assertThat(e.getType())
+					.as("Wrong exception type.")
+					.isEqualTo(BundleException.DUPLICATE_BUNDLE_ERROR);
 			// expected
 		}
 		stopFramework(frameworkSingleBSN2);
 	}
 
+	@Test
 	public void testUUID() {
 		// Test UUID values
 		Map<String, String> config1 = getConfiguration(getName() + ".1");
@@ -530,19 +608,25 @@ public class FrameworkLaunchTests extends LaunchTest {
 			initFramework(framework1);
 			String uuid1 = framework1.getBundleContext().getProperty(Constants.FRAMEWORK_UUID);
 			verifyUUID(uuid1);
-			assertFalse("Duplicate UUID", uuids.contains(uuid1));
+			assertThat(uuids.contains(uuid1))
+					.as("Duplicate UUID")
+					.isFalse();
 			uuids.add(uuid1);
 			startFramework(framework1);
 			// after start the uuid should be the same as after init
 			String uuid2 = framework1.getBundleContext().getProperty(Constants.FRAMEWORK_UUID);
 			verifyUUID(uuid2);
-			assertEquals("UUID changed after start", uuid1, uuid2);
+			assertThat(uuid2)
+					.as("UUID changed after start")
+					.isEqualTo(uuid1);
 			stopFramework(framework1);
 		}
 	}
 
 	private void verifyUUID(String uuid) {
-		assertNotNull("Null uuid.", uuid);
+		assertThat(uuid)
+				.as("Null uuid.")
+				.isNotNull();
 		StringTokenizer st = new StringTokenizer(uuid, "-");
 		String[] uuidSections = new String[5];
 		// All UUIDs must have 5 sections
@@ -554,12 +638,9 @@ public class FrameworkLaunchTests extends LaunchTest {
 			}
 		}
 		// make sure there is not an extra section.
-		try {
-			st.nextToken();
-			fail("Too many sections in uuid: " + uuid);
-		} catch (NoSuchElementException e) {
-			// expected
-		}
+		assertThatExceptionOfType(NoSuchElementException.class)
+				.as("Too many sections in uuid: " + uuid)
+				.isThrownBy(() -> st.nextToken());
 		// now verify each section of the UUID can be decoded as a hex string and is the correct size
 		for (int i = 0; i < uuidSections.length; i++) {
 			int limit = 0;
@@ -581,12 +662,42 @@ public class FrameworkLaunchTests extends LaunchTest {
 				default:
 					break;
 			}
-			assertTrue("UUISection is too big: " + uuidSections[i], uuidSections[i].length() <= limit);
+			assertThat(uuidSections[i].length() <= limit)
+					.as("UUISection is too big: " + uuidSections[i])
+					.isTrue();
 			try {
 				Long.decode(uuidSections[i]);
 			} catch (NumberFormatException e) {
 				fail("Invalid section: " + uuidSections[i], e);
 			}
 		}
+	}
+	/**
+	 * The highest-versioned capability exporting the package in the
+	 * framework, or {@code null} if nothing exports it.
+	 */
+	private static BundleCapability exportedPackage(BundleContext context, String packageName) {
+		BundleCapability result = null;
+		Version resultVersion = null;
+		for (Bundle bundle : context.getBundles()) {
+			BundleWiring wiring = bundle.adapt(BundleWiring.class);
+			if (wiring == null) {
+				continue; // not resolved
+			}
+			for (BundleCapability capability : wiring.getCapabilities(BundleRevision.PACKAGE_NAMESPACE)) {
+				if (!packageName.equals(capability.getAttributes().get(BundleRevision.PACKAGE_NAMESPACE))) {
+					continue;
+				}
+				Version version = (Version) capability.getAttributes().get(Constants.VERSION_ATTRIBUTE);
+				if (version == null) {
+					version = Version.emptyVersion;
+				}
+				if (result == null || version.compareTo(resultVersion) > 0) {
+					result = capability;
+					resultVersion = version;
+				}
+			}
+		}
+		return result;
 	}
 }

@@ -17,11 +17,18 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.secure.junit.adaptions;
 
+import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
 import java.io.IOException;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.opentest4j.AssertionFailedError;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
@@ -34,14 +41,20 @@ import org.osgi.framework.wiring.BundleRevisions;
 import org.osgi.framework.wiring.BundleWiring;
 import org.osgi.framework.wiring.FrameworkWiring;
 import org.osgi.test.cases.framework.secure.junit.adaptions.export.AdaptTestService;
-import org.osgi.test.support.OSGiTestCase;
-
-import junit.framework.AssertionFailedError;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.install.BundleInstaller;
 
 /**
  * Basic Bundle Wiring API security tests.
  */
-public class BundleAdaptTests extends OSGiTestCase {
+public class BundleAdaptTests {
+
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
 	private static final String WITH_PERMS = "adaptAllPerms.jar";
 	private static final String WITHOUTPERMS = "adaptMissingPerms.jar";
 
@@ -53,32 +66,34 @@ public class BundleAdaptTests extends OSGiTestCase {
 	 * the caller has AdaptPermission[AccessControlContext,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptAccessControlContextWithPermission() throws Exception {
 		doAdaptTest(AccessControlContext.class, false, true);
 	}
-	
+
 	/**
 	 * Bundle.adapt(BundleRevision.class) must throw a security exception if the 
 	 * caller does not have AdaptPermission[BundleRevision,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptAccessControlContextWithoutPermission() throws Exception {
 		doAdaptTest(AccessControlContext.class, false, false);
 	}
 
+	@Test
 	public void testAccessControlContextPermissionCheck() {
-		final Bundle b = getContext().getBundle();
+		final Bundle b = bundleContext.getBundle();
 		AccessControlContext accNoContextPerm = withoutPerms.adapt(AccessControlContext.class);
-		try {
-			AccessController.doPrivileged(new PrivilegedAction<BundleContext>() {
-				public BundleContext run() {
-					return b.getBundleContext();
-				}
-			}, accNoContextPerm);
-			fail("Expected security exception.");
-		} catch (SecurityException e) {
-			// expected
-		}
+		assertThatExceptionOfType(SecurityException.class)
+				.as("Expected security exception.")
+				.isThrownBy(() -> {
+					AccessController.doPrivileged(new PrivilegedAction<BundleContext>() {
+						public BundleContext run() {
+							return b.getBundleContext();
+						}
+					}, accNoContextPerm);
+				});
 
 		AccessControlContext accWithContextPerm = withPerms.adapt(AccessControlContext.class);
 		try {
@@ -97,15 +112,17 @@ public class BundleAdaptTests extends OSGiTestCase {
 	 * the caller has AdaptPermission[BundleContext,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptBundleContextWithPermission() throws Exception {
 		doAdaptTest(BundleContext.class, false, true);
 	}
-	
+
 	/**
 	 * Bundle.adapt(BundleRevision.class) must throw a security exception if the 
 	 * caller does not have AdaptPermission[BundleRevision,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptBundleContextWithoutPermission() throws Exception {
 		doAdaptTest(BundleContext.class, false, false);
 	}
@@ -115,33 +132,37 @@ public class BundleAdaptTests extends OSGiTestCase {
 	 * the caller has AdaptPermission[BundleRevision,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptBundleRevisionWithPermission() throws Exception {
 		doAdaptTest(BundleRevision.class, false, true);
 	}
-	
+
 	/**
 	 * Bundle.adapt(BundleRevision.class) must throw a security exception if the 
 	 * caller does not have AdaptPermission[BundleRevision,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptBundleRevisionWithoutPermission() throws Exception {
 		doAdaptTest(BundleRevision.class, false, false);
 	}
-	
+
 	/**
 	 * Bundle.adapt(BundleRevisions.class) must not throw a security exception
 	 * if the caller has AdaptPermission[BundleRevisions,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptBundleRevisionsWithPermission() throws Exception {
 		doAdaptTest(BundleRevisions.class, false, true);
 	}
-	
+
 	/**
 	 * Bundle.adapt(BundleRevisions.class) must throw a security exception if
 	 * the caller does not have AdaptPermission[BundleRevisions,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptBundleRevisionsWithoutPermission() throws Exception {
 		doAdaptTest(BundleRevisions.class, false, false);
 	}
@@ -151,15 +172,17 @@ public class BundleAdaptTests extends OSGiTestCase {
 	 * if the caller has AdaptPermission[BundleStartLevel,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptBundleStartLevelWithPermission() throws Exception {
 		doAdaptTest(BundleStartLevel.class, false, true);
 	}
-	
+
 	/**
 	 * Bundle.adapt(BundleStartLevel.class) must throw a security exception if
 	 * the caller does not have AdaptPermission[BundleStartLevel,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptBundleStartLevelWithoutPermission() throws Exception {
 		doAdaptTest(BundleStartLevel.class, false, false);
 	}
@@ -169,15 +192,17 @@ public class BundleAdaptTests extends OSGiTestCase {
 	 * the caller has AdaptPermission[BundleWiring,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptBundleWiringWithPermission() throws Exception {
 		doAdaptTest(BundleWiring.class, false, true);
 	}
-	
+
 	/**
 	 * Bundle.adapt(BundleWiring.class) must throw a security exception if the 
 	 * caller does not have AdaptPermission[BundleWiring,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptBundleWiringWithoutPermission() throws Exception {
 		doAdaptTest(BundleWiring.class, false, false);
 	}
@@ -187,15 +212,17 @@ public class BundleAdaptTests extends OSGiTestCase {
 	 * if the caller has AdaptPermission[Framework,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptFrameworkWithPermission() throws Exception {
 		doAdaptTest(Framework.class, true, true);
 	}
-	
+
 	/**
 	 * Bundle.adapt(FrameworkWiring.class) must throw a security exception if
 	 * the caller does not have AdaptPermission[Framework,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptFrameworkWithoutPermission() throws Exception {
 		doAdaptTest(Framework.class, true, false);
 	}
@@ -205,15 +232,17 @@ public class BundleAdaptTests extends OSGiTestCase {
 	 * if the caller has AdaptPermission[FrameworkWiring,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptFrameworkWiringWithPermission() throws Exception {
 		doAdaptTest(FrameworkWiring.class, true, true);
 	}
-	
+
 	/**
 	 * Bundle.adapt(FrameworkWiring.class) must throw a security exception if
 	 * the caller does not have AdaptPermission[FrameworkWiring,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptFrameworkWiringWithoutPermission() throws Exception {
 		doAdaptTest(FrameworkWiring.class, true, false);
 	}
@@ -223,15 +252,17 @@ public class BundleAdaptTests extends OSGiTestCase {
 	 * if the caller has AdaptPermission[FrameworkStartLevel,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptFrameworkStartLevelWithPermission() throws Exception {
 		doAdaptTest(FrameworkStartLevel.class, true, true);
 	}
-	
+
 	/**
 	 * Bundle.adapt(FrameworkStartLevel.class) must throw a security exception if
 	 * the caller does not have AdaptPermission[FrameworkStartLevel,ADAPT].
 	 * @throws Exception
 	 */
+	@Test
 	public void testAdaptFrameworkStartLevelWithoutPermission() throws Exception {
 		doAdaptTest(FrameworkStartLevel.class, true, false);
 	}
@@ -242,36 +273,40 @@ public class BundleAdaptTests extends OSGiTestCase {
 	 * AdminPermission[System Bundle,RESOLVE].
 	 * @throws Exception
 	 */
+	@Test
 	public void testFrameworkWiringRefreshBundlesWithPermission() throws Exception {
 		execute("wiring.tb2.jar");
 	}
-	
+
 	/**
 	 * FrameworkWiring.refreshBundles(Collection<Bundle>, FrameWorkListener...)
 	 * must throw a security exception if the caller does not have
 	 * AdminPermission[System Bundle,RESOLVE].
 	 * @throws Exception
 	 */
+	@Test
 	public void testFrameworkWiringRefreshBundlesWithoutPermission() throws Exception {
 		execute("wiring.tb1.jar");
 	}
-	
+
 	/**
 	 * FrameworkWiring.resolveBundles(Collection<Bundle>) must not throw a 
 	 * security exception if the caller has 
 	 * AdminPermission[System Bundle,RESOLVE].
 	 * @throws Exception
 	 */
+	@Test
 	public void testFrameworkWiringResolveBundlesWithPermission() throws Exception {
 		execute("wiring.tb3.jar");
 	}
-	
+
 	/**
 	 * FrameworkWiring.resolveBundles(Collection<Bundle>) must throw a security
 	 * exception if the caller does not have 
 	 * AdminPermission[System Bundle,RESOLVE].
 	 * @throws Exception
 	 */
+	@Test
 	public void testFrameworkWiringResolveBundlesWithoutPermission() throws Exception {
 		execute("wiring.tb4.jar");
 	}
@@ -279,7 +314,7 @@ public class BundleAdaptTests extends OSGiTestCase {
 	private void execute(String name) throws Exception {
 		Bundle b = null;
 		try {
-			b = install(name);
+			b = bundleInstaller.installBundle(name, false);
 			b.start();
 		}
 		catch (BundleException e) {
@@ -298,23 +333,23 @@ public class BundleAdaptTests extends OSGiTestCase {
 		}
 	}
 
-	protected void setUp() throws Exception {
-		super.setUp();
-		withPerms = install(WITH_PERMS);
-		withoutPerms = install(WITHOUTPERMS);
+	@BeforeEach
+	public void setUp() throws Exception {
+		withPerms = bundleInstaller.installBundle(WITH_PERMS, false);
+		withoutPerms = bundleInstaller.installBundle(WITHOUTPERMS, false);
 	}
 
-	protected void tearDown() throws Exception {
-		super.tearDown();
+	@AfterEach
+	public void tearDown() throws Exception {
 		withPerms.uninstall();
 		withoutPerms.uninstall();
 	}
 
 	private <T> void doAdaptTest(Class<T> adaptTo, boolean fromSystemBundle, boolean hasPermission) throws BundleException, IOException {
 		Bundle testBundle = hasPermission ? withPerms : withoutPerms;
-		Bundle adaptBundle = fromSystemBundle ? getContext().getBundle(0) : getContext().getBundle();
+		Bundle adaptBundle = fromSystemBundle ? bundleContext.getBundle(0) : bundleContext.getBundle();
 		AdaptTestService<T> service = new AdaptTestService<T>(adaptTo, hasPermission, adaptBundle);
-		ServiceRegistration< ? > reg = getContext()
+		ServiceRegistration< ? > reg = bundleContext
 				.registerService(AdaptTestService.class, service, null);
 		try {
 			testBundle.start();

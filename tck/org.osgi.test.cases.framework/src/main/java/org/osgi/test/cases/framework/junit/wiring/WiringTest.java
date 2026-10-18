@@ -17,45 +17,63 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.junit.wiring;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.wiring.FrameworkWiring;
-import org.osgi.test.support.OSGiTestCase;
-import org.osgi.test.support.wiring.Wiring;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.install.BundleInstaller;
+import org.osgi.test.common.wiring.FrameworkWirings;
 
-public abstract class WiringTest extends OSGiTestCase {
+public abstract class WiringTest {
+
+	private String testName;
+
+	@BeforeEach
+	public void captureTestName(TestInfo testInfo) {
+		testName = testInfo.getTestMethod().get().getName();
+	}
+
+	/** The name of the running test method, as TestCase.getName() gave it. */
+	protected String getName() {
+		return testName;
+	}
+
+	@InjectBundleContext
+	protected BundleContext bundleContext;
+
+	@InjectBundleInstaller
+	protected BundleInstaller bundleInstaller;
 	protected final List<Bundle> bundles = new ArrayList<Bundle>();
 	protected FrameworkWiring frameworkWiring;
 	
 	public Bundle install(String bundle) {
-		Bundle result = null;
-		try {
-			result = super.install(bundle);
-		} catch (BundleException e) {
-			fail("failed to install bundle: " + bundle, e);
-		} catch (IOException e) {
-			fail("failed to install bundle: " + bundle, e);
-		}
+		Bundle result = bundleInstaller.installBundle(bundle, false);
 		if (!bundles.contains(result))
 			bundles.add(result);
 		return result;
 	}
 	
 	protected void refreshBundles(List<Bundle> b) {
-		Wiring.synchronousRefreshBundles(getContext(), b);
-	}
-	
-	protected void setUp() throws Exception {
-		bundles.clear();
-		frameworkWiring = getContext().getBundle(0).adapt(FrameworkWiring.class);
+		FrameworkWirings.refreshBundles(bundleContext, b);
 	}
 
-	protected void tearDown() throws Exception {
+	@BeforeEach
+	public void setUp() throws Exception {
+		bundles.clear();
+		frameworkWiring = bundleContext.getBundle(0).adapt(FrameworkWiring.class);
+	}
+
+	@AfterEach
+	public void tearDown() throws Exception {
 		for (Iterator<Bundle> iBundles = bundles.iterator(); iBundles.hasNext();)
 			try {
 				iBundles.next().uninstall();

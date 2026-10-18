@@ -17,6 +17,9 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.junit.resources;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,51 +31,73 @@ import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.wiring.BundleWiring;
-import org.osgi.test.support.OSGiTestCase;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.install.BundleInstaller;
 
+public class GetEntryResourceTests {
 
-public class GetEntryResourceTests extends OSGiTestCase {
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
+
+	private String testName;
+
+	/** The name of the running test method, as TestCase.getName() gave it. */
+	private String getName() {
+		return testName;
+	}
 	Bundle testBundle;
 	Bundle testFragment;
 
-	protected void setUp() throws Exception {
-		super.setUp();
+	@BeforeEach
+	public void setUp(TestInfo testInfo) throws Exception {
+		testName = testInfo.getTestMethod().get().getName();
 		if (getName().startsWith("testFragment"))
-			testFragment = install("resources.tb2.jar");
-		testBundle = install("resources.tb1.jar");
+			testFragment = bundleInstaller.installBundle("resources.tb2.jar", false);
+		testBundle = bundleInstaller.installBundle("resources.tb1.jar", false);
 	}
 
+	@Test
 	public void testGetEntryRoot() {
 		URL root = testBundle.getEntry("/");
-		assertNotNull(root);
+		assertThat(root).isNotNull();
 	}
 
+	@Test
 	public void testGetEntry01() {
 		URL datatxt = testBundle.getEntry("resources/data.txt");
-		assertNotNull(datatxt);
+		assertThat(datatxt).isNotNull();
 		assertURL(datatxt);
 		URL dataxml = testBundle.getEntry("resources/data.xml");
 		assertURL(dataxml);
 
 		URL doesNotExist = testBundle.getEntry("DoesNotExist");
-		assertNull("Found unexpected resource: " + doesNotExist, doesNotExist);
+		assertThat(doesNotExist)
+				.as("Found unexpected resource: " + doesNotExist)
+				.isNull();
 	}
 
+	@Test
 	public void testGetEntry02() {
 		URL base = testBundle.getEntry("resources/data.txt");
-		assertNotNull(base);
+		assertThat(base).isNotNull();
 		// test using a file as a relative URL
 		URL dataxml = newURL(base, "data.xml");
 		assertURL(dataxml);
 
 		URL dir1 = newURL(base, "dir1/");
-		assertEquals("Wrong path for dir1", "/resources/dir1/", dir1.getPath());
+		assertThat(dir1.getPath())
+				.as("Wrong path for dir1")
+				.isEqualTo("/resources/dir1/");
 
 		// test using the root URL as a base
 		URL root = testBundle.getEntry("/");
-		assertNotNull(root);
+		assertThat(root).isNotNull();
 		URL datatxt = newURL(root, "resources/data.txt");
 		assertURL(datatxt);
 		dataxml = newURL(root, "resources/data.xml");
@@ -85,10 +110,12 @@ public class GetEntryResourceTests extends OSGiTestCase {
 		assertURL(datatxt);
 	}
 
+	@Test
 	public void testFindEntries01() {
 		doTestFindEntries(1);
 	}
 
+	@Test
 	public void testFragmentFindEntries01() {
 		doTestFindEntries(2);
 	}
@@ -113,6 +140,7 @@ public class GetEntryResourceTests extends OSGiTestCase {
 		assertFindEntries(testBundle, "resources", "dir*", true, 4 * factor);
 	}
 
+	@Test
 	public void testGetEntryPaths01() {
 		assertEntryPaths(testBundle, "resources", new String[] {"resources/dir1/", "resources/dir2/", "resources/data.txt", "resources/data.xml"});
 		assertEntryPaths(testBundle, "resources/dir1", new String[] {"resources/dir1/dir1a/", "resources/dir1/data1.txt", "resources/dir1/data1.xml"});
@@ -122,9 +150,9 @@ public class GetEntryResourceTests extends OSGiTestCase {
 	private void assertEntryPaths(Bundle bundle, String path, String[] expected) {
 		Enumeration<String> paths = bundle.getEntryPaths(path);
 		if (expected != null)
-			assertNotNull(paths);
+			assertThat(paths).isNotNull();
 		else {
-			assertNull(paths);
+			assertThat(paths).isNull();
 			return;
 		}
 
@@ -139,7 +167,9 @@ public class GetEntryResourceTests extends OSGiTestCase {
 				fail("Unexpected entry found: " + element);
 			numFound++;
 		}
-		assertEquals("Unexpected number of entries", expected.length, numFound);
+		assertThat(numFound)
+				.as("Unexpected number of entries")
+				.isEqualTo(expected.length);
 	}
 
 	private void assertFindEntries(Bundle bundle, String path, String wildCard, boolean recurse, int expectedNum) {
@@ -149,9 +179,9 @@ public class GetEntryResourceTests extends OSGiTestCase {
 	private void assertBundleFindEntries(Bundle bundle, String path, String wildCard, boolean recurse, int expectedNum) {
 		Enumeration<URL> entries = bundle.findEntries(path, wildCard, recurse);
 		if (expectedNum > 0)
-			assertNotNull(entries);
+			assertThat(entries).isNotNull();
 		else {
-			assertNull(entries);
+			assertThat(entries).isNull();
 			return;
 		}
 
@@ -160,14 +190,18 @@ public class GetEntryResourceTests extends OSGiTestCase {
 			assertURL(entries.nextElement());
 			numFound++;
 		}
-		assertEquals("Unexpected number of entries", expectedNum, numFound);
+		assertThat(numFound)
+				.as("Unexpected number of entries")
+				.isEqualTo(expectedNum);
 	}
 
 	private void assertWiringFindEntries(Bundle bundle, String path, String wildCard, boolean recurse, int expectedNum) {
 		BundleWiring wiring = bundle.adapt(BundleWiring.class);
 		List<URL> entries = wiring.findEntries(path, wildCard,
 				recurse ? BundleWiring.FINDENTRIES_RECURSE : 0);
-		assertNotNull("Entries should not be null.", entries);
+		assertThat(entries)
+				.as("Entries should not be null.")
+				.isNotNull();
 
 		Iterator<URL> iEntries = entries.iterator();
 		int numFound = 0;
@@ -175,10 +209,13 @@ public class GetEntryResourceTests extends OSGiTestCase {
 			assertURL(iEntries.next());
 			numFound++;
 		}
-		assertEquals("Unexpected number of entries", expectedNum, numFound);
+		assertThat(numFound)
+				.as("Unexpected number of entries")
+				.isEqualTo(expectedNum);
 	}
 
-	protected void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() throws Exception {
 		testBundle.uninstall();
 		if (testFragment != null)
 			testFragment.uninstall();
@@ -194,20 +231,26 @@ public class GetEntryResourceTests extends OSGiTestCase {
 	}
 
 	private void assertURL(URL url) {
-		assertNotNull("Unexpected null url", url);
+		assertThat(url)
+				.as("Unexpected null url")
+				.isNotNull();
 		String expected = url.getPath();
 		int lastSlash = expected.lastIndexOf('/');
-		assertTrue(lastSlash >= 0);
+		assertThat(lastSlash).isNotNegative();
 		if (lastSlash == expected.length() - 1)
 			return;
 		expected = expected.substring(lastSlash + 1);
 		InputStream ins = null;
 		try {
 			ins = url.openStream();
-			assertNotNull("Expecting to open stream to resource", ins);
+			assertThat(ins)
+					.as("Expecting to open stream to resource")
+				.isNotNull();
 			BufferedReader bufr = new BufferedReader(new InputStreamReader(ins));
 			String line = bufr.readLine();
-			assertEquals("Incorrect content in: " + url, expected, line);
+			assertThat(line)
+					.as("Incorrect content in: " + url)
+				.isEqualTo(expected);
 		} catch (IOException e) {
 			fail("Failed to read resource: " + url, e);
 		}

@@ -18,6 +18,10 @@
 
 package org.osgi.test.cases.framework.junit.hooks.weaving;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.fail;
+
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,6 +31,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
@@ -40,10 +48,17 @@ import org.osgi.framework.hooks.weaving.WovenClass;
 import org.osgi.framework.hooks.weaving.WovenClassListener;
 import org.osgi.framework.namespace.PackageNamespace;
 import org.osgi.framework.wiring.BundleWiring;
-import org.osgi.test.support.compatibility.DefaultTestBundleControl;
-import org.osgi.test.support.sleep.Sleep;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.install.BundleInstaller;
 
-public class WeavingHookTests extends DefaultTestBundleControl implements WeavingHook, WovenClassListener {
+public class WeavingHookTests implements WeavingHook, WovenClassListener {
+
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
 
 	/* Test Constants */
 
@@ -169,8 +184,8 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 			toThrow = re;
 		}
 
-
-		public void weave(WovenClass wovenClass) {
+		// NOTE: JUnit assertions on purpose: AssertJ would load its own classes here and re-enter the weaving hook
+	public void weave(WovenClass wovenClass) {
 
 			// We are only interested in classes that are in the test
 			if(wovenClass.getClassName().startsWith(TESTCLASSES_PACKAGE)) {
@@ -301,35 +316,34 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 		}
 	}
 
-
-
 	/** The test classes */
 	private Bundle weavingClasses;
 
-	protected void setUp() throws Exception {
-		super.setUp();
-		weavingClasses = installBundle(TESTCLASSES_JAR);
+	@BeforeEach
+	public void setUp() throws Exception {
+		weavingClasses = bundleInstaller.installBundle(TESTCLASSES_JAR, true);
 		listenerWovenClass = null;
 		wovenClassStates.clear();
 	}
 
-	protected void tearDown() throws Exception {
-		super.tearDown();
-		uninstallBundle(weavingClasses);
+	@AfterEach
+	public void tearDown() throws Exception {
+		weavingClasses.uninstall();
 	}
 
 	/**
 	 * Perform a basic weave, and show the loaded class is changed
 	 * @throws Exception
 	 */
+	@Test
 	public void testBasicWeaving() throws Exception {
 		// Install the bundles necessary for this test
 		ServiceRegistration<WeavingHook> reg = null;
 		try {
-			reg = new ConfigurableWeavingHook().register(getContext(), 0);
+			reg = new ConfigurableWeavingHook().register(bundleContext, 0);
 			Class<?> clazz = weavingClasses.loadClass(TEST_CLASS_NAME);
-			assertEquals("Weaving was unsuccessful", DEFAULT_CHANGE_TO,
-					clazz.getConstructor().newInstance().toString());
+			assertThat(clazz.getConstructor().newInstance())
+					.as("Weaving was unsuccessful").hasToString(DEFAULT_CHANGE_TO);
 		} finally {
 			if (reg != null)
 				reg.unregister();
@@ -341,19 +355,21 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * the hook does not add the import
 	 * @throws Exception
 	 */
+	@Test
 	public void testBasicWeavingNoDynamicImport() throws Exception {
 		// Install the bundles necessary for this test
 		ServiceRegistration<WeavingHook> reg = null;
 		ConfigurableWeavingHook hook = new ConfigurableWeavingHook();
 		hook.setChangeTo("org.osgi.framework.Bundle");
 		try {
-			reg = hook.register(getContext(), 0);
+			reg = hook.register(bundleContext, 0);
 			Class<?>clazz = weavingClasses.loadClass(DYNAMIC_IMPORT_TEST_CLASS_NAME);
 			clazz.getConstructor().newInstance().toString();
 			fail("Should fail to load the Bundle class");
 		} catch (RuntimeException cnfe) {
-			assertTrue("Wrong exception: " + cnfe.getCause().getClass(),
-				(cnfe.getCause() instanceof ClassNotFoundException));
+			assertThat((cnfe.getCause() instanceof ClassNotFoundException))
+					.as("Wrong exception: " + cnfe.getCause().getClass())
+				.isTrue();
 		} finally {
 			if (reg != null)
 				reg.unregister();
@@ -365,6 +381,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * the hook adds the import
 	 * @throws Exception
 	 */
+	@Test
 	public void testBasicWeavingDynamicImport() throws Exception {
 		// Install the bundles necessary for this test
 		ServiceRegistration<WeavingHook> reg = null;
@@ -372,10 +389,10 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 		hook.addImport("org.osgi.framework");
 		hook.setChangeTo("org.osgi.framework.Bundle");
 		try {
-			reg = hook.register(getContext(), 0);
+			reg = hook.register(bundleContext, 0);
 			Class<?>clazz = weavingClasses.loadClass(DYNAMIC_IMPORT_TEST_CLASS_NAME);
-			assertEquals("Weaving was unsuccessful", "interface org.osgi.framework.Bundle",
-					clazz.getConstructor().newInstance().toString());
+			assertThat(clazz.getConstructor().newInstance())
+					.as("Weaving was unsuccessful").hasToString("interface org.osgi.framework.Bundle");
 		} finally {
 			if (reg != null)
 				reg.unregister();
@@ -386,6 +403,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * Test that multiple weavers get called in service id order
 	 * @throws Exception
 	 */
+	@Test
 	public void testMultipleWeavers() throws Exception {
 
 		ConfigurableWeavingHook hook1 = new ConfigurableWeavingHook();
@@ -402,12 +420,12 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 		ServiceRegistration<WeavingHook> reg2= null;
 		ServiceRegistration<WeavingHook> reg3 = null;
 		try {
-			reg1 = hook1.register(getContext(), 0);
-			reg2 = hook2.register(getContext(), 0);
-			reg3 = hook3.register(getContext(), 0);
+			reg1 = hook1.register(bundleContext, 0);
+			reg2 = hook2.register(bundleContext, 0);
+			reg3 = hook3.register(bundleContext, 0);
 			Class<?>clazz = weavingClasses.loadClass(TEST_CLASS_NAME);
-			assertEquals("Weaving was unsuccessful", "Chain Complete",
-					clazz.getConstructor().newInstance().toString());
+			assertThat(clazz.getConstructor().newInstance())
+					.as("Weaving was unsuccessful").hasToString("Chain Complete");
 		} finally {
 			if (reg1 != null)
 				reg1.unregister();
@@ -422,6 +440,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * Test that multiple weavers get called in ranking and service id order
 	 * @throws Exception
 	 */
+	@Test
 	public void testMultipleWeaversWithRankings() throws Exception {
 
 		ConfigurableWeavingHook hook1 = new ConfigurableWeavingHook();
@@ -435,17 +454,16 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 		hook2.setExpected("1 Finished");
 		hook2.setChangeTo("Chain Complete");
 
-
 		ServiceRegistration<WeavingHook> reg1 = null;
 		ServiceRegistration<WeavingHook> reg2= null;
 		ServiceRegistration<WeavingHook> reg3 = null;
 		try {
-			reg1 = hook1.register(getContext(), 0);
-			reg2 = hook2.register(getContext(), 0);
-			reg3 = hook3.register(getContext(), 1);
+			reg1 = hook1.register(bundleContext, 0);
+			reg2 = hook2.register(bundleContext, 0);
+			reg3 = hook3.register(bundleContext, 1);
 			Class<?>clazz = weavingClasses.loadClass(TEST_CLASS_NAME);
-			assertEquals("Weaving was unsuccessful", "Chain Complete",
-					clazz.getConstructor().newInstance().toString());
+			assertThat(clazz.getConstructor().newInstance())
+					.as("Weaving was unsuccessful").hasToString("Chain Complete");
 
 			// We expect the order to change if we update our ranking
 			Hashtable<String, Object> table = new Hashtable<String, Object>();
@@ -461,8 +479,8 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 			hook2.addImport("org.osgi.framework.hooks.weaving");
 
 			clazz = weavingClasses.loadClass(DYNAMIC_IMPORT_TEST_CLASS_NAME);
-			assertEquals("Weaving was unsuccessful", "interface org.osgi.framework.hooks.weaving.WovenClass",
-					clazz.getConstructor().newInstance().toString());
+			assertThat(clazz.getConstructor().newInstance())
+					.as("Weaving was unsuccessful").hasToString("interface org.osgi.framework.hooks.weaving.WovenClass");
 		} finally {
 			if (reg1 != null)
 				reg1.unregister();
@@ -477,6 +495,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * Test that an exception stops the weaving chain mid-way
 	 * @throws Exception
 	 */
+	@Test
 	public void testExceptionPreventsSubsequentCalls() throws Exception {
 
 		ConfigurableWeavingHook hook1 = new ConfigurableWeavingHook();
@@ -496,16 +515,24 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 		ServiceRegistration<WeavingHook> reg2= null;
 		ServiceRegistration<WeavingHook> reg3 = null;
 		try {
-			reg1 = hook1.register(getContext(), 0);
-			reg2 = hook2.register(getContext(), 0);
-			reg3 = hook3.register(getContext(), 0);
+			reg1 = hook1.register(bundleContext, 0);
+			reg2 = hook2.register(bundleContext, 0);
+			reg3 = hook3.register(bundleContext, 0);
 			weavingClasses.loadClass(TEST_CLASS_NAME);
 			fail("Class should fail to Load");
 		} catch (ClassFormatError cfe) {
-			assertSame("Should be caused by our Exception", cause, cfe.getCause());
-			assertTrue("Hook 1 should be called", hook1.isCalled());
-			assertTrue("Hook 2 should be called", hook2.isCalled());
-			assertFalse("Hook 3 should not be called", hook3.isCalled());
+			assertThat(cfe.getCause())
+					.as("Should be caused by our Exception")
+				.isSameAs(cause);
+			assertThat(hook1.isCalled())
+					.as("Hook 1 should be called")
+				.isTrue();
+			assertThat(hook2.isCalled())
+					.as("Hook 2 should be called")
+				.isTrue();
+			assertThat(hook3.isCalled())
+					.as("Hook 3 should not be called")
+				.isFalse();
 		} finally {
 			if (reg1 != null)
 				reg1.unregister();
@@ -521,6 +548,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * 
 	 * @throws Exception
 	 */
+	@Test
 	public void testExceptionCausesDenyListing() throws Exception {
 
 		ConfigurableWeavingHook hook1 = new ConfigurableWeavingHook();
@@ -537,14 +565,14 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 		ServiceRegistration<WeavingHook> reg1 = null;
 		ServiceRegistration<WeavingHook> reg2= null;
 		ServiceRegistration<WeavingHook> reg3 = null;
-		ClassLoadErrorListener listener = new ClassLoadErrorListener(cause, getContext().getBundle());
+		ClassLoadErrorListener listener = new ClassLoadErrorListener(cause, bundleContext.getBundle());
 		try {
 			try {
-				reg1 = hook1.register(getContext(), 0);
-				reg2 = hook2.register(getContext(), 0);
-				reg3 = hook3.register(getContext(), 0);
+				reg1 = hook1.register(bundleContext, 0);
+				reg2 = hook2.register(bundleContext, 0);
+				reg3 = hook3.register(bundleContext, 0);
 
-				getContext().addFrameworkListener(listener);
+				bundleContext.addFrameworkListener(listener);
 
 				weavingClasses.loadClass(TEST_CLASS_NAME);
 				fail("Class should fail to Load");
@@ -552,13 +580,23 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 
 				waitForListener(listener);
 
-				getContext().removeFrameworkListener(listener);
-				assertTrue("Wrong event was sent " + listener, listener.wasValidEventSent());
+				bundleContext.removeFrameworkListener(listener);
+				assertThat(listener.wasValidEventSent())
+						.as("Wrong event was sent " + listener)
+				.isTrue();
 
-				assertSame("Should be caused by our Exception", cause, cfe.getCause());
-				assertTrue("Hook 1 should be called", hook1.isCalled());
-				assertTrue("Hook 2 should be called", hook2.isCalled());
-				assertFalse("Hook 3 should not be called", hook3.isCalled());
+				assertThat(cfe.getCause())
+						.as("Should be caused by our Exception")
+				.isSameAs(cause);
+				assertThat(hook1.isCalled())
+						.as("Hook 1 should be called")
+				.isTrue();
+				assertThat(hook2.isCalled())
+						.as("Hook 2 should be called")
+				.isTrue();
+				assertThat(hook3.isCalled())
+						.as("Hook 3 should not be called")
+				.isFalse();
 			}
 
 			hook1.clearCalls();
@@ -568,13 +606,18 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 			hook1.addImport("org.osgi.framework.wiring;version=\"[1.0.0,2.0.0)\"");
 			hook3.setChangeTo("org.osgi.framework.wiring.BundleWiring");
 
-
 			Class<?>clazz = weavingClasses.loadClass(DYNAMIC_IMPORT_TEST_CLASS_NAME);
-			assertTrue("Hook 1 should be called", hook1.isCalled());
-			assertFalse("Hook 2 should not be called", hook2.isCalled());
-			assertTrue("Hook 3 should be called", hook3.isCalled());
-			assertEquals("Weaving was unsuccessful", "interface org.osgi.framework.wiring.BundleWiring",
-					clazz.getConstructor().newInstance().toString());
+			assertThat(hook1.isCalled())
+					.as("Hook 1 should be called")
+				.isTrue();
+			assertThat(hook2.isCalled())
+					.as("Hook 2 should not be called")
+				.isFalse();
+			assertThat(hook3.isCalled())
+					.as("Hook 3 should be called")
+				.isTrue();
+			assertThat(clazz.getConstructor().newInstance())
+					.as("Weaving was unsuccessful").hasToString("interface org.osgi.framework.wiring.BundleWiring");
 		} finally {
 			if (reg1 != null)
 				reg1.unregister();
@@ -593,7 +636,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 				break;
 			else {
 				try {
-					Sleep.sleep(250);
+					Thread.sleep(250);
 				} catch (InterruptedException e) {
 					break;
 				}
@@ -607,6 +650,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * 
 	 * @throws Exception
 	 */
+	@Test
 	public void testWeavingExceptionDoesNotCauseDenyListing() throws Exception {
 
 		ConfigurableWeavingHook hook1 = new ConfigurableWeavingHook();
@@ -625,14 +669,14 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 		ServiceRegistration<WeavingHook> reg1 = null;
 		ServiceRegistration<WeavingHook> reg2= null;
 		ServiceRegistration<WeavingHook> reg3 = null;
-		ClassLoadErrorListener listener = new ClassLoadErrorListener(cause, getContext().getBundle());
+		ClassLoadErrorListener listener = new ClassLoadErrorListener(cause, bundleContext.getBundle());
 		try {
 			try {
-				reg1 = hook1.register(getContext(), 0);
-				reg2 = hook2.register(getContext(), 0);
-				reg3 = hook3.register(getContext(), 0);
+				reg1 = hook1.register(bundleContext, 0);
+				reg2 = hook2.register(bundleContext, 0);
+				reg3 = hook3.register(bundleContext, 0);
 
-				getContext().addFrameworkListener(listener);
+				bundleContext.addFrameworkListener(listener);
 
 				weavingClasses.loadClass(TEST_CLASS_NAME);
 				fail("Class should fail to Load");
@@ -640,13 +684,23 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 
 				waitForListener(listener);
 
-				getContext().removeFrameworkListener(listener);
-				assertTrue("Wrong event was sent " + listener, listener.wasValidEventSent());
+				bundleContext.removeFrameworkListener(listener);
+				assertThat(listener.wasValidEventSent())
+						.as("Wrong event was sent " + listener)
+				.isTrue();
 
-				assertSame("Should be caused by our Exception", cause, cfe.getCause());
-				assertTrue("Hook 1 should be called", hook1.isCalled());
-				assertTrue("Hook 2 should be called", hook2.isCalled());
-				assertFalse("Hook 3 should not be called", hook3.isCalled());
+				assertThat(cfe.getCause())
+						.as("Should be caused by our Exception")
+				.isSameAs(cause);
+				assertThat(hook1.isCalled())
+						.as("Hook 1 should be called")
+				.isTrue();
+				assertThat(hook2.isCalled())
+						.as("Hook 2 should be called")
+				.isTrue();
+				assertThat(hook3.isCalled())
+						.as("Hook 3 should not be called")
+				.isFalse();
 			}
 
 			hook1.clearCalls();
@@ -657,11 +711,17 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 			hook3.setChangeTo("org.osgi.framework.wiring.BundleWiring");
 
 			Class<?>clazz = weavingClasses.loadClass(DYNAMIC_IMPORT_TEST_CLASS_NAME);
-			assertTrue("Hook 1 should be called", hook1.isCalled());
-			assertTrue("Hook 2 should not be called", hook2.isCalled());
-			assertTrue("Hook 3 should be called", hook3.isCalled());
-			assertEquals("Weaving was unsuccessful", "interface org.osgi.framework.wiring.BundleWiring",
-					clazz.getConstructor().newInstance().toString());
+			assertThat(hook1.isCalled())
+					.as("Hook 1 should be called")
+				.isTrue();
+			assertThat(hook2.isCalled())
+					.as("Hook 2 should not be called")
+				.isTrue();
+			assertThat(hook3.isCalled())
+					.as("Hook 3 should be called")
+				.isTrue();
+			assertThat(clazz.getConstructor().newInstance())
+					.as("Weaving was unsuccessful").hasToString("interface org.osgi.framework.wiring.BundleWiring");
 		} finally {
 			if (reg1 != null)
 				reg1.unregister();
@@ -677,6 +737,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * 
 	 * @throws Exception
 	 */
+	@Test
 	public void testDenyListingOnlyAppliesToRegistration() throws Exception {
 
 		ConfigurableWeavingHook hook1 = new ConfigurableWeavingHook();
@@ -693,14 +754,14 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 		ServiceRegistration<WeavingHook> reg1 = null;
 		ServiceRegistration<WeavingHook> reg2= null;
 		ServiceRegistration<WeavingHook> reg3 = null;
-		ClassLoadErrorListener listener = new ClassLoadErrorListener(cause, getContext().getBundle());
+		ClassLoadErrorListener listener = new ClassLoadErrorListener(cause, bundleContext.getBundle());
 		try {
 			try {
-				reg1 = hook1.register(getContext(), 0);
-				reg2 = hook2.register(getContext(), 0);
-				reg3 = hook3.register(getContext(), 0);
+				reg1 = hook1.register(bundleContext, 0);
+				reg2 = hook2.register(bundleContext, 0);
+				reg3 = hook3.register(bundleContext, 0);
 
-				getContext().addFrameworkListener(listener);
+				bundleContext.addFrameworkListener(listener);
 
 				weavingClasses.loadClass(TEST_CLASS_NAME);
 				fail("Class should fail to Load");
@@ -708,13 +769,23 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 
 				waitForListener(listener);
 
-				getContext().removeFrameworkListener(listener);
-			    assertTrue("Wrong event was sent " + listener, listener.wasValidEventSent());
+				bundleContext.removeFrameworkListener(listener);
+			    assertThat(listener.wasValidEventSent())
+			    		.as("Wrong event was sent " + listener)
+				.isTrue();
 
-				assertSame("Should be caused by our Exception", cause, cfe.getCause());
-				assertTrue("Hook 1 should be called", hook1.isCalled());
-				assertTrue("Hook 2 should be called", hook2.isCalled());
-				assertFalse("Hook 3 should not be called", hook3.isCalled());
+				assertThat(cfe.getCause())
+						.as("Should be caused by our Exception")
+				.isSameAs(cause);
+				assertThat(hook1.isCalled())
+						.as("Hook 1 should be called")
+				.isTrue();
+				assertThat(hook2.isCalled())
+						.as("Hook 2 should be called")
+				.isTrue();
+				assertThat(hook3.isCalled())
+						.as("Hook 3 should not be called")
+				.isFalse();
 			}
 
 			hook1.clearCalls();
@@ -727,13 +798,19 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 			hook2.setChangeTo("org.osgi.framework.wiring.BundleRevision");
 
 			reg2.unregister();
-			reg2 = hook2.register(getContext());
+			reg2 = hook2.register(bundleContext);
 			Class<?>clazz = weavingClasses.loadClass(DYNAMIC_IMPORT_TEST_CLASS_NAME);
-			assertTrue("Hook 1 should be called", hook1.isCalled());
-			assertTrue("Hook 2 should not be called", hook2.isCalled());
-			assertTrue("Hook 3 should be called", hook3.isCalled());
-			assertEquals("Weaving was unsuccessful", "interface org.osgi.framework.wiring.BundleRevision",
-					clazz.getConstructor().newInstance().toString());
+			assertThat(hook1.isCalled())
+					.as("Hook 1 should be called")
+				.isTrue();
+			assertThat(hook2.isCalled())
+					.as("Hook 2 should not be called")
+				.isTrue();
+			assertThat(hook3.isCalled())
+					.as("Hook 3 should be called")
+				.isTrue();
+			assertThat(clazz.getConstructor().newInstance())
+					.as("Weaving was unsuccessful").hasToString("interface org.osgi.framework.wiring.BundleRevision");
 		} finally {
 			if (reg1 != null)
 				reg1.unregister();
@@ -758,10 +835,10 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 		hook.setChangeTo(IMPORT_TEST_CLASS_NAME);
 		ServiceRegistration<WeavingHook> reg = null;
 		try {
-			reg = hook.register(getContext(), 0);
+			reg = hook.register(bundleContext, 0);
 			Class<?>clazz = weavingClasses.loadClass(DYNAMIC_IMPORT_TEST_CLASS_NAME);
-			assertEquals("Weaving was unsuccessful", result,
-					clazz.getConstructor().newInstance().toString());
+			assertThat(clazz.getConstructor().newInstance())
+					.as("Weaving was unsuccessful").hasToString(result);
 		} finally {
 			if (reg != null)
 				reg.unregister();
@@ -773,6 +850,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * A basic test with a version range
 	 * @throws Exception
 	 */
+	@Test
 	public void testDynamicImport() throws Exception {
 		doTest(";version=\"[1,2)\"", TEST_ALT_IMPORT_SYM_NAME + "_1.0.0");
 	}
@@ -781,6 +859,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * A test with a version range that prevents the "best" package
 	 * @throws Exception
 	 */
+	@Test
 	public void testVersionConstrainedDynamicImport() throws Exception {
 		doTest(";version=\"[1,1.5)\"" , TEST_IMPORT_SYM_NAME + "_1.1.0");
 	}
@@ -789,6 +868,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * A test with a bundle-symbolic-name attribute
 	 * @throws Exception
 	 */
+	@Test
 	public void testBSNConstrainedDynamicImport() throws Exception {
 		doTest(";" + Constants.BUNDLE_SYMBOLICNAME_ATTRIBUTE + "="
 				+ TEST_IMPORT_SYM_NAME, TEST_IMPORT_SYM_NAME + "_1.1.0");
@@ -798,6 +878,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * A test with a bundle-symbolic-name attribute and a version constraint
 	 * @throws Exception
 	 */
+	@Test
 	public void testBSNAndVersionConstrainedDynamicImport() throws Exception {
 		doTest(";version=\"[1.0,1.1)\";" + Constants.BUNDLE_SYMBOLICNAME_ATTRIBUTE + "="
 				+ TEST_IMPORT_SYM_NAME, TEST_IMPORT_SYM_NAME + "_1.0.0");
@@ -807,6 +888,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * A test with an attribute constraint
 	 * @throws Exception
 	 */
+	@Test
 	public void testAttributeConstrainedDynamicImport() throws Exception {
 		doTest(";foo=bar", TEST_IMPORT_SYM_NAME + "_1.0.0");
 	}
@@ -815,6 +897,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * A test with a mandatory attribute constraint
 	 * @throws Exception
 	 */
+	@Test
 	public void testMandatoryAttributeConstrainedDynamicImport() throws Exception {
 		doTest(";prop=val", TEST_IMPORT_SYM_NAME + "_1.6.0");
 	}
@@ -823,6 +906,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * A test with multiple imports that would wire differently
 	 * @throws Exception
 	 */
+	@Test
 	public void testMultipleConflictingDynamicImports() throws Exception {
 
 		setupImportChoices();
@@ -832,11 +916,10 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 		hook.setChangeTo(IMPORT_TEST_CLASS_NAME);
 		ServiceRegistration<WeavingHook> reg = null;
 		try {
-			reg = hook.register(getContext(), 0);
+			reg = hook.register(bundleContext, 0);
 			Class<?>clazz = weavingClasses.loadClass(DYNAMIC_IMPORT_TEST_CLASS_NAME);
-			assertEquals("Weaving was unsuccessful",
-					TEST_IMPORT_SYM_NAME + "_1.1.0",
-					clazz.getConstructor().newInstance().toString());
+			assertThat(clazz.getConstructor().newInstance())
+					.as("Weaving was unsuccessful").hasToString(TEST_IMPORT_SYM_NAME + "_1.1.0");
 		} finally {
 			if (reg != null)
 				reg.unregister();
@@ -848,6 +931,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * A test with a bad input that causes a failure
 	 * @throws Exception
 	 */
+	@Test
 	public void testBadDynamicImportString() throws Exception {
 		setupImportChoices();
 		ConfigurableWeavingHook hook = new ConfigurableWeavingHook();
@@ -856,7 +940,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 		hook.setChangeTo(IMPORT_TEST_CLASS_NAME);
 		ServiceRegistration<WeavingHook> reg = null;
 		try {
-			reg = hook.register(getContext(), 0);
+			reg = hook.register(bundleContext, 0);
 			weavingClasses.loadClass(DYNAMIC_IMPORT_TEST_CLASS_NAME);
 			fail("Should not get here!");
 		} catch (ClassFormatError cfe) {
@@ -877,19 +961,18 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	private Bundle altIM;
 
 	private void tearDownImportChoices() throws Exception {
-		uninstallBundle(im100);
-		uninstallBundle(im110);
-		uninstallBundle(im160);
-		uninstallBundle(altIM);
+		im100.uninstall();
+		im110.uninstall();
+		im160.uninstall();
+		altIM.uninstall();
 	}
 
 	private void setupImportChoices() throws Exception {
-		im100 = installBundle(TEST_IMPORT_100_JAR);
-		im110 = installBundle(TEST_IMPORT_110_JAR);
-		im160 = installBundle(TEST_IMPORT_160_JAR);
-		altIM = installBundle(TEST_ALT_IMPORT_JAR);
+		im100 = bundleInstaller.installBundle(TEST_IMPORT_100_JAR, true);
+		im110 = bundleInstaller.installBundle(TEST_IMPORT_110_JAR, true);
+		im160 = bundleInstaller.installBundle(TEST_IMPORT_160_JAR, true);
+		altIM = bundleInstaller.installBundle(TEST_ALT_IMPORT_JAR, true);
 	}
-
 
 	/** The {@link WovenClass} from the test weave */
 	private WovenClass wc = null;
@@ -906,6 +989,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * Test the basic contract of WovenClass, incluing immutability after a weave has finished
 	 * @throws Exception
 	 */
+	@Test
 	public void testWovenClass() throws Exception {
 
 		registerThisHook();
@@ -915,11 +999,21 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 
 			assertWiring();
 
-			assertTrue("Should be complete now", wc.isWeavingComplete());
-			assertNotSame("Should get copies of the byte array now", realBytes, wc.getBytes());
-			assertEquals("Wrong class", TEST_CLASS_NAME, wc.getClassName());
-			assertSame("Should be set now", clazz, wc.getDefinedClass());
-			assertSame("Should be set now", clazz.getProtectionDomain(), wc.getProtectionDomain());
+			assertThat(wc.isWeavingComplete())
+					.as("Should be complete now")
+				.isTrue();
+			assertThat(wc.getBytes())
+					.as("Should get copies of the byte array now")
+				.isNotSameAs(realBytes);
+			assertThat(wc.getClassName())
+					.as("Wrong class")
+				.isEqualTo(TEST_CLASS_NAME);
+			assertThat(wc.getDefinedClass())
+					.as("Should be set now")
+				.isSameAs(clazz);
+			assertThat(wc.getProtectionDomain())
+					.as("Should be set now")
+				.isSameAs(clazz.getProtectionDomain());
 
 			assertImmutableList();
 
@@ -939,6 +1033,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * bytes
 	 * @throws Exception
 	 */
+	@Test
 	public void testBadWeaveClass() throws Exception {
 
 		registerThisHook();
@@ -952,11 +1047,21 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 			} catch (ClassFormatError cfe) {
 				assertWiring();
 
-				assertTrue("Should be complete now", wc.isWeavingComplete());
-				assertNotSame("Should get copies of the byte array now", fakeBytes, wc.getBytes());
-				assertTrue("Content should still be equal though", Arrays.equals(fakeBytes, wc.getBytes()));
-				assertEquals("Wrong class", TEST_CLASS_NAME, wc.getClassName());
-				assertNull("Should not be set", wc.getDefinedClass());
+				assertThat(wc.isWeavingComplete())
+						.as("Should be complete now")
+				.isTrue();
+				assertThat(wc.getBytes())
+						.as("Should get copies of the byte array now")
+				.isNotSameAs(fakeBytes);
+				assertThat(Arrays.equals(fakeBytes, wc.getBytes()))
+						.as("Content should still be equal though")
+				.isTrue();
+				assertThat(wc.getClassName())
+						.as("Wrong class")
+				.isEqualTo(TEST_CLASS_NAME);
+				assertThat(wc.getDefinedClass())
+						.as("Should not be set")
+				.isNull();
 
 				assertImmutableList();
 
@@ -968,7 +1073,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 				}
 			}
 
-			reg2 =  getContext().registerService(WeavingHook.class, this, null);
+			reg2 =  bundleContext.registerService(WeavingHook.class, this, null);
 		} finally {
 			unregisterThisHook();
 		}
@@ -979,6 +1084,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * an exception
 	 * @throws Exception
 	 */
+	@Test
 	public void testHookException() throws Exception {
 
 		registerThisHook();
@@ -986,18 +1092,28 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 		try {
 			ConfigurableWeavingHook hook = new ConfigurableWeavingHook();
 			hook.setExceptionToThrow(new RuntimeException());
-			ServiceRegistration<WeavingHook>reg3 = hook.register(getContext());
+			ServiceRegistration<WeavingHook>reg3 = hook.register(bundleContext);
 			try {
 				weavingClasses.loadClass(TEST_CLASS_NAME);
 				fail("Should blow up");
 			} catch (ClassFormatError cfe) {
 				assertWiring();
 
-				assertTrue("Should be complete now", wc.isWeavingComplete());
-				assertNotSame("Should get copies of the byte array now", realBytes, wc.getBytes());
-				assertTrue("Content should still be equal though", Arrays.equals(realBytes, wc.getBytes()));
-				assertEquals("Wrong class", TEST_CLASS_NAME, wc.getClassName());
-				assertNull("Should not be set", wc.getDefinedClass());
+				assertThat(wc.isWeavingComplete())
+						.as("Should be complete now")
+				.isTrue();
+				assertThat(wc.getBytes())
+						.as("Should get copies of the byte array now")
+				.isNotSameAs(realBytes);
+				assertThat(Arrays.equals(realBytes, wc.getBytes()))
+						.as("Content should still be equal though")
+				.isTrue();
+				assertThat(wc.getClassName())
+						.as("Wrong class")
+				.isEqualTo(TEST_CLASS_NAME);
+				assertThat(wc.getDefinedClass())
+						.as("Should not be set")
+				.isNull();
 
 				assertImmutableList();
 
@@ -1023,8 +1139,8 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	}
 
 	private void registerThisHook() throws Exception {
-		reg1 = getContext().registerService(WeavingHook.class, this, null);
-		reg2 = getContext().registerService(WeavingHook.class, this, null);
+		reg1 = bundleContext.registerService(WeavingHook.class, this, null);
+		reg2 = bundleContext.registerService(WeavingHook.class, this, null);
 	}
 
 	private void unregisterThisHook() throws Exception {
@@ -1037,7 +1153,9 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	 * Test the various {@link WovenClass} methods inside a WeavingHook
 	 */
 	public void weave(WovenClass wovenClass) {
-		assertEquals("Wrong state", WovenClass.TRANSFORMING, wovenClass.getState());
+		assertThat(wovenClass.getState())
+				.as("Wrong state")
+				.isEqualTo(WovenClass.TRANSFORMING);
 
 		if(wc == null) {
 			//First time through
@@ -1046,30 +1164,49 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 			assertWiring();
 
 			realBytes = wovenClass.getBytes();
-			assertSame("Should be the same byte array!", realBytes, wovenClass.getBytes());
+			assertThat(wovenClass.getBytes())
+					.as("Should be the same byte array!")
+				.isSameAs(realBytes);
 
-			assertEquals("Wrong class", TEST_CLASS_NAME, wc.getClassName());
+			assertThat(wc.getClassName())
+					.as("Wrong class")
+				.isEqualTo(TEST_CLASS_NAME);
 
-			assertNull("Should not be defined yet", wc.getDefinedClass());
+			assertThat(wc.getDefinedClass())
+					.as("Should not be defined yet")
+				.isNull();
 
 			List<String> dynamicImports = wc.getDynamicImports();
-			assertSame("Should be the same List!", dynamicImports, wovenClass.getDynamicImports());
-			assertTrue("No imports yet", dynamicImports.isEmpty());
+			assertThat(wovenClass.getDynamicImports())
+					.as("Should be the same List!")
+				.isSameAs(dynamicImports);
+			assertThat(dynamicImports)
+					.as("No imports yet").isEmpty();
 
 			dynamicImports.add("org.osgi.framework;version=1.5");
 
-			assertFalse("Weaving should not be complete", wc.isWeavingComplete());
+			assertThat(wc.isWeavingComplete())
+					.as("Weaving should not be complete")
+				.isFalse();
 
 			wc.setBytes(fakeBytes);
-			assertSame("Should be the same byte array!", fakeBytes, wovenClass.getBytes());
+			assertThat(wovenClass.getBytes())
+					.as("Should be the same byte array!")
+				.isSameAs(fakeBytes);
 		} else {
 			//Second time through
-			assertSame("Should be the same byte array!", fakeBytes, wovenClass.getBytes());
+			assertThat(wovenClass.getBytes())
+					.as("Should be the same byte array!")
+				.isSameAs(fakeBytes);
 			wc.setBytes(realBytes);
 			List<String> dynamicImports = wc.getDynamicImports();
-			assertEquals("Should be one import", 1, dynamicImports.size());
+			assertThat(dynamicImports.size())
+					.as("Should be one import")
+				.isEqualTo(1);
 			dynamicImports.clear();
-			assertTrue("Should be no imports now", dynamicImports.isEmpty());
+			assertThat(dynamicImports.isEmpty())
+					.as("Should be no imports now")
+				.isTrue();
 			dynamicImports.add(ORG_OSGI_FRAMEWORK_VERSION_1_6);
 		}
 
@@ -1081,26 +1218,33 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	private void assertWiring() {
 		BundleWiring bw = wc.getBundleWiring();
 
-		assertTrue("Should be the current bundle", bw.isCurrent());
-		assertEquals("Wrong bundle", TESTCLASSES_SYM_NAME,
-				bw.getBundle().getSymbolicName());
-		assertEquals("Wrong bundle", Version.parseVersion("1.0.0"),
-				bw.getBundle().getVersion());
-		assertNotNull("No Classloader", bw.getClassLoader());
+		assertThat(bw.isCurrent())
+				.as("Should be the current bundle")
+				.isTrue();
+		assertThat(bw.getBundle().getSymbolicName())
+				.as("Wrong bundle")
+				.isEqualTo(TESTCLASSES_SYM_NAME);
+		assertThat(bw.getBundle().getVersion())
+				.as("Wrong bundle")
+				.isEqualTo(Version.parseVersion("1.0.0"));
+		assertThat(bw.getClassLoader())
+				.as("No Classloader")
+				.isNotNull();
 	}
 	
 	private WovenClass listenerWovenClass;
 	private final List<Integer> wovenClassStates = new ArrayList<Integer>(2);
 	
+	// NOTE: JUnit assertions on purpose: AssertJ would load its own classes here and re-enter the weaving hook
 	public void modified(WovenClass wovenClass) {
 		if (listenerWovenClass == null)
 			listenerWovenClass = wovenClass;
 		else
-			assertSame("Wrong woven class", wovenClass, listenerWovenClass);
+			Assertions.assertSame(wovenClass, listenerWovenClass, "Wrong woven class");
 		wovenClassStates.add(wovenClass.getState());
 		switch(wovenClass.getState()) {
 			case WovenClass.TRANSFORMING:
-				fail("Woven class listeners must not be notified of the TRANSFORMING state");
+				Assertions.fail("Woven class listeners must not be notified of the TRANSFORMING state");
 			case WovenClass.TRANSFORMED:
 				assertTransformed(wovenClass);
 				break;
@@ -1114,7 +1258,7 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 				assertDefineFailed(wovenClass);
 				break;
 			default:
-				fail("Invalid state for woven class");
+				Assertions.fail("Invalid state for woven class");
 		}
 	}
 	
@@ -1155,39 +1299,45 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	}
 	
 	private void assertClassDefined(WovenClass wovenClass) {
-		assertNotNull("Class was not defined", wovenClass.getDefinedClass());
+		assertThat(wovenClass.getDefinedClass())
+				.as("Class was not defined")
+				.isNotNull();
 	}
 	
 	private void assertClassNotDefined(WovenClass wovenClass) {
-		assertNull("Class was defined", wovenClass.getDefinedClass());
+		assertThat(wovenClass.getDefinedClass())
+				.as("Class was defined")
+				.isNull();
 	}
 	
 	private void assertWeavingComplete(WovenClass wovenClass) {
-		assertTrue("Weaving was not complete", wovenClass.isWeavingComplete());
+		assertThat(wovenClass.isWeavingComplete())
+				.as("Weaving was not complete")
+				.isTrue();
 	}
 	
 	private void assertWeavingIncomplete(WovenClass wovenClass) {
-		assertFalse("Weaving was complete", wovenClass.isWeavingComplete());
+		assertThat(wovenClass.isWeavingComplete())
+				.as("Weaving was complete")
+				.isFalse();
 	}
 	
 	private static void assertState(WovenClass wovenClass, int expected) {
-		assertEquals("Wrong state", expected, wovenClass.getState());
+		assertThat(wovenClass.getState())
+				.as("Wrong state")
+				.isEqualTo(expected);
 	}
 
 	private static void assertImmutableBytes(WovenClass wovenClass) {
-		try {
-			wovenClass.setBytes(new byte[0]);
-			fail("Bytes were mutable");
-		} 
-		catch (IllegalStateException e) {
-			// Okay
-		}
+		assertThatExceptionOfType(IllegalStateException.class)
+				.as("Bytes were mutable")
+				.isThrownBy(() -> wovenClass.setBytes(new byte[0]));
 	}
 	
 	private ServiceRegistration<WovenClassListener> listenerReg;
 	
 	private void registerThisListener() throws Exception {
-		listenerReg = getContext().registerService(WovenClassListener.class, this, null);
+		listenerReg = bundleContext.registerService(WovenClassListener.class, this, null);
 	}
 
 	private void unregisterThisListener() {
@@ -1203,11 +1353,12 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 		unregisterThisListener();
 		unregisterThisHook();
 	}
-	
+
 	/**
 	 * Test the basic contract of WovenClassListener.
 	 * @throws Exception
 	 */
+	@Test
 	public void testWovenClassListener() throws Exception {
 		registerAll();
 		try {
@@ -1221,19 +1372,24 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	}
 	
 	private void assertStates(Integer...states) {
-		assertEquals("Listener did not receive notification of all states", states.length, wovenClassStates.size());
+		assertThat(wovenClassStates.size())
+				.as("Listener did not receive notification of all states")
+				.isEqualTo(states.length);
 		int i = 0;
 		for (Integer state : states)
-			assertEquals("Wrong state", state, wovenClassStates.get(i++));
+			assertThat(wovenClassStates.get(i++))
+					.as("Wrong state")
+				.isEqualTo(state);
 	}
-	
+
 	/**
 	 * Test the class load does not fail if a listener throws an exception.
 	 * @throws Exception
 	 */
+	@Test
 	public void testWovenClassListenerExceptionDoesNotCauseClassLoadToFail() throws Exception {
 		final AtomicInteger integer = new AtomicInteger(0);
-		ServiceRegistration<WovenClassListener> reg = getContext().registerService(
+		ServiceRegistration<WovenClassListener> reg = bundleContext.registerService(
 				WovenClassListener.class, 
 				new WovenClassListener() {
 					public void modified(WovenClass wovenClass) {
@@ -1246,7 +1402,8 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 			registerAll();
 			try {
 				Class<?> clazz = weavingClasses.loadClass(TEST_CLASS_NAME);
-				assertEquals("Listener not called", 1, integer.get());
+				assertThat(integer.get())
+						.as("Listener not called").isOne();
 				assertDefinedClass(listenerWovenClass, clazz);
 				assertStates(WovenClass.TRANSFORMED, WovenClass.DEFINED);
 			}
@@ -1258,16 +1415,17 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 			reg.unregister();
 		}
 	}
-	
+
 	/**
 	 * Test that listeners are still notified when weaving hook throws exception.
 	 * @throws Exception
 	 */
+	@Test
 	public void testWovenClassListenerCalledWhenWeavingHookException() throws Exception {
 		final AtomicInteger integer = new AtomicInteger(0);
 		Dictionary<String, Object> props = new Hashtable<String, Object>(1);
 		props.put(Constants.SERVICE_RANKING, Integer.valueOf(Integer.MIN_VALUE));
-		ServiceRegistration<WeavingHook> reg = getContext().registerService(
+		ServiceRegistration<WeavingHook> reg = bundleContext.registerService(
 				WeavingHook.class, 
 				new WeavingHook() {
 					public void weave(WovenClass wovenClass) {
@@ -1283,7 +1441,8 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 				fail("Class should have failed to load");
 			}
 			catch (ClassFormatError e) {
-				assertEquals("Hook not called", 1, integer.get());
+				assertThat(integer.get())
+						.as("Hook not called").isOne();
 				assertStates(WovenClass.TRANSFORMING_FAILED);
 			}
 			finally {
@@ -1294,14 +1453,15 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 			reg.unregister();
 		}
 	}
-	
+
 	/**
 	 * Test that listeners are still notified when class definition fails.
 	 * @throws Exception
 	 */
+	@Test
 	public void testWovenClassListenerCalledWhenClassDefinitionFails() throws Exception {
 		final AtomicInteger integer = new AtomicInteger(0);
-		ServiceRegistration<WeavingHook> reg = getContext().registerService(
+		ServiceRegistration<WeavingHook> reg = bundleContext.registerService(
 				WeavingHook.class, 
 				new WeavingHook() {
 					public void weave(WovenClass wovenClass) {
@@ -1317,7 +1477,8 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 				fail("Class should have failed to load");
 			}
 			catch (ClassFormatError e) {
-				assertEquals("Hook not called", 1, integer.get());
+				assertThat(integer.get())
+						.as("Hook not called").isOne();
 				assertStates(WovenClass.TRANSFORMED, WovenClass.DEFINE_FAILED);
 			}
 			finally {
@@ -1328,16 +1489,19 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 			reg.unregister();
 		}
 	}
-	
+
 	/**
 	 * Test that listeners are not notified when no weaving hooks are registered.
 	 * @throws Exception
 	 */
+	@Test
 	public void testWovenClassListenerNotNotifiedWhenNoWeavingHooks() throws Exception {
 		registerThisListener();
 		try {
 			weavingClasses.loadClass(TEST_CLASS_NAME);
-			assertNull("Listener notified with no weaving hooks registered", listenerWovenClass);
+			assertThat(listenerWovenClass)
+					.as("Listener notified with no weaving hooks registered")
+				.isNull();
 			assertStates();
 		}
 		finally {
@@ -1346,88 +1510,62 @@ public class WeavingHookTests extends DefaultTestBundleControl implements Weavin
 	}
 	
 	private static void assertBundleWiringUpdated(WovenClass wovenClass) {
-		assertFalse("Bundle wiring was not updated", wovenClass.getBundleWiring().getRequirements(PackageNamespace.PACKAGE_NAMESPACE).isEmpty());
+		assertThat(wovenClass.getBundleWiring().getRequirements(PackageNamespace.PACKAGE_NAMESPACE))
+				.as("Bundle wiring was not updated").isNotEmpty();
 	}
 	
 	private static void assertBundleWiringNotUpdated(WovenClass wovenClass) {
-		assertTrue("Bundle wiring was updated", wovenClass.getBundleWiring().getRequirements(PackageNamespace.PACKAGE_NAMESPACE).isEmpty());
+		assertThat(wovenClass.getBundleWiring().getRequirements(PackageNamespace.PACKAGE_NAMESPACE))
+				.as("Bundle wiring was updated").isEmpty();
 	}
 	
 	private static void assertDefinedClass(WovenClass wovenClass, Class<?> clazz) {
-		assertEquals("Wrong defined class", clazz, wovenClass.getDefinedClass());
+		assertThat(wovenClass.getDefinedClass())
+				.as("Wrong defined class")
+				.isEqualTo(clazz);
 	}
 	
 	private static void assertImmutableList(WovenClass wc) {
 		List<String> dynamicImports = wc.getDynamicImports();
-		try {
-			dynamicImports.clear();
-			fail("Should be immutable");
-		} catch (Exception e) {
-			//No action needed
-		}
+		assertThatExceptionOfType(Exception.class)
+				.as("Should be immutable")
+				.isThrownBy(() -> dynamicImports.clear());
 
-		try {
-			dynamicImports.remove(0);
-			fail("Should be immutable");
-		} catch (Exception e) {
-			//No action needed
-		}
+		assertThatExceptionOfType(Exception.class)
+				.as("Should be immutable")
+				.isThrownBy(() -> dynamicImports.remove(0));
 
-		try {
-			dynamicImports.remove(ORG_OSGI_FRAMEWORK_VERSION_1_6);
-			fail("Should be immutable");
-		} catch (Exception e) {
-			//No action needed
-		}
+		assertThatExceptionOfType(Exception.class)
+				.as("Should be immutable")
+				.isThrownBy(() -> dynamicImports.remove(ORG_OSGI_FRAMEWORK_VERSION_1_6));
 
-		try {
-			dynamicImports.removeAll(Arrays.asList(new String[] {ORG_OSGI_FRAMEWORK_VERSION_1_6}));
-			fail("Should be immutable");
-		} catch (Exception e) {
-			//No action needed
-		}
+		assertThatExceptionOfType(Exception.class)
+				.as("Should be immutable")
+				.isThrownBy(() -> dynamicImports.removeAll(Arrays.asList(new String[] {ORG_OSGI_FRAMEWORK_VERSION_1_6})));
 
-		try {
-			dynamicImports.add(ORG_OSGI_FRAMEWORK_VERSION_1_6);
-			fail("Should be immutable");
-		} catch (Exception e) {
-			//No action needed
-		}
+		assertThatExceptionOfType(Exception.class)
+				.as("Should be immutable")
+				.isThrownBy(() -> dynamicImports.add(ORG_OSGI_FRAMEWORK_VERSION_1_6));
 
-		try {
-			dynamicImports.add(0, "foo");
-			fail("Should be immutable");
-		} catch (Exception e) {
-			//No action needed
-		}
+		assertThatExceptionOfType(Exception.class)
+				.as("Should be immutable")
+				.isThrownBy(() -> dynamicImports.add(0, "foo"));
 
-		try {
-			dynamicImports.addAll(Arrays.asList(new String[] {"bar"}));
-			fail("Should be immutable");
-		} catch (Exception e) {
-			//No action needed
-		}
+		assertThatExceptionOfType(Exception.class)
+				.as("Should be immutable")
+				.isThrownBy(() -> dynamicImports.addAll(Arrays.asList(new String[] {"bar"})));
 
-		try {
-			dynamicImports.addAll(0, Arrays.asList(new String[] {"bar"}));
-			fail("Should be immutable");
-		} catch (Exception e) {
-			//No action needed
-		}
+		assertThatExceptionOfType(Exception.class)
+				.as("Should be immutable")
+				.isThrownBy(() -> dynamicImports.addAll(0, Arrays.asList(new String[] {"bar"})));
 
-		try {
-			dynamicImports.set(0, "foo");
-			fail("Should be immutable");
-		} catch (Exception e) {
-			//No action needed
-		}
+		assertThatExceptionOfType(Exception.class)
+				.as("Should be immutable")
+				.isThrownBy(() -> dynamicImports.set(0, "foo"));
 
-		try {
-			dynamicImports.retainAll(Arrays.asList(new String[] {"bar"}));
-			fail("Should be immutable");
-		} catch (Exception e) {
-			//No action needed
-		}
+		assertThatExceptionOfType(Exception.class)
+				.as("Should be immutable")
+				.isThrownBy(() -> dynamicImports.retainAll(Arrays.asList(new String[] {"bar"})));
 
 		try {
 			Iterator<String> it = dynamicImports.iterator();

@@ -17,7 +17,7 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.secure.junit.hooks.weaving.export;
 
-import org.osgi.test.support.OSGiTestCaseProperties;
+import org.osgi.test.cases.framework.secure.junit.tck.TckProperties;
 
 public class TestConstants {
 	public static final String DYNAMIC_IMPORT_PACKAGE = "org.osgi.resource";
@@ -33,22 +33,22 @@ public class TestConstants {
 	public static final String WOVEN_CLASS = "org.osgi.test.cases.framework.secure.weaving.tb.woven.WeaveMe";
 	
 	public static boolean isExpectSecurityExceptionAll() {
-		return OSGiTestCaseProperties.getBooleanProperty(
+		return TckProperties.getBooleanProperty(
 				PROP_EXPECT_SECURITYEXCEPTION_ALL, false);
 	}
 	
 	public static boolean isExpectSecurityExceptionAddDynamicImport() {
-		return OSGiTestCaseProperties.getBooleanProperty(
+		return TckProperties.getBooleanProperty(
 				PROP_EXPECT_SECURITYEXCEPTION_ADDDYNAMICIMPORT, false);
 	}
 	
 	public static boolean isInvalidSetBytes() {
-		return OSGiTestCaseProperties.getBooleanProperty(PROP_INVALID_SETBYTES,
+		return TckProperties.getBooleanProperty(PROP_INVALID_SETBYTES,
 				false);
 	}
 	
 	public static boolean isRethrowingSecurityException() {
-		return OSGiTestCaseProperties.getBooleanProperty(
+		return TckProperties.getBooleanProperty(
 				PROP_RETHROW_SECURITYEXCEPTION, false);
 	}
 }

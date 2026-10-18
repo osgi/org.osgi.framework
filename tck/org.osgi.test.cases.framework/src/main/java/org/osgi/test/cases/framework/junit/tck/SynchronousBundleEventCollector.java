@@ -15,10 +15,18 @@
  *
  * SPDX-License-Identifier: Apache-2.0 
  *******************************************************************************/
+package org.osgi.test.cases.framework.junit.tck;
 
-package org.osgi.test.cases.framework.launch.junit;
+import org.osgi.framework.SynchronousBundleListener;
 
-public class SignatureTestCase extends
-		org.osgi.test.support.signature.SignatureTestCase {
-	// concrete subclass
+/**
+ * Local copy of the TCK test support class of the same purpose, so the test
+ * cases do not depend on the old JUnit 3 based test support library.
+ */
+public class SynchronousBundleEventCollector extends BundleEventCollector
+		implements SynchronousBundleListener {
+
+	public SynchronousBundleEventCollector(int typeMask) {
+		super(typeMask);
+	}
 }

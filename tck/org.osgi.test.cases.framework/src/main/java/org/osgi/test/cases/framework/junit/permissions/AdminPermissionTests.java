@@ -18,15 +18,21 @@
 
 package org.osgi.test.cases.framework.junit.permissions;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.osgi.test.cases.framework.junit.permissions.PermissionMocks.newMockBundle;
+import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.osgi.test.assertj.permission.PermissionAssertions.assertThat;
+
 import java.security.Permission;
 import java.security.PermissionCollection;
 import java.util.PropertyPermission;
 
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.AdminPermission;
 import org.osgi.framework.Bundle;
-import org.osgi.test.support.PermissionTestCase;
 
-public class AdminPermissionTests extends PermissionTestCase {
+public class AdminPermissionTests {
 
 	/*
 	 * @param actions <code>class</code>, <code>execute</code>,
@@ -35,6 +41,7 @@ public class AdminPermissionTests extends PermissionTestCase {
 	 * <code>resource</code>, <code>startlevel</code> or <code>context</code>. A
 	 * value of "*" or <code>null</code> indicates all actions.
 	 */
+	@Test
 	public void testInvalid() {
 		invalidAdminPermission("*", "x");
 		invalidAdminPermission("*", "   class  ,  x   ");
@@ -58,6 +65,7 @@ public class AdminPermissionTests extends PermissionTestCase {
 		invalidAdminPermission((Bundle) null, "*");
 	}
 
+	@Test
 	public void testDefault() {
 		AdminPermission p1 = new AdminPermission();
 		AdminPermission p2 = new AdminPermission("*", "*");
@@ -65,71 +73,72 @@ public class AdminPermissionTests extends PermissionTestCase {
 		AdminPermission p4 = new AdminPermission((String) null, p2.getActions());
 		Permission op = new PropertyPermission("java.home", "read");
 
-		assertImplies(p1, p2);
-		assertImplies(p2, p1);
-		assertImplies(p1, p3);
-		assertImplies(p3, p1);
-		assertImplies(p3, p2);
-		assertImplies(p2, p3);
-		assertImplies(p1, p4);
-		assertImplies(p4, p1);
-		assertImplies(p4, p3);
-		assertImplies(p3, p4);
-		assertImplies(p3, p4);
-		assertImplies(p4, p3);
-		assertImplies(p4, p2);
-		assertImplies(p2, p4);
-		assertImplies(p1, p1);
-		assertImplies(p2, p2);
-		assertImplies(p3, p3);
-		assertImplies(p4, p4);
-		assertNotImplies(p1, op);
+		assertThat(p1).implies(p2);
+		assertThat(p2).implies(p1);
+		assertThat(p1).implies(p3);
+		assertThat(p3).implies(p1);
+		assertThat(p3).implies(p2);
+		assertThat(p2).implies(p3);
+		assertThat(p1).implies(p4);
+		assertThat(p4).implies(p1);
+		assertThat(p4).implies(p3);
+		assertThat(p3).implies(p4);
+		assertThat(p3).implies(p4);
+		assertThat(p4).implies(p3);
+		assertThat(p4).implies(p2);
+		assertThat(p2).implies(p4);
+		assertThat(p1).implies(p1);
+		assertThat(p2).implies(p2);
+		assertThat(p3).implies(p3);
+		assertThat(p4).implies(p4);
+		assertThat(p1).doesNotImply(op);
 
-		assertEquals(p1, p2);
-		assertEquals(p2, p1);
-		assertEquals(p1, p3);
-		assertEquals(p3, p1);
-		assertEquals(p2, p3);
-		assertEquals(p3, p2);
-		assertEquals(p3, p4);
-		assertEquals(p4, p3);
-		assertEquals(p2, p4);
-		assertEquals(p4, p2);
-		assertEquals(p1, p4);
-		assertEquals(p4, p1);
-		assertNotEquals(p1, op);
+		assertThat(p1).isEqualTo(p2).hasSameHashCodeAs(p2);
+		assertThat(p2).isEqualTo(p1).hasSameHashCodeAs(p1);
+		assertThat(p1).isEqualTo(p3).hasSameHashCodeAs(p3);
+		assertThat(p3).isEqualTo(p1).hasSameHashCodeAs(p1);
+		assertThat(p2).isEqualTo(p3).hasSameHashCodeAs(p3);
+		assertThat(p3).isEqualTo(p2).hasSameHashCodeAs(p2);
+		assertThat(p3).isEqualTo(p4).hasSameHashCodeAs(p4);
+		assertThat(p4).isEqualTo(p3).hasSameHashCodeAs(p3);
+		assertThat(p2).isEqualTo(p4).hasSameHashCodeAs(p4);
+		assertThat(p4).isEqualTo(p2).hasSameHashCodeAs(p2);
+		assertThat(p1).isEqualTo(p4).hasSameHashCodeAs(p4);
+		assertThat(p4).isEqualTo(p1).hasSameHashCodeAs(p1);
+		assertThat(p1).isNotEqualTo(op).doesNotHaveSameHashCodeAs(op);
 
 		PermissionCollection pc = p1.newPermissionCollection();
 
-		checkEnumeration(pc.elements(), true);
+		assertThat(pc).hasNoElements();
 
-		assertNotImplies(pc, p1);
+		assertThat(pc).doesNotImply(p1);
 
-		assertAddPermission(pc, p1);
-		assertAddPermission(pc, p2);
-		assertAddPermission(pc, p3);
-		assertAddPermission(pc, p4);
-		assertNotAddPermission(pc, op);
+		assertThat(pc).accepts(p1);
+		assertThat(pc).accepts(p2);
+		assertThat(pc).accepts(p3);
+		assertThat(pc).accepts(p4);
+		assertThat(pc).rejects(op);
 
 		pc.setReadOnly();
 
-		assertNotAddPermission(pc, new AdminPermission());
+		assertThat(pc).rejects(new AdminPermission());
 
-		assertImplies(pc, p1);
-		assertImplies(pc, p2);
-		assertImplies(pc, p3);
-		assertImplies(pc, p4);
-		assertNotImplies(pc, op);
+		assertThat(pc).implies(p1);
+		assertThat(pc).implies(p2);
+		assertThat(pc).implies(p3);
+		assertThat(pc).implies(p4);
+		assertThat(pc).doesNotImply(op);
 
-		checkEnumeration(pc.elements(), false);
+		assertThat(pc).hasElements();
 
-		assertSerializable(p1);
-		assertSerializable(p2);
-		assertSerializable(p3);
-		assertSerializable(p4);
-		assertSerializable(pc);
+		assertThat(p1).isSerializable();
+		assertThat(p2).isSerializable();
+		assertThat(p3).isSerializable();
+		assertThat(p4).isSerializable();
+		assertThat(pc).isSerializable();
 	}
 
+	@Test
 	public void testFilter() {
 		AdminPermission p1 = new AdminPermission("(id=2)", "class");
 		AdminPermission p2 = new AdminPermission(" (id =2)", "class");
@@ -137,114 +146,115 @@ public class AdminPermissionTests extends PermissionTestCase {
 				"test.location", null), "resolve");
 		AdminPermission p4 = new AdminPermission("(name=test.*)", "resource");
 		AdminPermission p5 = new AdminPermission("(location=test.*)", "*");
-		assertImplies(p1, p3);
-		assertImplies(p1, p3);
-		assertImplies(p4, p3);
-		assertImplies(p5, p3);
-		assertNotImplies(p1, p2);
-		assertNotImplies(p2, p1);
-		assertNotImplies(p3, p2);
-		assertNotImplies(p3, p1);
+		assertThat(p1).implies(p3);
+		assertThat(p1).implies(p3);
+		assertThat(p4).implies(p3);
+		assertThat(p5).implies(p3);
+		assertThat(p1).doesNotImply(p2);
+		assertThat(p2).doesNotImply(p1);
+		assertThat(p3).doesNotImply(p2);
+		assertThat(p3).doesNotImply(p1);
 
-		assertEquals(p1, p2);
-		assertEquals(p2, p1);
-		assertNotEquals(p1, p3);
-		assertNotEquals(p2, p3);
+		assertThat(p1).isEqualTo(p2).hasSameHashCodeAs(p2);
+		assertThat(p2).isEqualTo(p1).hasSameHashCodeAs(p1);
+		assertThat(p1).isNotEqualTo(p3).doesNotHaveSameHashCodeAs(p3);
+		assertThat(p2).isNotEqualTo(p3).doesNotHaveSameHashCodeAs(p3);
 
 		PermissionCollection pc = p1.newPermissionCollection();
 
-		checkEnumeration(pc.elements(), true);
+		assertThat(pc).hasNoElements();
 
-		assertNotImplies(pc, p3);
-		assertNotImplies(pc, p1);
+		assertThat(pc).doesNotImply(p3);
+		assertThat(pc).doesNotImply(p1);
 
-		assertAddPermission(pc, new AdminPermission("(id=2)", "class"));
-		assertAddPermission(pc, new AdminPermission("(id=2)", "resource"));
+		assertThat(pc).accepts(new AdminPermission("(id=2)", "class"));
+		assertThat(pc).accepts(new AdminPermission("(id=2)", "resource"));
 
 		Bundle testBundle1 = newMockBundle(2, "test.bsn", "test.location", null);
 		Bundle testBundle2 = newMockBundle(1, "test.bsn", "test.location", null);
-		assertImplies(pc, new AdminPermission(testBundle1, "resolve"));
-		assertImplies(pc, new AdminPermission(testBundle1, "class"));
-		assertImplies(pc, new AdminPermission(testBundle1, "resource"));
-		assertNotImplies(pc, new AdminPermission(testBundle2, "resolve"));
-		assertNotImplies(pc, new AdminPermission(testBundle2, "class"));
-		assertNotImplies(pc, new AdminPermission(testBundle2, "resource"));
-		assertNotImplies(pc, new AdminPermission("*", "resource"));
+		assertThat(pc).implies(new AdminPermission(testBundle1, "resolve"));
+		assertThat(pc).implies(new AdminPermission(testBundle1, "class"));
+		assertThat(pc).implies(new AdminPermission(testBundle1, "resource"));
+		assertThat(pc).doesNotImply(new AdminPermission(testBundle2, "resolve"));
+		assertThat(pc).doesNotImply(new AdminPermission(testBundle2, "class"));
+		assertThat(pc).doesNotImply(new AdminPermission(testBundle2, "resource"));
+		assertThat(pc).doesNotImply(new AdminPermission("*", "resource"));
 
-		assertAddPermission(pc, new AdminPermission());
-		assertImplies(pc, new AdminPermission(testBundle1, "resolve"));
-		assertImplies(pc, new AdminPermission(testBundle1, "class"));
-		assertImplies(pc, new AdminPermission(testBundle1, "resource"));
-		assertImplies(pc, new AdminPermission(testBundle2, "resolve"));
-		assertImplies(pc, new AdminPermission(testBundle2, "class"));
-		assertImplies(pc, new AdminPermission(testBundle2, "resource"));
-		assertImplies(pc, new AdminPermission("*", "resource"));
+		assertThat(pc).accepts(new AdminPermission());
+		assertThat(pc).implies(new AdminPermission(testBundle1, "resolve"));
+		assertThat(pc).implies(new AdminPermission(testBundle1, "class"));
+		assertThat(pc).implies(new AdminPermission(testBundle1, "resource"));
+		assertThat(pc).implies(new AdminPermission(testBundle2, "resolve"));
+		assertThat(pc).implies(new AdminPermission(testBundle2, "class"));
+		assertThat(pc).implies(new AdminPermission(testBundle2, "resource"));
+		assertThat(pc).implies(new AdminPermission("*", "resource"));
 
-		assertNotImplies(pc, p1);
+		assertThat(pc).doesNotImply(p1);
 
-		checkEnumeration(pc.elements(), false);
+		assertThat(pc).hasElements();
 
-		assertSerializable(p1);
-		assertSerializable(p2);
-		assertNotSerializable(p3);
-		assertSerializable(p4);
-		assertSerializable(p5);
-		assertSerializable(pc);
+		assertThat(p1).isSerializable();
+		assertThat(p2).isSerializable();
+		assertThat(p3).isNotSerializable();
+		assertThat(p4).isSerializable();
+		assertThat(p5).isSerializable();
+		assertThat(pc).isSerializable();
 	}
 
+	@Test
 	public void testSigners() {
 		AdminPermission ap = new AdminPermission("(signer=\\*, o=ACME, c=US)",
 				"*");
 
-		assertImplies(ap, new AdminPermission(newMockBundle(1, "test.bsn",
+		assertThat(ap).implies(new AdminPermission(newMockBundle(1, "test.bsn",
 				"test.location", "cn=Bugs Bunny, o=ACME, c=US"), "*"));
-		assertImplies(ap, new AdminPermission(newMockBundle(2, "test.bsn",
+		assertThat(ap).implies(new AdminPermission(newMockBundle(2, "test.bsn",
 				"test.location", "ou = Carrots, cn=Daffy Duck, o=ACME, c=US"),
 		"*"));
-		assertImplies(ap, new AdminPermission(newMockBundle(3, "test.bsn",
+		assertThat(ap).implies(new AdminPermission(newMockBundle(3, "test.bsn",
 				"test.location", "dc=www,dc=acme,dc=com,o=ACME,c=US"), "*"));
-		assertNotImplies(ap, new AdminPermission(newMockBundle(4, "test.bsn",
+		assertThat(ap).doesNotImply(new AdminPermission(newMockBundle(4, "test.bsn",
 				"test.location",
 		"street = 9C\\, Avenue St. Drézéry, o=ACME, c=FR"), "*"));
-		assertNotImplies(ap, new AdminPermission(newMockBundle(5, "test.bsn",
+		assertThat(ap).doesNotImply(new AdminPermission(newMockBundle(5, "test.bsn",
 				"test.location", "dc=www, dc=acme, dc=com, c=US"), "*"));
 
 		ap = new AdminPermission("(signer=cn=\\*,o=ACME,c=\\*)", "*");
 		
-		assertImplies(ap, new AdminPermission(newMockBundle(6, "test.bsn",
+		assertThat(ap).implies(new AdminPermission(newMockBundle(6, "test.bsn",
 				"test.location", "cn = Daffy Duck , o = ACME , c = US"), "*"));
-		assertImplies(ap, new AdminPermission(newMockBundle(7, "test.bsn",
+		assertThat(ap).implies(new AdminPermission(newMockBundle(7, "test.bsn",
 				"test.location", "cn=Road Runner, o=ACME, c=NL"), "*"));
-		assertNotImplies(ap, new AdminPermission(newMockBundle(8, "test.bsn",
+		assertThat(ap).doesNotImply(new AdminPermission(newMockBundle(8, "test.bsn",
 				"test.location", "o=ACME, c=NL"), "*"));
-		assertNotImplies(ap, new AdminPermission(newMockBundle(9, "test.bsn",
+		assertThat(ap).doesNotImply(new AdminPermission(newMockBundle(9, "test.bsn",
 				"test.location", "dc=acme.com, cn=Bugs Bunny, o=ACME, c=US"),
 				"*"));
 
 		// test bad signer filter that does not escape '*'
 		ap = new AdminPermission("(signer=*, o=ACME, c=US)", "*");
-		assertNotImplies(ap, new AdminPermission(newMockBundle(1, "test.bsn",
+		assertThat(ap).doesNotImply(new AdminPermission(newMockBundle(1, "test.bsn",
 				"test.location", "cn=Bugs Bunny, o=ACME, c=US"), "*"));
-		assertNotImplies(ap, new AdminPermission(newMockBundle(2, "test.bsn",
+		assertThat(ap).doesNotImply(new AdminPermission(newMockBundle(2, "test.bsn",
 				"test.location", "ou = Carrots, cn=Daffy Duck, o=ACME, c=US"),
 		"*"));
-		assertNotImplies(ap, new AdminPermission(newMockBundle(3, "test.bsn",
+		assertThat(ap).doesNotImply(new AdminPermission(newMockBundle(3, "test.bsn",
 				"test.location", "dc=www,dc=acme,dc=com,o=ACME,c=US"), "*"));
-		assertNotImplies(ap, new AdminPermission(newMockBundle(4, "test.bsn",
+		assertThat(ap).doesNotImply(new AdminPermission(newMockBundle(4, "test.bsn",
 				"test.location",
 		"street = 9C\\, Avenue St. Drézéry, o=ACME, c=FR"), "*"));
-		assertNotImplies(ap, new AdminPermission(newMockBundle(5, "test.bsn",
+		assertThat(ap).doesNotImply(new AdminPermission(newMockBundle(5, "test.bsn",
 				"test.location", "dc=www, dc=acme, dc=com, c=US"), "*"));
 	}
 
+	@Test
 	public void testInvalidDN() {
 		AdminPermission ap = new AdminPermission("(signer=;`´$.,@)", "*");
-		assertNotImplies(
-				ap,
-				new AdminPermission(newMockBundle(1, "test.bsn",
+		assertThat(ap).doesNotImply(new AdminPermission(newMockBundle(1, "test.bsn",
 						"test.location", "cn=Bugs Bunny, o=ACME, c=US"), "*"));
 	}
-	
+
+	@Test
 	public void testActionImplications() {
 		AdminPermission classx = new AdminPermission("*", "CLASS");
 		AdminPermission execute = new AdminPermission("*", "EXECUTE");
@@ -259,17 +269,17 @@ public class AdminPermissionTests extends PermissionTestCase {
 		AdminPermission context = new AdminPermission("*", "CONTEXT");
 		AdminPermission weave = new AdminPermission("*", "WEAVE");
 
-		assertEquals("class,resolve", classx.getActions());
-		assertEquals("execute,resolve", execute.getActions());
-		assertEquals("extensionLifecycle", extensionLifecycle.getActions());
-		assertEquals("lifecycle", lifecycle.getActions());
-		assertEquals("listener", listener.getActions());
-		assertEquals("metadata", metadata.getActions());
-		assertEquals("resolve", resolve.getActions());
-		assertEquals("resolve,resource", resource.getActions());
-		assertEquals("startlevel", startlevel.getActions());
-		assertEquals("context", context.getActions());
-		assertEquals("weave", weave.getActions());
+		assertThat(classx.getActions()).isEqualTo("class,resolve");
+		assertThat(execute.getActions()).isEqualTo("execute,resolve");
+		assertThat(extensionLifecycle.getActions()).isEqualTo("extensionLifecycle");
+		assertThat(lifecycle.getActions()).isEqualTo("lifecycle");
+		assertThat(listener.getActions()).isEqualTo("listener");
+		assertThat(metadata.getActions()).isEqualTo("metadata");
+		assertThat(resolve.getActions()).isEqualTo("resolve");
+		assertThat(resource.getActions()).isEqualTo("resolve,resource");
+		assertThat(startlevel.getActions()).isEqualTo("startlevel");
+		assertThat(context.getActions()).isEqualTo("context");
+		assertThat(weave.getActions()).isEqualTo("weave");
 
 		classx = new AdminPermission(classx.getName(), classx.getActions());
 		execute = new AdminPermission(execute.getName(), execute.getActions());
@@ -289,165 +299,157 @@ public class AdminPermissionTests extends PermissionTestCase {
 		context = new AdminPermission(context.getName(), context.getActions());
 		weave = new AdminPermission(weave.getName(), weave.getActions());
 
-		assertImplies(classx, classx);
-		assertNotImplies(classx, execute);
-		assertNotImplies(classx, extensionLifecycle);
-		assertNotImplies(classx, lifecycle);
-		assertNotImplies(classx, listener);
-		assertNotImplies(classx, metadata);
-		assertImplies(classx, resolve);
-		assertNotImplies(classx, resource);
-		assertNotImplies(classx, startlevel);
-		assertNotImplies(classx, context);
-		assertNotImplies(classx, weave);
+		assertThat(classx).implies(classx);
+		assertThat(classx).doesNotImply(execute);
+		assertThat(classx).doesNotImply(extensionLifecycle);
+		assertThat(classx).doesNotImply(lifecycle);
+		assertThat(classx).doesNotImply(listener);
+		assertThat(classx).doesNotImply(metadata);
+		assertThat(classx).implies(resolve);
+		assertThat(classx).doesNotImply(resource);
+		assertThat(classx).doesNotImply(startlevel);
+		assertThat(classx).doesNotImply(context);
+		assertThat(classx).doesNotImply(weave);
 
-		assertNotImplies(execute, classx);
-		assertImplies(execute, execute);
-		assertNotImplies(execute, extensionLifecycle);
-		assertNotImplies(execute, lifecycle);
-		assertNotImplies(execute, listener);
-		assertNotImplies(execute, metadata);
-		assertImplies(execute, resolve);
-		assertNotImplies(execute, resource);
-		assertNotImplies(execute, startlevel);
-		assertNotImplies(execute, context);
-		assertNotImplies(execute, weave);
+		assertThat(execute).doesNotImply(classx);
+		assertThat(execute).implies(execute);
+		assertThat(execute).doesNotImply(extensionLifecycle);
+		assertThat(execute).doesNotImply(lifecycle);
+		assertThat(execute).doesNotImply(listener);
+		assertThat(execute).doesNotImply(metadata);
+		assertThat(execute).implies(resolve);
+		assertThat(execute).doesNotImply(resource);
+		assertThat(execute).doesNotImply(startlevel);
+		assertThat(execute).doesNotImply(context);
+		assertThat(execute).doesNotImply(weave);
 		
-		assertNotImplies(extensionLifecycle, classx);
-		assertNotImplies(extensionLifecycle, execute);
-		assertImplies(extensionLifecycle, extensionLifecycle);
-		assertNotImplies(extensionLifecycle, lifecycle);
-		assertNotImplies(extensionLifecycle, listener);
-		assertNotImplies(extensionLifecycle, metadata);
-		assertNotImplies(extensionLifecycle, resolve);
-		assertNotImplies(extensionLifecycle, resource);
-		assertNotImplies(extensionLifecycle, startlevel);
-		assertNotImplies(extensionLifecycle, context);
-		assertNotImplies(extensionLifecycle, weave);
+		assertThat(extensionLifecycle).doesNotImply(classx);
+		assertThat(extensionLifecycle).doesNotImply(execute);
+		assertThat(extensionLifecycle).implies(extensionLifecycle);
+		assertThat(extensionLifecycle).doesNotImply(lifecycle);
+		assertThat(extensionLifecycle).doesNotImply(listener);
+		assertThat(extensionLifecycle).doesNotImply(metadata);
+		assertThat(extensionLifecycle).doesNotImply(resolve);
+		assertThat(extensionLifecycle).doesNotImply(resource);
+		assertThat(extensionLifecycle).doesNotImply(startlevel);
+		assertThat(extensionLifecycle).doesNotImply(context);
+		assertThat(extensionLifecycle).doesNotImply(weave);
 		
-		assertNotImplies(lifecycle, classx);
-		assertNotImplies(lifecycle, execute);
-		assertNotImplies(lifecycle, extensionLifecycle);
-		assertImplies(lifecycle, lifecycle);
-		assertNotImplies(lifecycle, listener);
-		assertNotImplies(lifecycle, metadata);
-		assertNotImplies(lifecycle, resolve);
-		assertNotImplies(lifecycle, resource);
-		assertNotImplies(lifecycle, startlevel);
-		assertNotImplies(lifecycle, context);
-		assertNotImplies(lifecycle, weave);
+		assertThat(lifecycle).doesNotImply(classx);
+		assertThat(lifecycle).doesNotImply(execute);
+		assertThat(lifecycle).doesNotImply(extensionLifecycle);
+		assertThat(lifecycle).implies(lifecycle);
+		assertThat(lifecycle).doesNotImply(listener);
+		assertThat(lifecycle).doesNotImply(metadata);
+		assertThat(lifecycle).doesNotImply(resolve);
+		assertThat(lifecycle).doesNotImply(resource);
+		assertThat(lifecycle).doesNotImply(startlevel);
+		assertThat(lifecycle).doesNotImply(context);
+		assertThat(lifecycle).doesNotImply(weave);
 		
-		assertNotImplies(listener, classx);
-		assertNotImplies(listener, execute);
-		assertNotImplies(listener, extensionLifecycle);
-		assertNotImplies(listener, lifecycle);
-		assertImplies(listener, listener);
-		assertNotImplies(listener, metadata);
-		assertNotImplies(listener, resolve);
-		assertNotImplies(listener, resource);
-		assertNotImplies(listener, startlevel);
-		assertNotImplies(listener, context);
-		assertNotImplies(listener, weave);
+		assertThat(listener).doesNotImply(classx);
+		assertThat(listener).doesNotImply(execute);
+		assertThat(listener).doesNotImply(extensionLifecycle);
+		assertThat(listener).doesNotImply(lifecycle);
+		assertThat(listener).implies(listener);
+		assertThat(listener).doesNotImply(metadata);
+		assertThat(listener).doesNotImply(resolve);
+		assertThat(listener).doesNotImply(resource);
+		assertThat(listener).doesNotImply(startlevel);
+		assertThat(listener).doesNotImply(context);
+		assertThat(listener).doesNotImply(weave);
 		
-		assertNotImplies(metadata, classx);
-		assertNotImplies(metadata, execute);
-		assertNotImplies(metadata, extensionLifecycle);
-		assertNotImplies(metadata, lifecycle);
-		assertNotImplies(metadata, listener);
-		assertImplies(metadata, metadata);
-		assertNotImplies(metadata, resolve);
-		assertNotImplies(metadata, resource);
-		assertNotImplies(metadata, startlevel);
-		assertNotImplies(metadata, context);
-		assertNotImplies(metadata, weave);
+		assertThat(metadata).doesNotImply(classx);
+		assertThat(metadata).doesNotImply(execute);
+		assertThat(metadata).doesNotImply(extensionLifecycle);
+		assertThat(metadata).doesNotImply(lifecycle);
+		assertThat(metadata).doesNotImply(listener);
+		assertThat(metadata).implies(metadata);
+		assertThat(metadata).doesNotImply(resolve);
+		assertThat(metadata).doesNotImply(resource);
+		assertThat(metadata).doesNotImply(startlevel);
+		assertThat(metadata).doesNotImply(context);
+		assertThat(metadata).doesNotImply(weave);
 		
-		assertNotImplies(resolve, classx);
-		assertNotImplies(resolve, execute);
-		assertNotImplies(resolve, extensionLifecycle);
-		assertNotImplies(resolve, lifecycle);
-		assertNotImplies(resolve, listener);
-		assertNotImplies(resolve, metadata);
-		assertImplies(resolve, resolve);
-		assertNotImplies(resolve, resource);
-		assertNotImplies(resolve, startlevel);
-		assertNotImplies(resolve, context);
-		assertNotImplies(resolve, weave);
+		assertThat(resolve).doesNotImply(classx);
+		assertThat(resolve).doesNotImply(execute);
+		assertThat(resolve).doesNotImply(extensionLifecycle);
+		assertThat(resolve).doesNotImply(lifecycle);
+		assertThat(resolve).doesNotImply(listener);
+		assertThat(resolve).doesNotImply(metadata);
+		assertThat(resolve).implies(resolve);
+		assertThat(resolve).doesNotImply(resource);
+		assertThat(resolve).doesNotImply(startlevel);
+		assertThat(resolve).doesNotImply(context);
+		assertThat(resolve).doesNotImply(weave);
 		
-		assertNotImplies(resource, classx);
-		assertNotImplies(resource, execute);
-		assertNotImplies(resource, extensionLifecycle);
-		assertNotImplies(resource, lifecycle);
-		assertNotImplies(resource, listener);
-		assertNotImplies(resource, metadata);
-		assertImplies(resource, resolve);
-		assertImplies(resource, resource);
-		assertNotImplies(resource, startlevel);
-		assertNotImplies(resource, context);
-		assertNotImplies(resource, weave);
+		assertThat(resource).doesNotImply(classx);
+		assertThat(resource).doesNotImply(execute);
+		assertThat(resource).doesNotImply(extensionLifecycle);
+		assertThat(resource).doesNotImply(lifecycle);
+		assertThat(resource).doesNotImply(listener);
+		assertThat(resource).doesNotImply(metadata);
+		assertThat(resource).implies(resolve);
+		assertThat(resource).implies(resource);
+		assertThat(resource).doesNotImply(startlevel);
+		assertThat(resource).doesNotImply(context);
+		assertThat(resource).doesNotImply(weave);
 		
-		assertNotImplies(startlevel, classx);
-		assertNotImplies(startlevel, execute);
-		assertNotImplies(startlevel, extensionLifecycle);
-		assertNotImplies(startlevel, lifecycle);
-		assertNotImplies(startlevel, listener);
-		assertNotImplies(startlevel, metadata);
-		assertNotImplies(startlevel, resolve);
-		assertNotImplies(startlevel, resource);
-		assertImplies(startlevel, startlevel);
-		assertNotImplies(startlevel, context);
-		assertNotImplies(startlevel, weave);
+		assertThat(startlevel).doesNotImply(classx);
+		assertThat(startlevel).doesNotImply(execute);
+		assertThat(startlevel).doesNotImply(extensionLifecycle);
+		assertThat(startlevel).doesNotImply(lifecycle);
+		assertThat(startlevel).doesNotImply(listener);
+		assertThat(startlevel).doesNotImply(metadata);
+		assertThat(startlevel).doesNotImply(resolve);
+		assertThat(startlevel).doesNotImply(resource);
+		assertThat(startlevel).implies(startlevel);
+		assertThat(startlevel).doesNotImply(context);
+		assertThat(startlevel).doesNotImply(weave);
 		
-		assertNotImplies(context, classx);
-		assertNotImplies(context, execute);
-		assertNotImplies(context, extensionLifecycle);
-		assertNotImplies(context, lifecycle);
-		assertNotImplies(context, listener);
-		assertNotImplies(context, metadata);
-		assertNotImplies(context, resolve);
-		assertNotImplies(context, resource);
-		assertNotImplies(context, startlevel);
-		assertImplies(context, context);
-		assertNotImplies(context, weave);
+		assertThat(context).doesNotImply(classx);
+		assertThat(context).doesNotImply(execute);
+		assertThat(context).doesNotImply(extensionLifecycle);
+		assertThat(context).doesNotImply(lifecycle);
+		assertThat(context).doesNotImply(listener);
+		assertThat(context).doesNotImply(metadata);
+		assertThat(context).doesNotImply(resolve);
+		assertThat(context).doesNotImply(resource);
+		assertThat(context).doesNotImply(startlevel);
+		assertThat(context).implies(context);
+		assertThat(context).doesNotImply(weave);
 
-		assertNotImplies(weave, classx);
-		assertNotImplies(weave, execute);
-		assertNotImplies(weave, extensionLifecycle);
-		assertNotImplies(weave, lifecycle);
-		assertNotImplies(weave, listener);
-		assertNotImplies(weave, metadata);
-		assertNotImplies(weave, resolve);
-		assertNotImplies(weave, resource);
-		assertNotImplies(weave, startlevel);
-		assertNotImplies(weave, context);
-		assertImplies(weave, weave);
+		assertThat(weave).doesNotImply(classx);
+		assertThat(weave).doesNotImply(execute);
+		assertThat(weave).doesNotImply(extensionLifecycle);
+		assertThat(weave).doesNotImply(lifecycle);
+		assertThat(weave).doesNotImply(listener);
+		assertThat(weave).doesNotImply(metadata);
+		assertThat(weave).doesNotImply(resolve);
+		assertThat(weave).doesNotImply(resource);
+		assertThat(weave).doesNotImply(startlevel);
+		assertThat(weave).doesNotImply(context);
+		assertThat(weave).implies(weave);
 		
 		PermissionCollection pc = context.newPermissionCollection();
 		AdminPermission ap = new AdminPermission("(id=2)", "metadata");
 		AdminPermission all = new AdminPermission(newMockBundle(2, "test.bsn",
 				"test.location", null), "metadata,context");
 
-		assertAddPermission(pc, context);
-		assertAddPermission(pc, ap);
-		assertImplies(pc, all);
+		assertThat(pc).accepts(context);
+		assertThat(pc).accepts(ap);
+		assertThat(pc).implies(all);
 	}
 
 	private static void invalidAdminPermission(String name, String actions) {
-		try {
-			AdminPermission p = new AdminPermission(name, actions);
-			fail(p + " created with invalid arguments");
-		}
-		catch (IllegalArgumentException e) {
-			// expected
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("permission created with invalid arguments")
+				.isThrownBy(() -> new AdminPermission(name, actions));
 	}
 	
 	private static void invalidAdminPermission(Bundle bundle, String actions) {
-		try {
-			AdminPermission p = new AdminPermission(bundle, actions);
-			fail(p + " created with invalid arguments");
-		}
-		catch (IllegalArgumentException e) {
-			// expected
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("permission created with invalid arguments")
+				.isThrownBy(() -> new AdminPermission(bundle, actions));
 	}
 }

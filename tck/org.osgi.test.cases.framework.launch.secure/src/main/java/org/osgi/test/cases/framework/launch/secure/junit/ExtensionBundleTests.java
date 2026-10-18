@@ -17,17 +17,22 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.launch.secure.junit;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
 import java.io.InputStream;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.Constants;
 import org.osgi.framework.launch.Framework;
-import org.osgi.test.support.compatibility.DefaultTestBundleControl;
 
 /**
  * Test cases for testing fragment bundles and extension bundles.
@@ -35,9 +40,11 @@ import org.osgi.test.support.compatibility.DefaultTestBundleControl;
  * @author $Id$
  */
 public class ExtensionBundleTests extends LaunchTest {
+
 	private Framework framework;
-	
-	protected void setUp() throws Exception {
+
+	@BeforeEach
+	public void setUp() throws Exception {
 		super.setUp();
 		Map<String, String> configuration = new HashMap<String, String>();
 		configuration.put(Constants.FRAMEWORK_SECURITY, "osgi");
@@ -45,11 +52,14 @@ public class ExtensionBundleTests extends LaunchTest {
 				getStorageArea(getName(), true).getAbsolutePath());
 		framework = createFramework(configuration);
 		initFramework(framework);
-		assertNotNull("Null SecurityManager", System.getSecurityManager());
+		assertThat(System.getSecurityManager())
+				.as("Null SecurityManager")
+				.isNotNull();
 		startFramework(framework);
 	}
 
-	protected void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() throws Exception {
 		stopFramework(framework);
 		super.tearDown();
 	}
@@ -63,29 +73,17 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
+	@Test
 	public void testFrameworkExtensionPermission() throws Exception {
 		if ("true".equals(framework.getBundleContext().getProperty(
 				Constants.SUPPORTS_FRAMEWORK_EXTENSION))) {
 			String message = "expected extension bundle to fail install due to lack of permission";
-			Bundle tb11 = null;
-			try {
-				tb11 = installBundle(framework, "/fragments.tb11.jar");
-				// should fail, since extension bundles have to have
-				// AllPermission to be installed
-				DefaultTestBundleControl.failException(message, 
-						BundleException.class);
-			}
-			catch (Exception e) {
-				DefaultTestBundleControl.assertException(message, 
-						BundleException.class, e);
-			} finally {
-				if (tb11 != null) {
-					tb11.uninstall();
-				}
-			}
+			assertThatExceptionOfType(BundleException.class)
+					.as(message)
+					.isThrownBy(() -> installBundle(framework, "/fragments.tb11.jar"));
 		}
 		else {
-			DefaultTestBundleControl.trace(
+			System.out.println(
 					"framework extension bundles not supported");
 		}
 	}
@@ -99,6 +97,7 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
+	@Test
 	public void testFrameworkExtensionInvokerPermission() throws Exception {
 		if ("true".equals(framework.getBundleContext().getProperty(
 				Constants.SUPPORTS_FRAMEWORK_EXTENSION))) {
@@ -117,12 +116,11 @@ public class ExtensionBundleTests extends LaunchTest {
 			// bundles have to have
 			// AdminPermission[<bundle>, EXTENSIONLIFECYCLE]
 			// to install extension bundles
-			DefaultTestBundleControl
-					.trace("prevented bundle without permission from installing "
+			System.out.println("prevented bundle without permission from installing "
 							+ "a framework extension bundle");
 		}
 		else {
-			DefaultTestBundleControl.trace(
+			System.out.println(
 					"framework extension bundles not supported");
 		}
 	}
@@ -136,6 +134,7 @@ public class ExtensionBundleTests extends LaunchTest {
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
+	@Test
 	public void testFrameworkExtensionInvokerPermissionOk() throws Exception {
 		if ("true".equals(framework.getBundleContext().getProperty(
 				Constants.SUPPORTS_FRAMEWORK_EXTENSION))) {
@@ -152,11 +151,11 @@ public class ExtensionBundleTests extends LaunchTest {
 			tb18.start();
 			// installation inside start should not fail, since
 			// bundle has AdminPermission[<bundle>, EXTENSIONLIFECYCLE]
-			DefaultTestBundleControl.trace("bundle with permission installed "
+			System.out.println("bundle with permission installed "
 					+ "a framework extension bundle");
 		}
 		else {
-			DefaultTestBundleControl.trace(
+			System.out.println(
 					"framework extension bundles not supported");
 		}
 	}

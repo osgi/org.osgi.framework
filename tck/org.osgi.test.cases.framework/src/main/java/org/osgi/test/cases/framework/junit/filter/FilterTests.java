@@ -17,14 +17,23 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.junit.filter;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+
 import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
-import org.osgi.test.support.compatibility.DefaultTestBundleControl;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.install.BundleInstaller;
 
 /**
  * This is the bundle initially installed and started by the TestCase when
@@ -32,21 +41,30 @@ import org.osgi.test.support.compatibility.DefaultTestBundleControl;
  * 
  * @author Ericsson Radio Systems AB
  */
-public class FilterTests extends DefaultTestBundleControl {
+public class FilterTests {
+
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
 	private Bundle						tb1;
 
-	protected void setUp() throws Exception {
-		tb1 = installBundle("filter.tb1.jar");
+	@BeforeEach
+	public void setUp() throws Exception {
+		tb1 = bundleInstaller.installBundle("filter.tb1.jar", true);
 		tb1.start();
 	}
 
-	protected void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() throws Exception {
 		tb1.uninstall();
 	}
-	
+
+	@Test
 	private void testFilter(String filter, String logtext, String[] ids)
 			throws Exception {
-		ServiceReference< ? >[] refs = getContext().getServiceReferences(
+		ServiceReference< ? >[] refs = bundleContext.getServiceReferences(
 				"org.osgi.test.cases.framework.filter.tb1.TestService", filter);
 		logRefList(logtext, refs, ids);
 	}
@@ -56,6 +74,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
+	@Test
 	public void test_framework_filter_m1() throws Exception {
 		testFilter(null, "Testing null filter", new String[]{"a1", "b1", "b2", "c1", "c2", "c25", "d25"});
 	}
@@ -65,15 +84,16 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
+	@Test
 	public void test_framework_filter_m2() throws Exception {
 		try {
-			getContext()
+			bundleContext
 					.getServiceReferences(
 							"org.osgi.test.cases.framework.filter.tb1.TestService",
 							"(!(!(!(!(!(!(!(!(!(!(!(!(!(!(!(!(!(!(!(!(!(!(!(!(name=ServiceA))))))))))))))))))))))))");
 			fail("The filter expression was wrong");
 		} catch (InvalidSyntaxException ise) {
-			pass("Exception thrown");
+			System.out.println("Exception thrown");
 		}
 	}
 
@@ -82,6 +102,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
+	@Test
 	public void test_framework_filter_m3() throws Exception {
 		testFilter("(nAMe=ServiceA)", "Testing case insensitive", new String[] {"a1"});
 	}
@@ -92,6 +113,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * @requirement framework.filter.m4
 	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
+	@Test
 	public void test_framework_filter_m4() throws Exception {
 		testFilter(
 				"(  \t \r \n \u000B \u000C \u001C \u001D  \u001E \u001F |  (   \t \r \n \u000B \u000C \u001C \u001D  \u001E \u001F  name 	  =ServiceA)(  \t \r \n \u000B \u000C \u001C \u001D  \u001E \u001F  name=ServiceB)   \t \r \n \u000B \u000C \u001C \u001D  \u001E \u001F  )",
@@ -103,6 +125,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
+	@Test
 	public void test_framework_filter_m5() throws Exception {
 		testFilter("(name=ServiceA)", "Testing type String", new String[]{"a1"});
 	}
@@ -112,6 +135,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
+	@Test
 	public void test_framework_filter_m6() throws Exception {
 		testFilter("(Integer=3)", "Testing type Integer", new String[]{"c25"});
 		testFilter("(Long=3)", "Testing type Long", new String[]{"c25"});
@@ -125,6 +149,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * @requirement framework.filter.m9
 	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
+	@Test
 	public void test_framework_filter_m9() throws Exception {
 		testFilter("(compatible=1.5)", "Testing array filter", new String[]{"c2"});
 	}
@@ -135,6 +160,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * @requirement framework.filter.m10
 	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
+	@Test
 	public void test_framework_filter_m10() throws Exception {
 		testFilter("(compatible=2.1)", "Testing Vector filter", new String[]{"c25"});
 	}
@@ -145,6 +171,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
+	@Test
 	public void test_framework_filter_s1() throws Exception {
 		testFilter("(name~=servicea)", "Testing approximate equality (case)", new String[]{"a1"});
 		testFilter("(description~=Service A)",
@@ -156,6 +183,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
+	@Test
 	public void test_framework_filter_s2() throws Exception {
 		// Always finds the service object when filtering by ObjectA
 		testFilter("(ObjectA=0)",
@@ -168,6 +196,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
+	@Test
 	public void test_framework_filter_s3() throws Exception {
 		testFilter("(ObjectB=4)",
 				"Testing = operator with object that does not implement java.lang.Comparable", new String[]{"d25"});
@@ -179,6 +208,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
+	@Test
 	public void test_framework_filter_s4() throws Exception {
 		testFilter("(ObjectB<=4)",
 				"Testing <= operator with object that does not implement java.lang.Comparable", new String[]{"d25"});
@@ -190,6 +220,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
+	@Test
 	public void test_framework_filter_s5() throws Exception {
 		testFilter("(ObjectB>=4)",
 				"Testing >= operator with object that does not implement java.lang.Comparable", new String[]{"d25"});
@@ -201,6 +232,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
+	@Test
 	public void test_framework_filter_s6() throws Exception {
 		testFilter("(ObjectB~=4)",
 				"Testing ~= operator with object that does not implement java.lang.Comparable", new String[]{"d25"});
@@ -212,12 +244,13 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
+	@Test
 	public void test_framework_filter_s7() throws Exception {
 		String msg;
 		msg = "Testing < operator with object that does not implement java.lang.Comparable";
 		try {
 			testFilter("(ObjectB<=4)", msg, new String[]{"d25"});
-			pass("Invalid syntax??");
+			System.out.println("Invalid syntax??");
 		} catch (InvalidSyntaxException ise) {
 			fail("Objects are not required to implement Comparable");
 		}
@@ -229,6 +262,7 @@ public class FilterTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec BundleContext.getServiceReferences(String, String)
 	 */
+	@Test
 	public void test_framework_filter_s9() throws Exception {
 		testFilter(
 				"(ObjectC=4)",
@@ -249,11 +283,17 @@ public class FilterTests extends DefaultTestBundleControl {
 		
 		for ( int i=0; i<refs.length; i++ ) {
 			String id = (String) refs[i].getProperty("id");
-			assertNotNull("Expecting an id for " + refs[i].getProperty("name") + ":" +refs[i].getProperty("version"),id);
-			assertTrue( "Did not expect " + id, set.contains(id));
+			assertThat(id)
+					.as("Expecting an id for " + refs[i].getProperty("name") + ":" +refs[i].getProperty("version"))
+				.isNotNull();
+			assertThat(set.contains(id))
+					.as("Did not expect " + id)
+				.isTrue();
 			set.remove(id);
 		}
-		assertTrue( "Remaining ids left in expected set: " + set, set.size() == 0);
+		assertThat(set.size() == 0)
+				.as("Remaining ids left in expected set: " + set)
+				.isTrue();
 		
 		/*
 		StringBuffer logString = new StringBuffer();
@@ -283,7 +323,7 @@ public class FilterTests extends DefaultTestBundleControl {
 			logString.append(" }");
 		} else
 			logString.append("No services.");
-		log(prefix + logString.toString());
+		System.out.println(prefix + logString.toString());
 		*/
 	}
 }

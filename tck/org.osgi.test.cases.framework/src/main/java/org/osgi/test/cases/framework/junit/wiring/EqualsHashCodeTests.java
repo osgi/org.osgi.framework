@@ -17,12 +17,17 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.junit.wiring;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceRegistration;
@@ -73,23 +78,38 @@ public class EqualsHashCodeTests extends WiringTest {
 	
 	private CollisionHook collisionHook;
 	private ServiceRegistration<org.osgi.framework.hooks.bundle.CollisionHook> registration;
-	
+
+	@Test
 	public void testEqualsHashCode() throws Exception {
 		Bundle tb1 = install("wiring.tb1.jar.a", "wiring.tb1.jar");
 		try {
 			Bundle tb2 = install("wiring.tb1.jar.b", "wiring.tb1.jar");
 			try {
-				assertTrue("Bundles should resolve", frameworkWiring.resolveBundles(Arrays.asList(tb1, tb2)));
-				assertEquals("Wrong number of calls to collision hook", 1, collisionHook.getCollisions().size());
+				assertThat(frameworkWiring.resolveBundles(Arrays.asList(tb1, tb2)))
+						.as("Bundles should resolve")
+				.isTrue();
+				assertThat(collisionHook.getCollisions())
+						.as("Wrong number of calls to collision hook").hasSize(1);
 				Collision collision = collisionHook.getCollisions().iterator().next();
-				assertEquals("Wrong target", getContext().getBundle(), collision.getTarget());
-				assertEquals("Wrong operation type", org.osgi.framework.hooks.bundle.CollisionHook.INSTALLING, collision.getOperationType());
-				assertEquals("Wrong number of collision candidates", 1, collision.getCollisionCandidates().size());
+				assertThat(collision.getTarget())
+						.as("Wrong target")
+				.isEqualTo(bundleContext.getBundle());
+				assertThat(collision.getOperationType())
+						.as("Wrong operation type")
+				.isEqualTo(org.osgi.framework.hooks.bundle.CollisionHook.INSTALLING);
+				assertThat(collision.getCollisionCandidates())
+						.as("Wrong number of collision candidates").hasSize(1);
 				BundleRevision tb1r = collision.getCollisionCandidates().get(0).adapt(BundleRevision.class);
-				assertEquals("Wrong collision candidate", tb1.adapt(BundleRevision.class), tb1r);
+				assertThat(tb1r)
+						.as("Wrong collision candidate")
+				.isEqualTo(tb1.adapt(BundleRevision.class));
 				BundleRevision tb2r = tb2.adapt(BundleRevision.class);
-				assertFalse("Revisions should not be equal", tb1r.equals(tb2r));
-				assertFalse("Hashcodes should not be equal", tb1r.hashCode() == tb2r.hashCode());
+				assertThat(tb1r.equals(tb2r))
+						.as("Revisions should not be equal")
+				.isFalse();
+				assertThat(tb1r.hashCode() == tb2r.hashCode())
+						.as("Hashcodes should not be equal")
+				.isFalse();
 				assertCapabilitiesNotEqual(tb1r, tb2r);
 				assertRequirementsNotEqual(tb1r, tb2r);
 				assertWiresNotEqual(tb1r, tb2r);
@@ -102,16 +122,18 @@ public class EqualsHashCodeTests extends WiringTest {
 			uninstallSilently(tb1);
 		}
 	}
-	
-	protected void setUp() throws Exception {
+
+	@BeforeEach
+	public void setUp() throws Exception {
 		super.setUp();
-		String bsnversion = getContext().getProperty(Constants.FRAMEWORK_BSNVERSION);
-		assertTrue(bsnversion == null || bsnversion.equals(Constants.FRAMEWORK_BSNVERSION_MANAGED));
+		String bsnversion = bundleContext.getProperty(Constants.FRAMEWORK_BSNVERSION);
+		assertThat(bsnversion == null || bsnversion.equals(Constants.FRAMEWORK_BSNVERSION_MANAGED)).isTrue();
 		collisionHook = new CollisionHook();
-		registration = getContext().registerService(org.osgi.framework.hooks.bundle.CollisionHook.class, collisionHook, null);
+		registration = bundleContext.registerService(org.osgi.framework.hooks.bundle.CollisionHook.class, collisionHook, null);
 	}
-	
-	protected void tearDown() throws Exception {
+
+	@AfterEach
+	public void tearDown() throws Exception {
 		if (registration != null)
 			registration.unregister();
 		super.tearDown();
@@ -119,45 +141,77 @@ public class EqualsHashCodeTests extends WiringTest {
 	
 	private void assertCapabilitiesNotEqual(BundleRevision tb1, BundleRevision tb2) {
 		List<Capability> tb1Capabilities = tb1.getCapabilities(PackageNamespace.PACKAGE_NAMESPACE);
-		assertEquals("Wrong number of capabilities", 3, tb1Capabilities.size());
+		assertThat(tb1Capabilities.size())
+				.as("Wrong number of capabilities")
+				.isEqualTo(3);
 		Capability tb1Capability = tb1Capabilities.get(0);
-		assertEquals("Wrong capability", "org.osgi.test.cases.framework.wiring.tb1a", tb1Capability.getAttributes().get(PackageNamespace.PACKAGE_NAMESPACE));
+		assertThat(tb1Capability.getAttributes().get(PackageNamespace.PACKAGE_NAMESPACE))
+				.as("Wrong capability")
+				.isEqualTo("org.osgi.test.cases.framework.wiring.tb1a");
 		List<Capability> tb2Capabilities = tb2.getCapabilities(PackageNamespace.PACKAGE_NAMESPACE);
-		assertEquals("Wrong number of capabilities", 3, tb1Capabilities.size());
+		assertThat(tb1Capabilities.size())
+				.as("Wrong number of capabilities")
+				.isEqualTo(3);
 		Capability tb2Capability = tb2Capabilities.get(0);
-		assertEquals("Wrong capability", "org.osgi.test.cases.framework.wiring.tb1a", tb2Capability.getAttributes().get(PackageNamespace.PACKAGE_NAMESPACE));
-		assertFalse("Capabilities should not be equal", tb1Capability.equals(tb2Capability));
-		assertFalse("Hashcodes should not be equal", tb1Capability.hashCode() == tb2Capability.hashCode());
+		assertThat(tb2Capability.getAttributes().get(PackageNamespace.PACKAGE_NAMESPACE))
+				.as("Wrong capability")
+				.isEqualTo("org.osgi.test.cases.framework.wiring.tb1a");
+		assertThat(tb1Capability.equals(tb2Capability))
+				.as("Capabilities should not be equal")
+				.isFalse();
+		assertThat(tb1Capability.hashCode() == tb2Capability.hashCode())
+				.as("Hashcodes should not be equal")
+				.isFalse();
 	}
 	
 	private void assertRequirementsNotEqual(BundleRevision tb1, BundleRevision tb2) {
 		List<Requirement> tb1Requirements = tb1.getRequirements(PackageNamespace.PACKAGE_NAMESPACE);
-		assertEquals("Wrong number of requirements", 1, tb1Requirements.size());
+		assertThat(tb1Requirements)
+				.as("Wrong number of requirements").hasSize(1);
 		Requirement tb1Requirement = tb1Requirements.get(0);
-		assertTrue("Wrong requirement", tb1Requirement.getDirectives().get(Constants.FILTER_DIRECTIVE).toString().indexOf(PackageNamespace.PACKAGE_NAMESPACE + "=org.osgi.framework") > 0);
+		assertThat(tb1Requirement.getDirectives().get(Constants.FILTER_DIRECTIVE).toString().indexOf(PackageNamespace.PACKAGE_NAMESPACE + "=org.osgi.framework") > 0)
+				.as("Wrong requirement")
+				.isTrue();
 		List<Requirement> tb2Requirements = tb2.getRequirements(PackageNamespace.PACKAGE_NAMESPACE);
-		assertEquals("Wrong number of requirements", 1, tb1Requirements.size());
+		assertThat(tb1Requirements)
+				.as("Wrong number of requirements").hasSize(1);
 		Requirement tb2Requirement = tb2Requirements.get(0);
-		assertTrue("Wrong requirement", tb2Requirement.getDirectives().get(Constants.FILTER_DIRECTIVE).toString().indexOf(PackageNamespace.PACKAGE_NAMESPACE + "=org.osgi.framework") > 0);
-		assertFalse("Requirements should not be equal", tb1Requirement.equals(tb2Requirement));
-		assertFalse("Hashcodes should not be equal", tb1Requirement.hashCode() == tb2Requirement.hashCode());
+		assertThat(tb2Requirement.getDirectives().get(Constants.FILTER_DIRECTIVE).toString().indexOf(PackageNamespace.PACKAGE_NAMESPACE + "=org.osgi.framework") > 0)
+				.as("Wrong requirement")
+				.isTrue();
+		assertThat(tb1Requirement.equals(tb2Requirement))
+				.as("Requirements should not be equal")
+				.isFalse();
+		assertThat(tb1Requirement.hashCode() == tb2Requirement.hashCode())
+				.as("Hashcodes should not be equal")
+				.isFalse();
 	}
 	
 	private void assertWiresNotEqual(BundleRevision tb1, BundleRevision tb2) {
 		List<BundleWire> tb1Wires = tb1.getWiring().getRequiredWires(PackageNamespace.PACKAGE_NAMESPACE);
-		assertEquals("Wrong number of wires", 1, tb1Wires.size());
+		assertThat(tb1Wires)
+				.as("Wrong number of wires").hasSize(1);
 		BundleWire tb1Wire = tb1Wires.get(0);
-		assertTrue("Wrong wire", tb1Wire.getRequirement().getDirectives().get(Constants.FILTER_DIRECTIVE).toString().indexOf(PackageNamespace.PACKAGE_NAMESPACE + "=org.osgi.framework") > 0);
+		assertThat(tb1Wire.getRequirement().getDirectives().get(Constants.FILTER_DIRECTIVE).toString().indexOf(PackageNamespace.PACKAGE_NAMESPACE + "=org.osgi.framework") > 0)
+				.as("Wrong wire")
+				.isTrue();
 		List<BundleWire> tb2Wires = tb2.getWiring().getRequiredWires(PackageNamespace.PACKAGE_NAMESPACE);
-		assertEquals("Wrong number of wires", 1, tb2Wires.size());
+		assertThat(tb2Wires)
+				.as("Wrong number of wires").hasSize(1);
 		BundleWire tb2Wire = tb2Wires.get(0);
-		assertTrue("Wrong wire", tb2Wire.getRequirement().getDirectives().get(Constants.FILTER_DIRECTIVE).toString().indexOf(PackageNamespace.PACKAGE_NAMESPACE + "=org.osgi.framework") > 0);
-		assertFalse("Wires should not be equal", tb1Wire.equals(tb2Wire));
-		assertFalse("Hashcodes should not be equal", tb1Wire.hashCode() == tb2Wire.hashCode());
+		assertThat(tb2Wire.getRequirement().getDirectives().get(Constants.FILTER_DIRECTIVE).toString().indexOf(PackageNamespace.PACKAGE_NAMESPACE + "=org.osgi.framework") > 0)
+				.as("Wrong wire")
+				.isTrue();
+		assertThat(tb1Wire.equals(tb2Wire))
+				.as("Wires should not be equal")
+				.isFalse();
+		assertThat(tb1Wire.hashCode() == tb2Wire.hashCode())
+				.as("Hashcodes should not be equal")
+				.isFalse();
 	}
 	
 	private Bundle install(String location, String bundle) throws Exception {
-		URL entry = getContext().getBundle().getEntry(bundle);
-		return getContext().installBundle(location, entry.openStream());
+		URL entry = bundleContext.getBundle().getEntry(bundle);
+		return bundleContext.installBundle(location, entry.openStream());
 	}
 }

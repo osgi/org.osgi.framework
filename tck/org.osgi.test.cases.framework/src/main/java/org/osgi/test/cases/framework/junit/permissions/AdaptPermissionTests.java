@@ -18,21 +18,28 @@
 
 package org.osgi.test.cases.framework.junit.permissions;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.osgi.test.cases.framework.junit.permissions.PermissionMocks.newMockBundle;
+import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.osgi.test.assertj.permission.PermissionAssertions.assertThat;
+
 import java.security.Permission;
 import java.security.PermissionCollection;
 import java.util.PropertyPermission;
 
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.AdaptPermission;
 import org.osgi.framework.Bundle;
-import org.osgi.test.support.PermissionTestCase;
 
 /**
  */
-public class AdaptPermissionTests extends PermissionTestCase {
+public class AdaptPermissionTests {
 
 	/**
 	 * 
 	 */
+	@Test
 	public void testInvalid() {
 		invalidAdaptPermission("(a=b)", "x");
 		invalidAdaptPermission("(a=b)", "   adapt  ,  x   ");
@@ -59,6 +66,7 @@ public class AdaptPermissionTests extends PermissionTestCase {
 	/**
 	 * 
 	 */
+	@Test
 	public void testActions() {
 		Permission op = new PropertyPermission("java.home", "read");
 		Bundle b1 = newMockBundle(2, "test.bsn", "test.location", null);
@@ -73,76 +81,75 @@ public class AdaptPermissionTests extends PermissionTestCase {
 		AdaptPermission p22 = new AdaptPermission("com.foo.coord1", b1,
 				"adAPT   ");
 
-		assertEquals("adapt", p11.getActions());
-		assertEquals("adapt", p21.getActions());
-		assertEquals("adapt", p12.getActions());
-		assertEquals("adapt", p22.getActions());
+		assertThat(p11.getActions()).isEqualTo("adapt");
+		assertThat(p21.getActions()).isEqualTo("adapt");
+		assertThat(p12.getActions()).isEqualTo("adapt");
+		assertThat(p22.getActions()).isEqualTo("adapt");
 
-		assertImplies(p11, p21);
-		assertImplies(p11, p22);
+		assertThat(p11).implies(p21);
+		assertThat(p11).implies(p22);
 
-		assertImplies(p12, p21);
-		assertImplies(p12, p22);
+		assertThat(p12).implies(p21);
+		assertThat(p12).implies(p22);
 
+		assertThat(p11).doesNotImply(p11);
+		assertThat(p11).doesNotImply(p12);
+		assertThat(p12).doesNotImply(p11);
+		assertThat(p12).doesNotImply(p12);
 
+		assertThat(p21).doesNotImply(p11);
+		assertThat(p21).doesNotImply(p12);
+		assertThat(p21).doesNotImply(p21);
+		assertThat(p21).doesNotImply(p22);
 
-		assertNotImplies(p11, p11);
-		assertNotImplies(p11, p12);
-		assertNotImplies(p12, p11);
-		assertNotImplies(p12, p12);
+		assertThat(p22).doesNotImply(p11);
+		assertThat(p22).doesNotImply(p12);
+		assertThat(p22).doesNotImply(p21);
+		assertThat(p22).doesNotImply(p22);
 
-		assertNotImplies(p21, p11);
-		assertNotImplies(p21, p12);
-		assertNotImplies(p21, p21);
-		assertNotImplies(p21, p22);
+		assertThat(p11).doesNotImply(op);
 
-		assertNotImplies(p22, p11);
-		assertNotImplies(p22, p12);
-		assertNotImplies(p22, p21);
-		assertNotImplies(p22, p22);
+		assertThat(p11).isEqualTo(p11).hasSameHashCodeAs(p11);
+		assertThat(p11).isEqualTo(p12).hasSameHashCodeAs(p12);
 
-		assertNotImplies(p11, op);
+		assertThat(p12).isEqualTo(p11).hasSameHashCodeAs(p11);
+		assertThat(p12).isEqualTo(p12).hasSameHashCodeAs(p12);
 
-		assertEquals(p11, p11);
-		assertEquals(p11, p12);
+		assertThat(p21).isEqualTo(p21).hasSameHashCodeAs(p21);
+		assertThat(p21).isEqualTo(p22).hasSameHashCodeAs(p22);
 
-		assertEquals(p12, p11);
-		assertEquals(p12, p12);
-
-		assertEquals(p21, p21);
-		assertEquals(p21, p22);
-
-		assertEquals(p22, p21);
-		assertEquals(p22, p22);
+		assertThat(p22).isEqualTo(p21).hasSameHashCodeAs(p21);
+		assertThat(p22).isEqualTo(p22).hasSameHashCodeAs(p22);
 
 		PermissionCollection pc = p11.newPermissionCollection();
 
-		checkEnumeration(pc.elements(), true);
+		assertThat(pc).hasNoElements();
 
-		assertNotImplies(pc, p22);
+		assertThat(pc).doesNotImply(p22);
 
-		assertAddPermission(pc, p11);
-		assertImplies(pc, p21);
-		assertImplies(pc, p22);
+		assertThat(pc).accepts(p11);
+		assertThat(pc).implies(p21);
+		assertThat(pc).implies(p22);
 
-		assertSerializable(pc);
+		assertThat(pc).isSerializable();
 
 		pc.setReadOnly();
 
-		assertNotAddPermission(pc, p12);
+		assertThat(pc).rejects(p12);
 
-		checkEnumeration(pc.elements(), false);
+		assertThat(pc).hasElements();
 
-		assertSerializable(p11);
-		assertSerializable(p12);
-		assertNotSerializable(p21);
-		assertNotSerializable(p22);
-		assertSerializable(pc);
+		assertThat(p11).isSerializable();
+		assertThat(p12).isSerializable();
+		assertThat(p21).isNotSerializable();
+		assertThat(p22).isNotSerializable();
+		assertThat(pc).isSerializable();
 	}
 
 	/**
 	 * 
 	 */
+	@Test
 	public void testWildcard() {
 		Bundle b1 = newMockBundle(2, "test.bsn", "test.location", null);
 		AdaptPermission p21 = new AdaptPermission("(adaptClass=com.foo.*)",
@@ -151,61 +158,63 @@ public class AdaptPermissionTests extends PermissionTestCase {
 		AdaptPermission p23 = new AdaptPermission("*", "adapt");
 		AdaptPermission p24 = new AdaptPermission("com.bar.coord2", b1, "adapt");
 
-		assertImplies(p21, p22);
-		assertNotImplies(p21, p23);
-		assertNotImplies(p21, p24);
-		assertImplies(p23, p22);
-		assertImplies(p23, p24);
-		assertImplies(p23, p23);
+		assertThat(p21).implies(p22);
+		assertThat(p21).doesNotImply(p23);
+		assertThat(p21).doesNotImply(p24);
+		assertThat(p23).implies(p22);
+		assertThat(p23).implies(p24);
+		assertThat(p23).implies(p23);
 
 		PermissionCollection pc = p21.newPermissionCollection();
 
-		assertAddPermission(pc, p21);
-		assertImplies(pc, p22);
-		assertNotImplies(pc, p23);
-		assertNotImplies(pc, p24);
+		assertThat(pc).accepts(p21);
+		assertThat(pc).implies(p22);
+		assertThat(pc).doesNotImply(p23);
+		assertThat(pc).doesNotImply(p24);
 
-		assertAddPermission(pc, p23);
-		assertImplies(pc, p22);
-		assertImplies(pc, p23);
-		assertImplies(pc, p24);
+		assertThat(pc).accepts(p23);
+		assertThat(pc).implies(p22);
+		assertThat(pc).implies(p23);
+		assertThat(pc).implies(p24);
 
-		assertSerializable(pc);
+		assertThat(pc).isSerializable();
 
 		pc = p23.newPermissionCollection();
 
-		assertAddPermission(pc, p23);
-		assertImplies(pc, p22);
-		assertImplies(pc, p23);
-		assertImplies(pc, p24);
-		assertSerializable(pc);
+		assertThat(pc).accepts(p23);
+		assertThat(pc).implies(p22);
+		assertThat(pc).implies(p23);
+		assertThat(pc).implies(p24);
+		assertThat(pc).isSerializable();
 
-		assertSerializable(p21);
-		assertNotSerializable(p22);
-		assertSerializable(p23);
-		assertNotSerializable(p24);
+		assertThat(p21).isSerializable();
+		assertThat(p22).isNotSerializable();
+		assertThat(p23).isSerializable();
+		assertThat(p24).isNotSerializable();
 	}
 
 	/**
 	 * 
 	 */
+	@Test
 	public void testActionImplications() {
 		AdaptPermission adapt = new AdaptPermission("*", "adapt");
 
-		assertEquals("adapt", adapt.getActions());
+		assertThat(adapt.getActions()).isEqualTo("adapt");
 		adapt = new AdaptPermission(adapt.getName(), adapt.getActions());
-		assertEquals("adapt", adapt.getActions());
+		assertThat(adapt.getActions()).isEqualTo("adapt");
 
 		PermissionCollection adaptpc = adapt.newPermissionCollection();
 		adaptpc.add(adapt);
 
-		assertImplies(adapt, adapt);
-		assertImplies(adaptpc, adapt);
+		assertThat(adapt).implies(adapt);
+		assertThat(adaptpc).implies(adapt);
 	}
 
 	/**
 	 * 
 	 */
+	@Test
 	public void testFiltersName() {
 		Bundle b1 = newMockBundle(2, "test.bsn", "test.location", null);
 		AdaptPermission p31 = new AdaptPermission(
@@ -217,80 +226,81 @@ public class AdaptPermissionTests extends PermissionTestCase {
 		AdaptPermission p35 = new AdaptPermission("com.foo.coord3", b1, "adapt");
 		AdaptPermission p38 = new AdaptPermission("*", "adapt");
 
-		assertImplies(p31, p35);
-		assertImplies(p32, p35);
-		assertImplies(p33, p35);
-		assertImplies(p34, p35);
-		assertImplies(p38, p35);
+		assertThat(p31).implies(p35);
+		assertThat(p32).implies(p35);
+		assertThat(p33).implies(p35);
+		assertThat(p34).implies(p35);
+		assertThat(p38).implies(p35);
 
-		assertNotImplies(p31, p31);
-		assertNotImplies(p31, p32);
-		assertNotImplies(p31, p33);
-		assertNotImplies(p31, p34);
+		assertThat(p31).doesNotImply(p31);
+		assertThat(p31).doesNotImply(p32);
+		assertThat(p31).doesNotImply(p33);
+		assertThat(p31).doesNotImply(p34);
 
-		assertNotImplies(p31, p38);
-		assertNotImplies(p32, p38);
-		assertNotImplies(p33, p38);
-		assertImplies(p34, p38);
-		assertNotImplies(p35, p38);
-		assertImplies(p38, p38);
+		assertThat(p31).doesNotImply(p38);
+		assertThat(p32).doesNotImply(p38);
+		assertThat(p33).doesNotImply(p38);
+		assertThat(p34).implies(p38);
+		assertThat(p35).doesNotImply(p38);
+		assertThat(p38).implies(p38);
 
 		PermissionCollection pc = p31.newPermissionCollection();
-		checkEnumeration(pc.elements(), true);
+		assertThat(pc).hasNoElements();
 
-		assertAddPermission(pc, p31);
+		assertThat(pc).accepts(p31);
 
-		assertNotImplies(pc, p31);
-		assertNotImplies(pc, p32);
-		assertNotImplies(pc, p33);
-		assertNotImplies(pc, p34);
+		assertThat(pc).doesNotImply(p31);
+		assertThat(pc).doesNotImply(p32);
+		assertThat(pc).doesNotImply(p33);
+		assertThat(pc).doesNotImply(p34);
 
-		assertImplies(pc, p35);
-		assertNotImplies(pc, p38);
+		assertThat(pc).implies(p35);
+		assertThat(pc).doesNotImply(p38);
 
-		assertAddPermission(pc, p32);
-		assertImplies(pc, p35);
-		assertNotImplies(pc, p38);
+		assertThat(pc).accepts(p32);
+		assertThat(pc).implies(p35);
+		assertThat(pc).doesNotImply(p38);
 
-		assertAddPermission(pc, p33);
-		assertImplies(pc, p35);
-		assertNotImplies(pc, p38);
+		assertThat(pc).accepts(p33);
+		assertThat(pc).implies(p35);
+		assertThat(pc).doesNotImply(p38);
 
-		assertAddPermission(pc, p34);
-		assertImplies(pc, p35);
-		assertImplies(pc, p38);
+		assertThat(pc).accepts(p34);
+		assertThat(pc).implies(p35);
+		assertThat(pc).implies(p38);
 
-		checkEnumeration(pc.elements(), false);
-		assertSerializable(pc);
+		assertThat(pc).hasElements();
+		assertThat(pc).isSerializable();
 
 		pc = p32.newPermissionCollection();
-		assertAddPermission(pc, p32);
-		assertImplies(pc, p35);
-		assertNotImplies(pc, p38);
-		assertSerializable(pc);
+		assertThat(pc).accepts(p32);
+		assertThat(pc).implies(p35);
+		assertThat(pc).doesNotImply(p38);
+		assertThat(pc).isSerializable();
 
 		pc = p33.newPermissionCollection();
-		assertAddPermission(pc, p33);
-		assertImplies(pc, p35);
-		assertNotImplies(pc, p38);
-		assertSerializable(pc);
+		assertThat(pc).accepts(p33);
+		assertThat(pc).implies(p35);
+		assertThat(pc).doesNotImply(p38);
+		assertThat(pc).isSerializable();
 
 		pc = p34.newPermissionCollection();
-		assertAddPermission(pc, p34);
-		assertImplies(pc, p35);
-		assertImplies(pc, p38);
+		assertThat(pc).accepts(p34);
+		assertThat(pc).implies(p35);
+		assertThat(pc).implies(p38);
 
-		assertSerializable(p31);
-		assertSerializable(p32);
-		assertSerializable(p33);
-		assertSerializable(p34);
-		assertNotSerializable(p35);
-		assertSerializable(pc);
+		assertThat(p31).isSerializable();
+		assertThat(p32).isSerializable();
+		assertThat(p33).isSerializable();
+		assertThat(p34).isSerializable();
+		assertThat(p35).isNotSerializable();
+		assertThat(pc).isSerializable();
 	}
 
 	/**
 	 * 
 	 */
+	@Test
 	public void testFiltersBundle() {
 		AdaptPermission p41 = new AdaptPermission("(id=2)", "adapt");
 		AdaptPermission p42 = new AdaptPermission("(location=test.*)", "adapt");
@@ -307,74 +317,75 @@ public class AdaptPermissionTests extends PermissionTestCase {
 				newMockBundle(3, "not.bsn", "not.location",
 						"cn=Bugs Bunny, o=NOT, c=US"), "adapt");
 
-		assertImplies(p41, p46);
-		assertImplies(p42, p46);
-		assertImplies(p43, p46);
-		assertImplies(p44, p46);
-		assertImplies(p45, p46);
+		assertThat(p41).implies(p46);
+		assertThat(p42).implies(p46);
+		assertThat(p43).implies(p46);
+		assertThat(p44).implies(p46);
+		assertThat(p45).implies(p46);
 
-		assertNotImplies(p41, p47);
-		assertNotImplies(p42, p47);
-		assertNotImplies(p43, p47);
-		assertNotImplies(p44, p47);
-		assertNotImplies(p45, p47);
+		assertThat(p41).doesNotImply(p47);
+		assertThat(p42).doesNotImply(p47);
+		assertThat(p43).doesNotImply(p47);
+		assertThat(p44).doesNotImply(p47);
+		assertThat(p45).doesNotImply(p47);
 
-		assertNotImplies(p41, p41);
-		assertNotImplies(p41, p42);
-		assertNotImplies(p41, p43);
-		assertNotImplies(p41, p44);
-		assertNotImplies(p41, p45);
+		assertThat(p41).doesNotImply(p41);
+		assertThat(p41).doesNotImply(p42);
+		assertThat(p41).doesNotImply(p43);
+		assertThat(p41).doesNotImply(p44);
+		assertThat(p41).doesNotImply(p45);
 
 		PermissionCollection pc = p41.newPermissionCollection();
-		checkEnumeration(pc.elements(), true);
+		assertThat(pc).hasNoElements();
 
-		assertAddPermission(pc, p44);
-		assertImplies(pc, p46);
-		assertNotImplies(pc, p47);
+		assertThat(pc).accepts(p44);
+		assertThat(pc).implies(p46);
+		assertThat(pc).doesNotImply(p47);
 
-		assertNotImplies(pc, p41);
-		assertNotImplies(pc, p42);
-		assertNotImplies(pc, p43);
-		assertNotImplies(pc, p44);
-		assertNotImplies(pc, p45);
-		assertSerializable(pc);
-
-		pc = p41.newPermissionCollection();
-		assertAddPermission(pc, p43);
-		assertImplies(pc, p46);
-		assertNotImplies(pc, p47);
-		assertSerializable(pc);
+		assertThat(pc).doesNotImply(p41);
+		assertThat(pc).doesNotImply(p42);
+		assertThat(pc).doesNotImply(p43);
+		assertThat(pc).doesNotImply(p44);
+		assertThat(pc).doesNotImply(p45);
+		assertThat(pc).isSerializable();
 
 		pc = p41.newPermissionCollection();
-		assertAddPermission(pc, p42);
-		assertImplies(pc, p46);
-		assertNotImplies(pc, p47);
-		assertSerializable(pc);
+		assertThat(pc).accepts(p43);
+		assertThat(pc).implies(p46);
+		assertThat(pc).doesNotImply(p47);
+		assertThat(pc).isSerializable();
 
 		pc = p41.newPermissionCollection();
-		assertAddPermission(pc, p41);
-		assertImplies(pc, p46);
-		assertNotImplies(pc, p47);
-		checkEnumeration(pc.elements(), false);
+		assertThat(pc).accepts(p42);
+		assertThat(pc).implies(p46);
+		assertThat(pc).doesNotImply(p47);
+		assertThat(pc).isSerializable();
+
+		pc = p41.newPermissionCollection();
+		assertThat(pc).accepts(p41);
+		assertThat(pc).implies(p46);
+		assertThat(pc).doesNotImply(p47);
+		assertThat(pc).hasElements();
 
 		// throw IllegalArgumentException If specified permission to be
 		// added was constructed with bundles.
-		assertNotAddPermission(pc, p46);
-		assertNotAddPermission(pc, p47);
+		assertThat(pc).rejects(p46);
+		assertThat(pc).rejects(p47);
 
-		assertSerializable(p41);
-		assertSerializable(p42);
-		assertSerializable(p43);
-		assertSerializable(p44);
-		assertSerializable(p45);
-		assertNotSerializable(p46);
-		assertNotSerializable(p47);
-		assertSerializable(pc);
+		assertThat(p41).isSerializable();
+		assertThat(p42).isSerializable();
+		assertThat(p43).isSerializable();
+		assertThat(p44).isSerializable();
+		assertThat(p45).isSerializable();
+		assertThat(p46).isNotSerializable();
+		assertThat(p47).isNotSerializable();
+		assertThat(pc).isSerializable();
 	}
 
 	/**
 	 * 
 	 */
+	@Test
 	public void testPermissionCollection() {
 		AdaptPermission p51 = new AdaptPermission(
 				"  (adaptClass  =com.foo.coord5)", "adapt");
@@ -393,83 +404,69 @@ public class AdaptPermissionTests extends PermissionTestCase {
 
 		PermissionCollection pc;
 		pc = p51.newPermissionCollection();
-		assertAddPermission(pc, p51);
-		assertImplies(p51, p5a);
-		assertImplies(pc, p5a);
-		assertNotImplies(p51, p5b);
-		assertNotImplies(pc, p5b);
-		assertSerializable(pc);
+		assertThat(pc).accepts(p51);
+		assertThat(p51).implies(p5a);
+		assertThat(pc).implies(p5a);
+		assertThat(p51).doesNotImply(p5b);
+		assertThat(pc).doesNotImply(p5b);
+		assertThat(pc).isSerializable();
 
 		pc = p51.newPermissionCollection();
-		assertAddPermission(pc, p51);
-		assertImplies(pc, p5a);
-		assertNotImplies(pc, p5b);
-		assertSerializable(pc);
+		assertThat(pc).accepts(p51);
+		assertThat(pc).implies(p5a);
+		assertThat(pc).doesNotImply(p5b);
+		assertThat(pc).isSerializable();
 
 		pc = p52.newPermissionCollection();
-		assertAddPermission(pc, p52);
-		assertImplies(p52, p5a);
-		assertImplies(pc, p5a);
-		assertNotImplies(p52, p5b);
-		assertNotImplies(pc, p5b);
-		assertSerializable(pc);
+		assertThat(pc).accepts(p52);
+		assertThat(p52).implies(p5a);
+		assertThat(pc).implies(p5a);
+		assertThat(p52).doesNotImply(p5b);
+		assertThat(pc).doesNotImply(p5b);
+		assertThat(pc).isSerializable();
 
 		pc = p53.newPermissionCollection();
-		assertAddPermission(pc, p53);
-		assertImplies(p53, p5a);
-		assertImplies(pc, p5a);
-		assertImplies(p53, p5b);
-		assertImplies(pc, p5b);
-		assertSerializable(pc);
+		assertThat(pc).accepts(p53);
+		assertThat(p53).implies(p5a);
+		assertThat(pc).implies(p5a);
+		assertThat(p53).implies(p5b);
+		assertThat(pc).implies(p5b);
+		assertThat(pc).isSerializable();
 
 		pc = p54.newPermissionCollection();
-		assertAddPermission(pc, p54);
-		assertAddPermission(pc, p59);
-		assertImplies(pc, p5a);
-		assertImplies(pc, p5b);
-		assertSerializable(pc);
+		assertThat(pc).accepts(p54);
+		assertThat(pc).accepts(p59);
+		assertThat(pc).implies(p5a);
+		assertThat(pc).implies(p5b);
+		assertThat(pc).isSerializable();
 
 		pc = p54.newPermissionCollection();
-		assertAddPermission(pc, p54);
-		assertImplies(p54, p5a);
-		assertImplies(pc, p5a);
-		assertImplies(p54, p5b);
-		assertImplies(pc, p5b);
-		assertSerializable(pc);
+		assertThat(pc).accepts(p54);
+		assertThat(p54).implies(p5a);
+		assertThat(pc).implies(p5a);
+		assertThat(p54).implies(p5b);
+		assertThat(pc).implies(p5b);
+		assertThat(pc).isSerializable();
 
 		pc = p59.newPermissionCollection();
-		assertAddPermission(pc, p59);
-		assertImplies(p59, p5a);
-		assertImplies(pc, p5a);
-		assertImplies(p59, p5b);
-		assertImplies(pc, p5b);
-		assertSerializable(pc);
+		assertThat(pc).accepts(p59);
+		assertThat(p59).implies(p5a);
+		assertThat(pc).implies(p5a);
+		assertThat(p59).implies(p5b);
+		assertThat(pc).implies(p5b);
+		assertThat(pc).isSerializable();
 	}
 
 	private static void invalidAdaptPermission(String name, String actions) {
-		try {
-			AdaptPermission p = new AdaptPermission(name, actions);
-			fail(p + " created with invalid arguments");
-		}
-		catch (IllegalArgumentException e) {
-			// expected
-		}
-		catch (NullPointerException e) {
-			// expected
-		}
+		assertThatCode(() -> new AdaptPermission(name, actions))
+				.as("AdaptPermission created with invalid arguments")
+				.isInstanceOfAny(IllegalArgumentException.class, NullPointerException.class);
 	}
 
 	private static void invalidAdaptPermission(String name, Bundle bundle,
 			String actions) {
-		try {
-			AdaptPermission p = new AdaptPermission(name, bundle, actions);
-			fail(p + " created with invalid arguments");
-		}
-		catch (IllegalArgumentException e) {
-			// expected
-		}
-		catch (NullPointerException e) {
-			// expected
-		}
+		assertThatCode(() -> new AdaptPermission(name, bundle, actions))
+				.as("AdaptPermission created with invalid arguments")
+				.isInstanceOfAny(IllegalArgumentException.class, NullPointerException.class);
 	}
 }

@@ -17,6 +17,10 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.launch.junit;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+import static org.osgi.test.assertj.bundle.BundleAssert.assertThat;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +38,9 @@ import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
@@ -44,10 +51,21 @@ import org.osgi.framework.connect.ConnectFrameworkFactory;
 import org.osgi.framework.connect.ModuleConnector;
 import org.osgi.framework.launch.Framework;
 import org.osgi.framework.launch.FrameworkFactory;
-import org.osgi.test.support.OSGiTestCase;
-import org.osgi.test.support.compatibility.DefaultTestBundleControl;
 
-public abstract class LaunchTest extends OSGiTestCase {
+public abstract class LaunchTest {
+
+	private String testName;
+
+	@BeforeEach
+	public void captureTestName(TestInfo testInfo) {
+		testName = testInfo.getTestMethod().get().getName();
+	}
+
+	/** The name of the running test method, as TestCase.getName() gave it. */
+	protected String getName() {
+		return testName;
+	}
+
 	private static final Pattern	QUOTED_P			= Pattern
 			.compile("^([\"'])(.*)\\1$");
 	private static final String FRAMEWORK_FACTORY = "/META-INF/services/org.osgi.framework.launch.FrameworkFactory";
@@ -67,7 +85,9 @@ public abstract class LaunchTest extends OSGiTestCase {
 
 		public FrameworkClassLoader(URL[] urls, ClassLoader parent) {
 			super(urls, parent);
-			assertNotNull("Cannot have null parent.", parent);
+			assertThat(parent)
+					.as("Cannot have null parent.")
+					.isNotNull();
 		}
 
 		@Override
@@ -152,8 +172,7 @@ public abstract class LaunchTest extends OSGiTestCase {
 				try {
 					frameworkClassLoader.close();
 				} catch (IOException e) {
-					DefaultTestBundleControl
-							.trace("Error closing framework class loader: "
+					System.out.println("Error closing framework class loader: "
 									+ e.getMessage());
 					e.printStackTrace();
 				}
@@ -206,20 +225,30 @@ public abstract class LaunchTest extends OSGiTestCase {
 	private List<String>			rootBundles	= new LinkedList<String>();
 	protected String				rootStorageArea;
 
-	protected void setUp() throws Exception {
-		super.setUp();
+	/** System property with a default: the launch tests run without a hosting framework, as OSGiTestCase.getProperty fell back to. */
+	protected String getProperty(String key, String defaultValue) {
+		String value = System.getProperty(key);
+		return (value == null) ? defaultValue : value;
+	}
+
+	@BeforeEach
+	public void setUp() throws Exception {
 		rootStorageArea = getStorageAreaRoot();
-		assertNotNull("No storage area root found", rootStorageArea);
+		assertThat(rootStorageArea)
+				.as("No storage area root found")
+				.isNotNull();
 		File rootFile = new File(rootStorageArea);
-		assertFalse(
-				"Root storage area is not a directory: " + rootFile.getPath(),
-				rootFile.exists() && !rootFile.isDirectory());
+		assertThat(rootFile.exists() && !rootFile.isDirectory())
+				.as("Root storage area is not a directory: " + rootFile.getPath())
+				.isFalse();
 		if (!rootFile.isDirectory())
-			assertTrue(
-					"Could not create root directory: " + rootFile.getPath(),
-					rootFile.mkdirs());
+			assertThat(rootFile.mkdirs())
+					.as("Could not create root directory: " + rootFile.getPath())
+					.isTrue();
 		String frameworkFactoryClassName = getFrameworkFactoryClassName();
-		assertNotNull("Could not find framework factory class", frameworkFactoryClassName);
+		assertThat(frameworkFactoryClassName)
+				.as("Could not find framework factory class")
+				.isNotNull();
 		String connectFrameworkFactoryClassName = getConnectFrameworkFactoryClassName(); // allow
 																							// null
 		frameworkFactory = new LaunchFrameworkFactory(
@@ -229,7 +258,7 @@ public abstract class LaunchTest extends OSGiTestCase {
 		rootBundles.clear();
 		while (st.hasMoreTokens()) {
 			String bundle = st.nextToken();
-			assertNotNull(bundle);
+			assertThat(bundle).isNotNull();
 			rootBundles.add(bundle);
 		}
 	}
@@ -262,8 +291,8 @@ public abstract class LaunchTest extends OSGiTestCase {
 				LaunchTest.class.getClassLoader());
 	}
 
-	protected void tearDown() throws Exception {
-		super.tearDown();
+	@AfterEach
+	public void tearDown() throws Exception {
 		frameworkFactory.close();
 	}
 
@@ -275,7 +304,8 @@ public abstract class LaunchTest extends OSGiTestCase {
 		catch (Exception e) {
 			fail("Failed to construct the framework", e);
 		}
-		assertEquals("Wrong state for newly constructed framework", Bundle.INSTALLED, framework.getState());
+		assertThat(framework)
+				.as("Wrong state for newly constructed framework").isInState(Bundle.INSTALLED);
 		return framework;
 	}
 	
@@ -292,7 +322,9 @@ public abstract class LaunchTest extends OSGiTestCase {
 			} else {
 				framework.init(listeners);
 			}
-			assertNotNull("BundleContext is null after init", framework.getBundleContext());
+			assertThat(framework.getBundleContext())
+					.as("BundleContext is null after init")
+					.isNotNull();
 		}
 		catch (BundleException e) {
 			fail("Unexpected BundleException initializing", e);
@@ -300,7 +332,8 @@ public abstract class LaunchTest extends OSGiTestCase {
 		if (unintialized) {
 			installRootBundles(framework);
 		}
-		assertEquals("Wrong framework state after init", Bundle.STARTING, framework.getState());
+		assertThat(framework)
+				.as("Wrong framework state after init").isInState(Bundle.STARTING);
 	}
 	
 	protected Bundle installBundle(Framework framework, String bundle) throws BundleException, IOException {
@@ -309,9 +342,13 @@ public abstract class LaunchTest extends OSGiTestCase {
 	
 	protected Bundle installBundle(Framework framework, String bundle, String location) throws BundleException, IOException {
 		BundleContext fwkContext = framework.getBundleContext();
-		assertNotNull("Framework context is null", fwkContext);
+		assertThat(fwkContext)
+				.as("Framework context is null")
+				.isNotNull();
 		URL input = getBundleInput(bundle);
-		assertNotNull("Cannot find resource: " + bundle, input);
+		assertThat(input)
+				.as("Cannot find resource: " + bundle)
+				.isNotNull();
 		return fwkContext.installBundle(location, input.openStream());
 	}
 	
@@ -319,7 +356,9 @@ public abstract class LaunchTest extends OSGiTestCase {
 		boolean unintialized = (framework.getState() & (Framework.INSTALLED | Framework.RESOLVED)) != 0;
 		try {
 			framework.start();
-			assertNotNull("BundleContext is null after start", framework.getBundleContext());
+			assertThat(framework.getBundleContext())
+					.as("BundleContext is null after start")
+					.isNotNull();
 		}
 		catch (BundleException e) {
 			fail("Unexpected BundleException initializing", e);
@@ -327,7 +366,8 @@ public abstract class LaunchTest extends OSGiTestCase {
 		if (unintialized) {
 			installRootBundles(framework);
 		}
-		assertEquals("Wrong framework state after init", Bundle.ACTIVE, framework.getState());
+		assertThat(framework)
+				.as("Wrong framework state after init").isInState(Bundle.ACTIVE);
 
 	}
 	
@@ -336,9 +376,15 @@ public abstract class LaunchTest extends OSGiTestCase {
 		try {
             framework.stop();
 			FrameworkEvent event = framework.waitForStop(10000);
-			assertNotNull("FrameworkEvent is null", event);
-			assertEquals("Wrong event type", FrameworkEvent.STOPPED, event.getType());
-			assertNull("BundleContext is not null after stop", framework.getBundleContext());
+			assertThat(event)
+					.as("FrameworkEvent is null")
+					.isNotNull();
+			assertThat(event.getType())
+					.as("Wrong event type")
+					.isEqualTo(FrameworkEvent.STOPPED);
+			assertThat(framework.getBundleContext())
+					.as("BundleContext is not null after stop")
+					.isNull();
 		}
 		catch (BundleException e) {
 			fail("Unexpected BundleException stopping", e);
@@ -349,8 +395,9 @@ public abstract class LaunchTest extends OSGiTestCase {
 		// if the framework was not STARTING STOPPING or ACTIVE then we assume the waitForStop returned immediately with a FrameworkEvent.STOPPED
 		// and does not change the state of the framework
 		int expectedState = (previousState & (Bundle.STARTING | Bundle.ACTIVE | Bundle.STOPPING)) != 0 ? Bundle.RESOLVED : previousState;
-		assertEquals("Wrong framework state after stop", expectedState,
-				framework.getState());
+		assertThat(framework.getState())
+				.as("Wrong framework state after stop")
+				.isEqualTo(expectedState);
 	}
 	
 	private String getClassName(URL factoryService) throws IOException {
@@ -380,14 +427,17 @@ public abstract class LaunchTest extends OSGiTestCase {
 	
 	private String getFrameworkFactoryClassName() throws IOException {
 		URL factoryService = getClass().getResource(FRAMEWORK_FACTORY);
-		assertNotNull("Could not locate: " + FRAMEWORK_FACTORY, factoryService);
+		assertThat(factoryService)
+				.as("Could not locate: " + FRAMEWORK_FACTORY)
+				.isNotNull();
 		return getClassName(factoryService);
 	}
 
 	private String getConnectFrameworkFactoryClassName() throws IOException {
 		URL factoryService = getClass().getResource(CONNECT_FRAMEWORK_FACTORY);
-		assertNotNull("Could not locate: " + CONNECT_FRAMEWORK_FACTORY,
-				factoryService);
+		assertThat(factoryService)
+				.as("Could not locate: " + CONNECT_FRAMEWORK_FACTORY)
+				.isNotNull();
 		return getClassName(factoryService);
 	}
 
@@ -395,11 +445,15 @@ public abstract class LaunchTest extends OSGiTestCase {
 		List<Bundle> bundles = new LinkedList<Bundle>();
 
 		BundleContext fwkContext = framework.getBundleContext();
-		assertNotNull("Framework context is null", fwkContext);
+		assertThat(fwkContext)
+				.as("Framework context is null")
+				.isNotNull();
 		for (String bundle : rootBundles) {
 			try {
 				Bundle b = fwkContext.installBundle("file:" + bundle);
-				assertNotNull("Cannot install bundle: " + bundle, b);
+				assertThat(b)
+						.as("Cannot install bundle: " + bundle)
+						.isNotNull();
 				System.out.println("installed bundle " + b.getSymbolicName()
 						+ " " + b.getVersion());
 				bundles.add(b);
@@ -424,16 +478,22 @@ public abstract class LaunchTest extends OSGiTestCase {
 	}
 
 	private String getStorageAreaRoot() {
-		String storageroot = getProperty(STORAGEROOT);
-			assertNotNull("Must set property: " + STORAGEROOT, storageroot);
+		String storageroot = System.getProperty(STORAGEROOT);
+			assertThat(storageroot)
+					.as("Must set property: " + STORAGEROOT)
+					.isNotNull();
 			return storageroot;
 	}
 
 	protected File getStorageArea(String testName, boolean delete) {
 		File storageArea = new File(rootStorageArea, testName);
 		if (delete) {
-			assertTrue("Could not clean up storage area: " + storageArea.getPath(), delete(storageArea));
-			assertTrue("Could not create storage area directory: " + storageArea.getPath(), storageArea.mkdirs());
+			assertThat(delete(storageArea))
+					.as("Could not clean up storage area: " + storageArea.getPath())
+					.isTrue();
+			assertThat(storageArea.mkdirs())
+					.as("Could not create storage area directory: " + storageArea.getPath())
+					.isTrue();
 		}
 		return storageArea;
 	}

@@ -18,36 +18,42 @@
 
 package org.osgi.test.cases.framework.secure.junit.hooks.weaving;
 
-import java.io.IOException;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.framework.hooks.weaving.WovenClassListener;
 import org.osgi.test.cases.framework.secure.junit.hooks.weaving.export.TestConstants;
-import org.osgi.test.support.OSGiTestCase;
-import org.osgi.test.support.wiring.Wiring;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.install.BundleInstaller;
+import org.osgi.test.common.wiring.FrameworkWirings;
 
-import junit.framework.TestCase;
+public class WeavingHookTests {
 
-public class WeavingHookTests extends OSGiTestCase {
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
 	private final List<Bundle> bundles = new ArrayList<Bundle>();
 	private final List<ServiceRegistration<?>> registrations = new ArrayList<ServiceRegistration<?>>();
 	
 	private TestWovenClassListener listener;
 	
 	public Bundle install(String bundle) {
-		Bundle result = null;
-		try {
-			result = super.install(bundle);
-		} catch (BundleException e) {
-			fail("failed to install bundle: " + bundle, e);
-		} catch (IOException e) {
-			fail("failed to install bundle: " + bundle, e);
-		}
+		Bundle result = bundleInstaller.installBundle(bundle, false);
 		if (bundle == null)
 			fail("Failed to install bundle: " + bundle);
 		if (!bundles.contains(result))
@@ -55,7 +61,8 @@ public class WeavingHookTests extends OSGiTestCase {
 		return result;
 	}
 
-	protected void setUp() throws Exception {
+	@BeforeEach
+	public void setUp() throws Exception {
 		bundles.clear();
 		resetSystemProperties();
 		setUpRegistrations();
@@ -70,13 +77,14 @@ public class WeavingHookTests extends OSGiTestCase {
 	
 	private void setUpRegistrations() {
 		listener = new TestWovenClassListener();
-		registrations.add(getContext().registerService(WovenClassListener.class, listener, null));
+		registrations.add(bundleContext.registerService(WovenClassListener.class, listener, null));
 	}
 
-	protected void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() throws Exception {
 		tearDownBundles();
 		tearDownRegistrations();
-		Wiring.synchronousRefreshBundles(getContext(), bundles);
+		FrameworkWirings.refreshBundles(bundleContext, bundles);
 		bundles.clear();
 	}
 	
@@ -108,11 +116,12 @@ public class WeavingHookTests extends OSGiTestCase {
 	 * Also tests that the WovenClass and woven bundle are in the expected 
 	 * states in TRANSFORMED and DEFINED.
 	 */
+	@Test
 	public void testNoPermissions() {
 		System.setProperty(TestConstants.PROP_EXPECT_SECURITYEXCEPTION_ALL, Boolean.TRUE.toString());
 		doTest("weaving.tb1.jar");
 	}
-	
+
 	/*
 	 * Test that a security exception is not thrown from all affected methods 
 	 * when both AdminPermission.WEAVE and PackagePermission.IMPORT is granted.
@@ -120,10 +129,11 @@ public class WeavingHookTests extends OSGiTestCase {
 	 * Also tests that the WovenClass and woven bundle are in the expected 
 	 * states in TRANSFORMED and DEFINED.
 	 */
+	@Test
 	public void testAllPermissions() {
 		doTest("weaving.tb4.jar");
 	}
-	
+
 	/*
 	 * Test that a security exception is not thrown from all affected methods 
 	 * when both AdminPermission.WEAVE and PackagePermission.IMPORT is granted.
@@ -131,11 +141,12 @@ public class WeavingHookTests extends OSGiTestCase {
 	 * Also tests that the WovenClass and woven bundle are in the expected 
 	 * states in TRANSFORMED and DEFINE_FAILED.
 	 */
+	@Test
 	public void testAllPermissionsInDefineFailed() {
 		System.setProperty(TestConstants.PROP_INVALID_SETBYTES, Boolean.TRUE.toString());
 		doTest("weaving.tb4.jar");
 	}
-	
+
 	/*
 	 * Test that a security exception is thrown from all affected methods when
 	 * AdminPermission.WEAVE is not granted but PackagePermission.IMPORT is
@@ -144,11 +155,12 @@ public class WeavingHookTests extends OSGiTestCase {
 	 * Also tests that the WovenClass and woven bundle are in the expected 
 	 * states in TRANSFORMED and DEFINED.
 	 */
+	@Test
 	public void testNoWeavingPermission() {
 		System.setProperty(TestConstants.PROP_EXPECT_SECURITYEXCEPTION_ALL, Boolean.TRUE.toString());
 		doTest("weaving.tb2.jar");
 	}
-	
+
 	/*
 	 * Test that a security exception is thrown from all affected methods when
 	 * PackagePermission.IMPORT is not granted but AdminPermission.WEAVE is
@@ -160,11 +172,12 @@ public class WeavingHookTests extends OSGiTestCase {
 	 * Also tests that the WovenClass and woven bundle are in the expected 
 	 * states in TRANSFORMED and DEFINED.
 	 */
+	@Test
 	public void testNoPackagePermission() {
 		System.setProperty(TestConstants.PROP_EXPECT_SECURITYEXCEPTION_ADDDYNAMICIMPORT, Boolean.TRUE.toString());
 		doTest("weaving.tb3.jar");
 	}
-	
+
 	/*
 	 * Test that a security exception is thrown from all affected methods when
 	 * PackagePermission.IMPORT is not granted but AdminPermission.WEAVE is
@@ -176,6 +189,7 @@ public class WeavingHookTests extends OSGiTestCase {
 	 * Also tests that the WovenClass and woven bundle are in the expected 
 	 * states in TRANSFORMING_FAILED.
 	 */
+	@Test
 	public void testNoPackagePermissionRethrowSecurityException() {
 		System.setProperty(TestConstants.PROP_EXPECT_SECURITYEXCEPTION_ADDDYNAMICIMPORT, Boolean.TRUE.toString());
 		System.setProperty(TestConstants.PROP_RETHROW_SECURITYEXCEPTION, Boolean.TRUE.toString());
@@ -199,7 +213,9 @@ public class WeavingHookTests extends OSGiTestCase {
 	}
 	
 	private void assertWovenClassListener() {
-		TestCase.assertTrue("Failed to call woven class listener", listener.isCalled());
+		assertThat(listener.isCalled())
+				.as("Failed to call woven class listener")
+				.isTrue();
 		if (listener.getError() != null)
 			throw listener.getError();
 	}

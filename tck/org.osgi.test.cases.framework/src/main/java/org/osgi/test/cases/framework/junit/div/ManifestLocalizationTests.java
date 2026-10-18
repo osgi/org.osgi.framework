@@ -18,11 +18,19 @@
 
 package org.osgi.test.cases.framework.junit.div;
 
+
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.Dictionary;
 import java.util.Locale;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
-import org.osgi.test.support.compatibility.DefaultTestBundleControl;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.annotation.InjectInstalledBundle;
+import org.osgi.test.common.install.BundleInstaller;
 
 /**
  * Test the method Bundle.getHeaders() and Bundle.getHeaders(Locale).
@@ -31,7 +39,10 @@ import org.osgi.test.support.compatibility.DefaultTestBundleControl;
  * 
  * @author $Id$
  */
-public class ManifestLocalizationTests extends DefaultTestBundleControl {
+public class ManifestLocalizationTests {
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
 	private static final String	basePkg										= DivTests.basePkg;
 
 	private String[]			manifestHeadersKeys							= {
@@ -126,11 +137,13 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 */
 	private Locale				defaultLocale;
 
-	protected void setUp() throws Exception {
+	@BeforeEach
+	public void setUp() throws Exception {
 		defaultLocale = Locale.getDefault();
 	}
 
-	protected void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() throws Exception {
 		Locale.setDefault(defaultLocale);
 	}
 
@@ -140,21 +153,18 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec Bundle.getHeaders()
 	 */
-	public void testGetHeaders001() throws Exception {
+	@Test
+	public void testGetHeaders001(
+			@InjectInstalledBundle(value = "div.tb1.jar", start = false) Bundle tb1
+			) throws Exception {
+		tb1.start();
+		Dictionary<String,String> h = tb1.getHeaders();
 
-		Bundle tb1 = getContext().installBundle(getWebServer() + "div.tb1.jar");
-		try {
-			tb1.start();
-			Dictionary<String,String> h = tb1.getHeaders();
-
-			for (int i = 0; i < tb1_manifestHeadersValues.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb1_manifestHeadersValues[i], h
-								.get(manifestHeadersKeys[i]));
-			}
-		}
-		finally {
-			tb1.uninstall();
+		for (int i = 0; i < tb1_manifestHeadersValues.length; i++) {
+			assertThat(h
+							.get(manifestHeadersKeys[i]))
+					.as("Manifest header localization does not match")
+					.isEqualTo(tb1_manifestHeadersValues[i]);
 		}
 	}
 
@@ -165,18 +175,20 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec Bundle.getHeaders()
 	 */
+	@Test
 	public void testGetHeaders002() throws Exception {
 
-		Bundle tb8 = getContext().installBundle(getWebServer() + "div.tb8.jar");
+		Bundle tb8 = bundleInstaller.installBundle("div.tb8.jar", false);
 		Dictionary<String,String> h;
 		try {
 			tb8.start();
 			h = tb8.getHeaders();
 
 			for (int i = 0; i < tb8_manifestHeadersValues_default.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb8_manifestHeadersValues_default[i], h
-								.get(manifestHeadersKeys[i]));
+				assertThat(h
+								.get(manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb8_manifestHeadersValues_default[i]);
 			}
 
 			tb8.stop();
@@ -196,9 +208,10 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 		}
 
 		for (int i = 0; i < tb8_manifestHeadersValues_default.length; i++) {
-			assertEquals("Manifest header localization does not match",
-					tb8_manifestHeadersValues_default[i], h
-							.get(manifestHeadersKeys[i]));
+			assertThat(h
+							.get(manifestHeadersKeys[i]))
+					.as("Manifest header localization does not match")
+					.isEqualTo(tb8_manifestHeadersValues_default[i]);
 		}
 	}
 
@@ -208,28 +221,31 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec Bundle.getHeaders()
 	 */
+	@Test
 	public void testGetHeaders003() throws Exception {
 		// specify default locale
 		Locale.setDefault(new Locale("en", "US"));
-		Bundle tb9 = getContext().installBundle(getWebServer() + "div.tb9.jar");
+		Bundle tb9 = bundleInstaller.installBundle("div.tb9.jar", false);
 		try {
 
 			tb9.start();
 			Dictionary<String,String> h = tb9.getHeaders();
 
 			for (int i = 0; i < tb9_manifestHeadersValues_en_US.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb9_manifestHeadersValues_en_US[i], h
-								.get(manifestHeadersKeys[i]));
+				assertThat(h
+								.get(manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb9_manifestHeadersValues_en_US[i]);
 			}
 
 			// If the specified locale is null then the locale returned by
 			// java.util.Locale.getDefault is used.
 			h = tb9.getHeaders(null);
 			for (int i = 0; i < tb9_manifestHeadersValues_en_US.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb9_manifestHeadersValues_en_US[i], h
-								.get(manifestHeadersKeys[i]));
+				assertThat(h
+								.get(manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb9_manifestHeadersValues_en_US[i]);
 			}
 
 			// If the specified locale is the empty string, this method
@@ -238,9 +254,10 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 			h = tb9.getHeaders("");
 
 			for (int i = 0; i < tb9_manifestHeadersValues_rawHeaders.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb9_manifestHeadersValues_rawHeaders[i], h
-								.get(manifestHeadersKeys[i]));
+				assertThat(h
+								.get(manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb9_manifestHeadersValues_rawHeaders[i]);
 			}
 
 			tb9.stop();
@@ -253,9 +270,10 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 			h = tb9.getHeaders();
 			tb9 = null;
 			for (int i = 0; i < tb9_manifestHeadersValues_en_US.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb9_manifestHeadersValues_en_US[i], h
-								.get(manifestHeadersKeys[i]));
+				assertThat(h
+								.get(manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb9_manifestHeadersValues_en_US[i]);
 			}
 		}
 		finally {
@@ -271,17 +289,19 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec Bundle.getHeaders()
 	 */
+	@Test
 	public void testGetHeaders004() throws Exception {
 		Locale.setDefault(new Locale("pt", "BR"));
-		Bundle tb9 = getContext().installBundle(getWebServer() + "div.tb9.jar");
+		Bundle tb9 = bundleInstaller.installBundle("div.tb9.jar", false);
 		try {
 			tb9.start();
 			Dictionary<String,String> h = tb9.getHeaders();
 
 			for (int i = 0; i < tb9_manifestHeadersValues_missingLocale.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb9_manifestHeadersValues_missingLocale[i], h
-								.get(manifestHeadersKeys[i]));
+				assertThat(h
+								.get(manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb9_manifestHeadersValues_missingLocale[i]);
 			}
 		}
 		finally {
@@ -295,17 +315,19 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec Bundle.getHeaders(String)
 	 */
+	@Test
 	public void testGetHeaders005() throws Exception {
 		Locale.setDefault(new Locale("en", "US"));
-		Bundle tb1 = getContext().installBundle(getWebServer() + "div.tb1.jar");
+		Bundle tb1 = bundleInstaller.installBundle("div.tb1.jar", false);
 		try {
 			tb1.start();
 
 			Dictionary<String,String> h = tb1.getHeaders("en_US");
 			for (int i = 0; i < tb1_manifestHeadersValues.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb1_manifestHeadersValues[i], h
-								.get(manifestHeadersKeys[i]));
+				assertThat(h
+								.get(manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb1_manifestHeadersValues[i]);
 			}
 		}
 		finally {
@@ -320,17 +342,19 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec Bundle.getHeaders(String)
 	 */
+	@Test
 	public void testGetHeaders006() throws Exception {
 		Locale.setDefault(new Locale("en", "US"));
-		Bundle tb8 = getContext().installBundle(getWebServer() + "div.tb8.jar");
+		Bundle tb8 = bundleInstaller.installBundle("div.tb8.jar", false);
 		try {
 			tb8.start();
 			Dictionary<String,String> h = tb8.getHeaders("en_US");
 
 			for (int i = 0; i < tb8_manifestHeadersValues_default.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb8_manifestHeadersValues_default[i], h
-								.get(manifestHeadersKeys[i]));
+				assertThat(h
+								.get(manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb8_manifestHeadersValues_default[i]);
 			}
 		}
 		finally {
@@ -344,20 +368,18 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec Bundle.getHeaders(String)
 	 */
-	public void testGetHeaders007() throws Exception {
-		Bundle tb9 = getContext().installBundle(getWebServer() + "div.tb9.jar");
-		try {
-			tb9.start();
-			Dictionary<String,String> h = tb9.getHeaders("en");
+	@Test
+	public void testGetHeaders007(
+			@InjectInstalledBundle(value = "div.tb9.jar", start = false) Bundle tb9
+			) throws Exception {
+		tb9.start();
+		Dictionary<String,String> h = tb9.getHeaders("en");
 
-			for (int i = 0; i < tb9_manifestHeadersValues_en.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb9_manifestHeadersValues_en[i], h
-								.get(manifestHeadersKeys[i]));
-			}
-		}
-		finally {
-			tb9.uninstall();
+		for (int i = 0; i < tb9_manifestHeadersValues_en.length; i++) {
+			assertThat(h
+							.get(manifestHeadersKeys[i]))
+					.as("Manifest header localization does not match")
+					.isEqualTo(tb9_manifestHeadersValues_en[i]);
 		}
 	}
 
@@ -367,17 +389,19 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec Bundle.getHeaders(String)
 	 */
+	@Test
 	public void testGetHeaders008() throws Exception {
 		Locale.setDefault(new Locale("en", "US"));
-		Bundle tb9 = getContext().installBundle(getWebServer() + "div.tb9.jar");
+		Bundle tb9 = bundleInstaller.installBundle("div.tb9.jar", false);
 		try {
 			tb9.start();
 			Dictionary<String,String> h = tb9.getHeaders("pt_BR");
 
 			for (int i = 0; i < tb9_manifestHeadersValues_en_US.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb9_manifestHeadersValues_en_US[i], h
-								.get(manifestHeadersKeys[i]));
+				assertThat(h
+								.get(manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb9_manifestHeadersValues_en_US[i]);
 			}
 		}
 		finally {
@@ -391,17 +415,19 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec Bundle.getHeaders(String)
 	 */
+	@Test
 	public void testGetHeaders009() throws Exception {
 		Locale.setDefault(new Locale("pt", "BR"));
-		Bundle tb9 = getContext().installBundle(getWebServer() + "div.tb9.jar");
+		Bundle tb9 = bundleInstaller.installBundle("div.tb9.jar", false);
 		try {
 			tb9.start();
 			Dictionary<String,String> h = tb9.getHeaders("en");
 
 			for (int i = 0; i < tb9_manifestHeadersValues_en.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb9_manifestHeadersValues_en[i], h
-								.get(manifestHeadersKeys[i]));
+				assertThat(h
+								.get(manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb9_manifestHeadersValues_en[i]);
 			}
 
 			tb9.stop();
@@ -414,9 +440,10 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 			h = tb9.getHeaders("en");
 			tb9 = null;
 			for (int i = 0; i < tb9_manifestHeadersValues_missingLocale.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb9_manifestHeadersValues_missingLocale[i], h
-								.get(manifestHeadersKeys[i]));
+				assertThat(h
+								.get(manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb9_manifestHeadersValues_missingLocale[i]);
 			}
 		}
 		finally {
@@ -432,14 +459,14 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec Bundle.getHeaders(String)
 	 */
+	@Test
 	public void testGetHeaders010() throws Exception {
 
 		Locale.setDefault(new Locale("pt", "BR"));
 		// install host bundle
-		Bundle tb9 = getContext().installBundle(getWebServer() + "div.tb9.jar");
+		Bundle tb9 = bundleInstaller.installBundle("div.tb9.jar", false);
 		// install fragment bundle
-		Bundle tb14 = getContext().installBundle(
-				getWebServer() + "div.tb14.jar");
+		Bundle tb14 = bundleInstaller.installBundle("div.tb14.jar", false);
 
 		try {
 
@@ -454,9 +481,10 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 			Dictionary<String,String> h = tb14.getHeaders("pt_BR");
 
 			for (int i = 0; i < tb14_manifestHeadersValues_pt_BR.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb14_manifestHeadersValues_pt_BR[i], h
-								.get(tb14_manifestHeadersKeys[i]));
+				assertThat(h
+								.get(tb14_manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb14_manifestHeadersValues_pt_BR[i]);
 			}
 
 			h = tb14.getHeaders("en_US");
@@ -471,9 +499,10 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 
 			// manifest localization before bundle is resolved.
 			for (int i = 0; i < tb14_manifestHeadersValues_en_US.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb14_manifestHeadersValues_en_US[i], h
-								.get(tb14_manifestHeadersKeys[i]));
+				assertThat(h
+								.get(tb14_manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb14_manifestHeadersValues_en_US[i]);
 			}
 		}
 		finally {
@@ -488,12 +517,12 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec Bundle.getHeaders(String)
 	 */
+	@Test
 	public void testGetHeaders011() throws Exception {
 
 		Locale.setDefault(new Locale("en", "US"));
-		Bundle tb14 = getContext().installBundle(
-				getWebServer() + "div.tb14.jar");
-		Bundle tb9 = getContext().installBundle(getWebServer() + "div.tb9.jar");
+		Bundle tb14 = bundleInstaller.installBundle("div.tb14.jar", false);
+		Bundle tb9 = bundleInstaller.installBundle("div.tb9.jar", false);
 		try {
 
 			tb9.start();
@@ -503,9 +532,10 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 			Dictionary<String,String> h = tb9.getHeaders("pt_BR");
 
 			for (int i = 0; i < tb9_manifestHeadersValues_pt_BR.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb9_manifestHeadersValues_pt_BR[i], h
-								.get(manifestHeadersKeys[i]));
+				assertThat(h
+								.get(manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb9_manifestHeadersValues_pt_BR[i]);
 			}
 		}
 		finally {
@@ -519,14 +549,14 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec Bundle.getHeaders(String)
 	 */
+	@Test
 	public void testGetHeaders012() throws Exception {
 
 		Locale.setDefault(new Locale("en", "US"));
 		// install fragment bundle
-		Bundle tb14 = getContext().installBundle(
-				getWebServer() + "div.tb14.jar");
+		Bundle tb14 = bundleInstaller.installBundle("div.tb14.jar", false);
 		// install host bundle
-		Bundle tb9 = getContext().installBundle(getWebServer() + "div.tb9.jar");
+		Bundle tb9 = bundleInstaller.installBundle("div.tb9.jar", false);
 
 		try {
 
@@ -540,9 +570,10 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 			// manifest localization after bundle is resolved.
 			Dictionary<String,String> h = tb14.getHeaders("en_US");
 			for (int i = 0; i < tb14_manifestHeadersValues_en_US.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb14_manifestHeadersValues_en_US[i], h
-								.get(tb14_manifestHeadersKeys[i]));
+				assertThat(h
+								.get(tb14_manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb14_manifestHeadersValues_en_US[i]);
 			}
 		}
 		finally {
@@ -557,17 +588,15 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 	 * 
 	 * @osgi.spec Bundle.getHeaders(String)
 	 */
+	@Test
 	public void testGetHeaders013() throws Exception {
 		// default locale should exist in any of the following
 		// bundles locale file
 		Locale.setDefault(new Locale("fr", "CA"));
-		Bundle tb14 = getContext().installBundle(
-				getWebServer() + "div.tb14.jar");
-		Bundle tb23 = getContext().installBundle(
-				getWebServer() + "div.tb23.jar");
-		Bundle tb9 = getContext().installBundle(getWebServer() + "div.tb9.jar");
-		Bundle tb9a = getContext().installBundle(
-				getWebServer() + "div.tb9a.jar");
+		Bundle tb14 = bundleInstaller.installBundle("div.tb14.jar", false);
+		Bundle tb23 = bundleInstaller.installBundle("div.tb23.jar", false);
+		Bundle tb9 = bundleInstaller.installBundle("div.tb9.jar", false);
+		Bundle tb9a = bundleInstaller.installBundle("div.tb9a.jar", false);
 		try {
 			tb9.start();
 			tb9a.start();
@@ -578,17 +607,19 @@ public class ManifestLocalizationTests extends DefaultTestBundleControl {
 			Dictionary<String,String> h = tb14.getHeaders("fr_FR");
 
 			for (int i = 0; i < tb14_manifestHeadersValues_missingLocale.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb14_manifestHeadersValues_missingLocale[i], h
-								.get(tb14_manifestHeadersKeys[i]));
+				assertThat(h
+								.get(tb14_manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb14_manifestHeadersValues_missingLocale[i]);
 			}
 
 			h = tb14.getHeaders("es_ES");
 
 			for (int i = 0; i < tb14_manifestHeadersValues_es_ES.length; i++) {
-				assertEquals("Manifest header localization does not match",
-						tb14_manifestHeadersValues_es_ES[i], h
-								.get(tb14_manifestHeadersKeys[i]));
+				assertThat(h
+								.get(tb14_manifestHeadersKeys[i]))
+						.as("Manifest header localization does not match")
+						.isEqualTo(tb14_manifestHeadersValues_es_ES[i]);
 			}
 		}
 		finally {

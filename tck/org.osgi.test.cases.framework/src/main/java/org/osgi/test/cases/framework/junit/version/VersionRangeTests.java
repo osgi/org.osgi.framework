@@ -17,20 +17,24 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.junit.version;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.fail;
+
 import java.util.HashMap;
 import java.util.Map;
 
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Filter;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.Version;
 import org.osgi.framework.VersionRange;
 
-import junit.framework.TestCase;
-
 /**
  * Tests for the VersionRange class.
  */
-public class VersionRangeTests extends TestCase {
+public class VersionRangeTests {
+	@Test
 	public void testConstructors() {
 		Version version1 = new Version(1, 2, 3);
 		Version version2 = new Version(2, 0, 0);
@@ -57,45 +61,28 @@ public class VersionRangeTests extends TestCase {
 		VersionRange.valueOf(" 1.2.3 ");
 	}
 
+	@Test
 	public void testConstructorsBadArguments() {
 		Version version1 = new Version(1, 2, 3);
 		Version version2 = new Version(2, 0, 0);
-		try {
-			new VersionRange('x', version1, version2, ')');
-			fail("VersionRange created with illegal arguments");
-		}
-		catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("VersionRange created with illegal arguments")
+				.isThrownBy(() -> new VersionRange('x', version1, version2, ')'));
 
-		try {
-			new VersionRange('[', version1, version2, 'x');
-			fail("VersionRange created with illegal arguments");
-		}
-		catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("VersionRange created with illegal arguments")
+				.isThrownBy(() -> new VersionRange('[', version1, version2, 'x'));
 
-		try {
-			new VersionRange('[', null, version2, ')');
-			fail("VersionRange created with illegal arguments");
-		}
-		catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("VersionRange created with illegal arguments")
+				.isThrownBy(() -> new VersionRange('[', null, version2, ')'));
 
-		try {
-			new VersionRange(null);
-			fail("VersionRange created with illegal arguments");
-		} catch (RuntimeException ex) {
-			// This is an expected exception and may be ignored
-		}
-		try {
-			VersionRange.valueOf(null);
-			fail("VersionRange created with illegal arguments");
-		} catch (RuntimeException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(RuntimeException.class)
+				.as("VersionRange created with illegal arguments")
+				.isThrownBy(() -> new VersionRange(null));
+		assertThatExceptionOfType(RuntimeException.class)
+				.as("VersionRange created with illegal arguments")
+				.isThrownBy(() -> VersionRange.valueOf(null));
 		testConstructorsBadArguments("");
 		testConstructorsBadArguments("x");
 		testConstructorsBadArguments(" 1.2.3 x");
@@ -117,23 +104,19 @@ public class VersionRangeTests extends TestCase {
 		testConstructorsBadArguments("[2)");
 	}
 
+	@Test
 	private void testConstructorsBadArguments(String arg) {
-		try {
-			new VersionRange(arg);
-			fail("VersionRange created with illegal arguments");
-		} catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
-		try {
-			VersionRange.valueOf(arg);
-			fail("VersionRange created with illegal arguments");
-		} catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("VersionRange created with illegal arguments")
+				.isThrownBy(() -> new VersionRange(arg));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("VersionRange created with illegal arguments")
+				.isThrownBy(() -> VersionRange.valueOf(arg));
 
 	}
 
 	@SuppressWarnings("unlikely-arg-type")
+	@Test
 	public void testEquals() {
 		Version version1 = new Version(1, 2, 3);
 		Version version2 = new Version(2, 4, 6);
@@ -142,69 +125,126 @@ public class VersionRangeTests extends TestCase {
 
 		range1 = new VersionRange('[', version1, version2, ')');
 		range2 = new VersionRange("[1.2.3,2.4.6)");
-		assertEquals("equal objects", range1, range1);
-		assertEquals("equal objects", range2, range2);
-		assertEquals("equal objects", range1, range2);
-		assertEquals("equal objects", range2, range1);
+		assertThat(range1)
+				.as("equal objects")
+				.isEqualTo(range1);
+		assertThat(range2)
+				.as("equal objects")
+				.isEqualTo(range2);
+		assertThat(range2)
+				.as("equal objects")
+				.isEqualTo(range1);
+		assertThat(range1)
+				.as("equal objects")
+				.isEqualTo(range2);
 
 		range1 = new VersionRange('[', version1, version2, ')');
 		range2 = new VersionRange('[', version1, version2, ')');
-		assertEquals("equal objects", range1, range2);
-		assertEquals("equal objects", range2, range1);
+		assertThat(range2)
+				.as("equal objects")
+				.isEqualTo(range1);
+		assertThat(range1)
+				.as("equal objects")
+				.isEqualTo(range2);
 
 		range1 = new VersionRange('[', version1, version2, ')');
 		range2 = new VersionRange('[', version1, version2, ']');
-		assertFalse("unequal objects", range1.equals(range2));
-		assertFalse("unequal objects", range2.equals(range1));
+		assertThat(range1.equals(range2))
+				.as("unequal objects")
+				.isFalse();
+		assertThat(range2.equals(range1))
+				.as("unequal objects")
+				.isFalse();
 		range2 = new VersionRange("[1.2.3,2.4.6]");
-		assertFalse("unequal objects", range1.equals(range2));
-		assertFalse("unequal objects", range2.equals(range1));
+		assertThat(range1.equals(range2))
+				.as("unequal objects")
+				.isFalse();
+		assertThat(range2.equals(range1))
+				.as("unequal objects")
+				.isFalse();
 
 		range1 = new VersionRange('(', version1, version2, ']');
 		range2 = new VersionRange('[', version1, version2, ']');
-		assertFalse("unequal objects", range1.equals(range2));
-		assertFalse("unequal objects", range2.equals(range1));
+		assertThat(range1.equals(range2))
+				.as("unequal objects")
+				.isFalse();
+		assertThat(range2.equals(range1))
+				.as("unequal objects")
+				.isFalse();
 		range2 = new VersionRange("[1.2.3,2.4.6]");
-		assertFalse("unequal objects", range1.equals(range2));
-		assertFalse("unequal objects", range2.equals(range1));
+		assertThat(range1.equals(range2))
+				.as("unequal objects")
+				.isFalse();
+		assertThat(range2.equals(range1))
+				.as("unequal objects")
+				.isFalse();
 
 		range1 = new VersionRange('[', version1, version2, ']');
 		range2 = new VersionRange('[', version1, version1, ']');
-		assertFalse("unequal objects", range1.equals(range2));
-		assertFalse("unequal objects", range2.equals(range1));
+		assertThat(range1.equals(range2))
+				.as("unequal objects")
+				.isFalse();
+		assertThat(range2.equals(range1))
+				.as("unequal objects")
+				.isFalse();
 
 		range1 = new VersionRange('[', version1, version1, ')');
 		range2 = new VersionRange('[', version1, version1, ']');
-		assertFalse("unequal objects", range1.equals(range2));
-		assertFalse("unequal objects", range2.equals(range1));
+		assertThat(range1.equals(range2))
+				.as("unequal objects")
+				.isFalse();
+		assertThat(range2.equals(range1))
+				.as("unequal objects")
+				.isFalse();
 
 		// both are empty; so equal
 		range1 = new VersionRange('[', version2, version1, ')');
 		range2 = new VersionRange('[', version1, version1, ')');
-		assertEquals("equal objects", range1, range2);
-		assertEquals("equal objects", range2, range1);
+		assertThat(range2)
+				.as("equal objects")
+				.isEqualTo(range1);
+		assertThat(range1)
+				.as("equal objects")
+				.isEqualTo(range2);
 
 		range1 = new VersionRange('[', version1, null, ')');
 		range2 = new VersionRange('[', version1, null, ']');
-		assertEquals("equal objects", range1, range2);
-		assertEquals("equal objects", range2, range1);
+		assertThat(range2)
+				.as("equal objects")
+				.isEqualTo(range1);
+		assertThat(range1)
+				.as("equal objects")
+				.isEqualTo(range2);
 
 		range1 = new VersionRange('[', version1, version2, ')');
 		range2 = new VersionRange('[', version1, null, ')');
-		assertFalse("unequal objects", range1.equals(range2));
-		assertFalse("unequal objects", range2.equals(range1));
+		assertThat(range1.equals(range2))
+				.as("unequal objects")
+				.isFalse();
+		assertThat(range2.equals(range1))
+				.as("unequal objects")
+				.isFalse();
 
 		range1 = new VersionRange('[', version1, null, ')');
 		range2 = new VersionRange('[', version1, version2, ')');
-		assertFalse("unequal objects", range1.equals(range2));
-		assertFalse("unequal objects", range2.equals(range1));
+		assertThat(range1.equals(range2))
+				.as("unequal objects")
+				.isFalse();
+		assertThat(range2.equals(range1))
+				.as("unequal objects")
+				.isFalse();
 
 		range1 = new VersionRange('[', version1, version2, ')');
-		assertFalse("unequal objects", range1.equals(null));
-		assertFalse("unequal objects", range1.equals(this));
+		assertThat(range1.equals(null))
+				.as("unequal objects")
+				.isFalse();
+		assertThat(range1.equals(this))
+				.as("unequal objects")
+				.isFalse();
 
 	}
 
+	@Test
 	public void testHashCode() throws Exception {
 		Version version1 = new Version(1, 2, 3);
 		Version version2 = new Version(2, 4, 6);
@@ -213,235 +253,328 @@ public class VersionRangeTests extends TestCase {
 
 		range1 = new VersionRange('[', version1, version2, ')');
 		range2 = new VersionRange('[', version1, version2, ')');
-		assertEquals("equal objects have different hashCode",
-				range1.hashCode(), range2.hashCode());
+		assertThat(range2.hashCode())
+				.as("equal objects have different hashCode")
+				.isEqualTo(range1.hashCode());
 
 		range1 = new VersionRange('[', version1, version2, ')');
 		range2 = new VersionRange('[', version1, version2, ']');
-		assertFalse("unequal objects have same hashCode",
-				range1.hashCode() == range2.hashCode());
+		assertThat(range1.hashCode() == range2.hashCode())
+				.as("unequal objects have same hashCode")
+				.isFalse();
 
 		range1 = new VersionRange('(', version1, version2, ']');
 		range2 = new VersionRange('[', version1, version2, ']');
-		assertFalse("unequal objects have same hashCode",
-				range1.hashCode() == range2.hashCode());
+		assertThat(range1.hashCode() == range2.hashCode())
+				.as("unequal objects have same hashCode")
+				.isFalse();
 
 		range1 = new VersionRange('[', version1, version2, ']');
 		range2 = new VersionRange('[', version1, version1, ']');
-		assertFalse("unequal objects have same hashCode",
-				range1.hashCode() == range2.hashCode());
+		assertThat(range1.hashCode() == range2.hashCode())
+				.as("unequal objects have same hashCode")
+				.isFalse();
 
 		range1 = new VersionRange('[', version1, version1, ')');
 		range2 = new VersionRange('[', version1, version1, ']');
-		assertFalse("unequal objects have same hashCode",
-				range1.hashCode() == range2.hashCode());
+		assertThat(range1.hashCode() == range2.hashCode())
+				.as("unequal objects have same hashCode")
+				.isFalse();
 
 		// both are empty; so same hashCode
 		range1 = new VersionRange('[', version2, version1, ')');
 		range2 = new VersionRange('[', version1, version1, ')');
-		assertEquals("equal objects have different hashCode",
-				range1.hashCode(), range2.hashCode());
+		assertThat(range2.hashCode())
+				.as("equal objects have different hashCode")
+				.isEqualTo(range1.hashCode());
 
 		range1 = new VersionRange('[', version1, null, ')');
 		range2 = new VersionRange('[', version1, null, ']');
-		assertEquals("equal objects have different hashCode",
-				range1.hashCode(), range2.hashCode());
+		assertThat(range2.hashCode())
+				.as("equal objects have different hashCode")
+				.isEqualTo(range1.hashCode());
 
 	}
 
+	@Test
 	public void testGetLeftType() {
 		Version version11 = new Version(2, 3, 4);
 		Version version21 = new Version(5, 6, 7);
 		VersionRange range;
 
 		range = new VersionRange('[', version11, version21, ')');
-		assertEquals("Wrong type", VersionRange.LEFT_CLOSED,
-				range.getLeftType());
+		assertThat(range.getLeftType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.LEFT_CLOSED);
 
 		range = new VersionRange('[', version11, version21, ']');
-		assertEquals("Wrong type", VersionRange.LEFT_CLOSED,
-				range.getLeftType());
+		assertThat(range.getLeftType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.LEFT_CLOSED);
 
 		range = new VersionRange('(', version11, version21, ')');
-		assertEquals("Wrong type", VersionRange.LEFT_OPEN, range.getLeftType());
+		assertThat(range.getLeftType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.LEFT_OPEN);
 
 		range = new VersionRange('(', version11, version21, ']');
-		assertEquals("Wrong type", VersionRange.LEFT_OPEN, range.getLeftType());
+		assertThat(range.getLeftType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.LEFT_OPEN);
 
 		range = new VersionRange('[', version11, null, ')');
-		assertEquals("Wrong type", VersionRange.LEFT_CLOSED,
-				range.getLeftType());
+		assertThat(range.getLeftType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.LEFT_CLOSED);
 
 		range = new VersionRange("[2.3.4,5.6.7)");
-		assertEquals("Wrong type", VersionRange.LEFT_CLOSED,
-				range.getLeftType());
+		assertThat(range.getLeftType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.LEFT_CLOSED);
 
 		range = new VersionRange("[2.3.4,5.6.7]");
-		assertEquals("Wrong type", VersionRange.LEFT_CLOSED,
-				range.getLeftType());
+		assertThat(range.getLeftType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.LEFT_CLOSED);
 
 		range = new VersionRange("(2.3.4,5.6.7)");
-		assertEquals("Wrong type", VersionRange.LEFT_OPEN, range.getLeftType());
+		assertThat(range.getLeftType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.LEFT_OPEN);
 
 		range = new VersionRange("(2.3.4,5.6.7]");
-		assertEquals("Wrong type", VersionRange.LEFT_OPEN, range.getLeftType());
+		assertThat(range.getLeftType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.LEFT_OPEN);
 
 		range = new VersionRange("2.3.4");
-		assertEquals("Wrong type", VersionRange.LEFT_CLOSED,
-				range.getLeftType());
+		assertThat(range.getLeftType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.LEFT_CLOSED);
 
 	}
 
+	@Test
 	public void testGetLeft() {
 		Version version11 = new Version(2, 3, 4);
 		Version version21 = new Version(5, 6, 7);
 		VersionRange range;
 
 		range = new VersionRange('[', version11, version21, ')');
-		assertEquals("Wrong version", version11, range.getLeft());
+		assertThat(range.getLeft())
+				.as("Wrong version")
+				.isEqualTo(version11);
 
 		range = new VersionRange('[', version11, version21, ']');
-		assertEquals("Wrong version", version11, range.getLeft());
+		assertThat(range.getLeft())
+				.as("Wrong version")
+				.isEqualTo(version11);
 
 		range = new VersionRange('(', version11, version21, ')');
-		assertEquals("Wrong version", version11, range.getLeft());
+		assertThat(range.getLeft())
+				.as("Wrong version")
+				.isEqualTo(version11);
 
 		range = new VersionRange('(', version11, version21, ']');
-		assertEquals("Wrong version", version11, range.getLeft());
+		assertThat(range.getLeft())
+				.as("Wrong version")
+				.isEqualTo(version11);
 
 		range = new VersionRange('[', version11, null, ')');
-		assertEquals("Wrong version", version11, range.getLeft());
+		assertThat(range.getLeft())
+				.as("Wrong version")
+				.isEqualTo(version11);
 
 		range = new VersionRange("[2.3.4,5.6.7)");
-		assertEquals("Wrong version", version11, range.getLeft());
+		assertThat(range.getLeft())
+				.as("Wrong version")
+				.isEqualTo(version11);
 
 		range = new VersionRange("[2.3.4,5.6.7]");
-		assertEquals("Wrong version", version11, range.getLeft());
+		assertThat(range.getLeft())
+				.as("Wrong version")
+				.isEqualTo(version11);
 
 		range = new VersionRange("(2.3.4,5.6.7)");
-		assertEquals("Wrong version", version11, range.getLeft());
+		assertThat(range.getLeft())
+				.as("Wrong version")
+				.isEqualTo(version11);
 
 		range = new VersionRange("(2.3.4,5.6.7]");
-		assertEquals("Wrong version", version11, range.getLeft());
+		assertThat(range.getLeft())
+				.as("Wrong version")
+				.isEqualTo(version11);
 
 		range = new VersionRange("2.3.4");
-		assertEquals("Wrong version", version11, range.getLeft());
+		assertThat(range.getLeft())
+				.as("Wrong version")
+				.isEqualTo(version11);
 
 	}
 
+	@Test
 	public void testGetRight() {
 		Version version11 = new Version(2, 3, 4);
 		Version version21 = new Version(5, 6, 7);
 		VersionRange range;
 
 		range = new VersionRange('[', version11, version21, ')');
-		assertEquals("Wrong version", version21, range.getRight());
+		assertThat(range.getRight())
+				.as("Wrong version")
+				.isEqualTo(version21);
 
 		range = new VersionRange('[', version11, version21, ']');
-		assertEquals("Wrong version", version21, range.getRight());
+		assertThat(range.getRight())
+				.as("Wrong version")
+				.isEqualTo(version21);
 
 		range = new VersionRange('(', version11, version21, ')');
-		assertEquals("Wrong version", version21, range.getRight());
+		assertThat(range.getRight())
+				.as("Wrong version")
+				.isEqualTo(version21);
 
 		range = new VersionRange('(', version11, version21, ']');
-		assertEquals("Wrong version", version21, range.getRight());
+		assertThat(range.getRight())
+				.as("Wrong version")
+				.isEqualTo(version21);
 
 		range = new VersionRange('[', version11, null, ')');
-		assertEquals("Wrong version", null, range.getRight());
+		assertThat(range.getRight())
+				.as("Wrong version")
+				.isEqualTo(null);
 
 		range = new VersionRange("[2.3.4,5.6.7)");
-		assertEquals("Wrong version", version21, range.getRight());
+		assertThat(range.getRight())
+				.as("Wrong version")
+				.isEqualTo(version21);
 
 		range = new VersionRange("[2.3.4,5.6.7]");
-		assertEquals("Wrong version", version21, range.getRight());
+		assertThat(range.getRight())
+				.as("Wrong version")
+				.isEqualTo(version21);
 
 		range = new VersionRange("(2.3.4,5.6.7)");
-		assertEquals("Wrong version", version21, range.getRight());
+		assertThat(range.getRight())
+				.as("Wrong version")
+				.isEqualTo(version21);
 
 		range = new VersionRange("(2.3.4,5.6.7]");
-		assertEquals("Wrong version", version21, range.getRight());
+		assertThat(range.getRight())
+				.as("Wrong version")
+				.isEqualTo(version21);
 
 		range = new VersionRange("2.3.4");
-		assertEquals("Wrong version", null, range.getRight());
+		assertThat(range.getRight())
+				.as("Wrong version")
+				.isEqualTo(null);
 	}
 
+	@Test
 	public void testGetRightType() throws Exception {
 		Version version11 = new Version(2, 3, 4);
 		Version version21 = new Version(5, 6, 7);
 		VersionRange range;
 
 		range = new VersionRange('[', version11, version21, ')');
-		assertEquals("Wrong type", VersionRange.RIGHT_OPEN,
-				range.getRightType());
+		assertThat(range.getRightType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.RIGHT_OPEN);
 
 		range = new VersionRange('[', version11, version21, ']');
-		assertEquals("Wrong type", VersionRange.RIGHT_CLOSED,
-				range.getRightType());
+		assertThat(range.getRightType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.RIGHT_CLOSED);
 
 		range = new VersionRange('(', version11, version21, ')');
-		assertEquals("Wrong type", VersionRange.RIGHT_OPEN,
-				range.getRightType());
+		assertThat(range.getRightType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.RIGHT_OPEN);
 
 		range = new VersionRange('(', version11, version21, ']');
-		assertEquals("Wrong type", VersionRange.RIGHT_CLOSED,
-				range.getRightType());
+		assertThat(range.getRightType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.RIGHT_CLOSED);
 
 		range = new VersionRange('[', version11, null, ')');
-		assertEquals("Wrong type", VersionRange.RIGHT_OPEN,
-				range.getRightType());
+		assertThat(range.getRightType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.RIGHT_OPEN);
 
 		range = new VersionRange("[2.3.4,5.6.7)");
-		assertEquals("Wrong type", VersionRange.RIGHT_OPEN,
-				range.getRightType());
+		assertThat(range.getRightType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.RIGHT_OPEN);
 
 		range = new VersionRange("[2.3.4,5.6.7]");
-		assertEquals("Wrong type", VersionRange.RIGHT_CLOSED,
-				range.getRightType());
+		assertThat(range.getRightType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.RIGHT_CLOSED);
 
 		range = new VersionRange("(2.3.4,5.6.7)");
-		assertEquals("Wrong type", VersionRange.RIGHT_OPEN,
-				range.getRightType());
+		assertThat(range.getRightType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.RIGHT_OPEN);
 
 		range = new VersionRange("(2.3.4,5.6.7]");
-		assertEquals("Wrong type", VersionRange.RIGHT_CLOSED,
-				range.getRightType());
+		assertThat(range.getRightType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.RIGHT_CLOSED);
 
 		range = new VersionRange("2.3.4");
-		assertEquals("Wrong type", VersionRange.RIGHT_OPEN,
-				range.getRightType());
+		assertThat(range.getRightType())
+				.as("Wrong type")
+				.isEqualTo(VersionRange.RIGHT_OPEN);
 
 	}
 
+	@Test
 	public void testIsEmpty() {
 		Version version1 = new Version(1, 0, 0);
 		Version version2 = new Version(1, 0, 0, "-");
 		VersionRange range;
 
 		range = new VersionRange('[', version1, version2, ')');
-		assertFalse("range is not empty", range.isEmpty());
+		assertThat(range.isEmpty())
+				.as("range is not empty")
+				.isFalse();
 
 		range = new VersionRange('(', version1, version2, ']');
-		assertFalse("range is not empty", range.isEmpty());
+		assertThat(range.isEmpty())
+				.as("range is not empty")
+				.isFalse();
 
 		range = new VersionRange('[', version1, version1, ']');
-		assertFalse("range is not empty", range.isEmpty());
+		assertThat(range.isEmpty())
+				.as("range is not empty")
+				.isFalse();
 
 		range = new VersionRange('[', version1, version1, ')');
-		assertTrue("range is empty", range.isEmpty());
+		assertThat(range.isEmpty())
+				.as("range is empty")
+				.isTrue();
 
 		range = new VersionRange('(', version1, version1, ']');
-		assertTrue("range is empty", range.isEmpty());
+		assertThat(range.isEmpty())
+				.as("range is empty")
+				.isTrue();
 
 		range = new VersionRange('(', version1, version1, ')');
-		assertTrue("range is empty", range.isEmpty());
+		assertThat(range.isEmpty())
+				.as("range is empty")
+				.isTrue();
 
 		range = new VersionRange('[', version2, version1, ']');
-		assertTrue("range is empty", range.isEmpty());
+		assertThat(range.isEmpty())
+				.as("range is empty")
+				.isTrue();
 
 		range = new VersionRange('[', version2, null, ')');
-		assertFalse("range is not empty", range.isEmpty());
+		assertThat(range.isEmpty())
+				.as("range is not empty")
+				.isFalse();
 	}
 
+	@Test
 	public void testIsExact() {
 		Version version1 = new Version(1, 0, 0);
 		Version version2 = new Version(1, 0, 0, "-");
@@ -449,39 +582,62 @@ public class VersionRangeTests extends TestCase {
 		VersionRange range;
 
 		range = new VersionRange('[', version1, version1, ']');
-		assertTrue("range is exact", range.isExact());
+		assertThat(range.isExact())
+				.as("range is exact")
+				.isTrue();
 
 		range = new VersionRange('[', version1, version1, ')');
-		assertFalse("range is not exact", range.isExact());
+		assertThat(range.isExact())
+				.as("range is not exact")
+				.isFalse();
 
 		range = new VersionRange('(', version1, version1, ']');
-		assertFalse("range is not exact", range.isExact());
+		assertThat(range.isExact())
+				.as("range is not exact")
+				.isFalse();
 
 		range = new VersionRange('(', version1, version1, ')');
-		assertFalse("range is not exact", range.isExact());
+		assertThat(range.isExact())
+				.as("range is not exact")
+				.isFalse();
 
 		range = new VersionRange('[', version1, version2, ']');
-		assertFalse("range is not exact", range.isExact());
+		assertThat(range.isExact())
+				.as("range is not exact")
+				.isFalse();
 
 		range = new VersionRange('[', version2, version1, ']');
-		assertFalse("range is not exact", range.isExact());
+		assertThat(range.isExact())
+				.as("range is not exact")
+				.isFalse();
 
 		range = new VersionRange('[', version2, null, ')');
-		assertFalse("range is not exact", range.isExact());
+		assertThat(range.isExact())
+				.as("range is not exact")
+				.isFalse();
 
 		range = new VersionRange('[', version2, null, ']');
-		assertFalse("range is not exact", range.isExact());
+		assertThat(range.isExact())
+				.as("range is not exact")
+				.isFalse();
 
 		range = new VersionRange('[', version1, version2, ')');
-		assertTrue("range is exact", range.isExact());
+		assertThat(range.isExact())
+				.as("range is exact")
+				.isTrue();
 
 		range = new VersionRange('(', version1, version2, ']');
-		assertTrue("range is exact", range.isExact());
+		assertThat(range.isExact())
+				.as("range is exact")
+				.isTrue();
 
 		range = new VersionRange('(', version1, version3, ')');
-		assertTrue("range is exact", range.isExact());
+		assertThat(range.isExact())
+				.as("range is exact")
+				.isTrue();
 	}
 
+	@Test
 	public void testToString() {
 		Version version11 = new Version(2, 3, 4, "-");
 		Version version12 = new Version(2, 3, 4);
@@ -490,66 +646,87 @@ public class VersionRangeTests extends TestCase {
 		VersionRange range;
 
 		range = new VersionRange('[', version11, version21, ')');
-		assertEquals("Wrong toString result", "[2.3.4.-,5.6.7.-)",
-				range.toString());
+		assertThat(range.toString())
+				.as("Wrong toString result")
+				.isEqualTo("[2.3.4.-,5.6.7.-)");
 
 		range = new VersionRange('[', version12, version22, ')');
-		assertEquals("Wrong toString result", "[2.3.4,5.6.7)",
-				range.toString());
+		assertThat(range.toString())
+				.as("Wrong toString result")
+				.isEqualTo("[2.3.4,5.6.7)");
 
 		range = new VersionRange('[', version11, version21, ']');
-		assertEquals("Wrong toString result", "[2.3.4.-,5.6.7.-]",
-				range.toString());
+		assertThat(range.toString())
+				.as("Wrong toString result")
+				.isEqualTo("[2.3.4.-,5.6.7.-]");
 
 		range = new VersionRange('[', version12, version22, ']');
-		assertEquals("Wrong toString result", "[2.3.4,5.6.7]",
-				range.toString());
+		assertThat(range.toString())
+				.as("Wrong toString result")
+				.isEqualTo("[2.3.4,5.6.7]");
 
 		range = new VersionRange('(', version11, version21, ')');
-		assertEquals("Wrong toString result", "(2.3.4.-,5.6.7.-)",
-				range.toString());
+		assertThat(range.toString())
+				.as("Wrong toString result")
+				.isEqualTo("(2.3.4.-,5.6.7.-)");
 
 		range = new VersionRange('(', version12, version22, ')');
-		assertEquals("Wrong toString result", "(2.3.4,5.6.7)",
-				range.toString());
+		assertThat(range.toString())
+				.as("Wrong toString result")
+				.isEqualTo("(2.3.4,5.6.7)");
 
 		range = new VersionRange('(', version11, version21, ']');
-		assertEquals("Wrong toString result", "(2.3.4.-,5.6.7.-]",
-				range.toString());
+		assertThat(range.toString())
+				.as("Wrong toString result")
+				.isEqualTo("(2.3.4.-,5.6.7.-]");
 
 		range = new VersionRange('(', version12, version22, ']');
-		assertEquals("Wrong toString result", "(2.3.4,5.6.7]",
-				range.toString());
+		assertThat(range.toString())
+				.as("Wrong toString result")
+				.isEqualTo("(2.3.4,5.6.7]");
 
 		range = new VersionRange('[', version11, null, ')');
-		assertEquals("Wrong toString result", "2.3.4.-", range.toString());
+		assertThat(range.toString())
+				.as("Wrong toString result")
+				.isEqualTo("2.3.4.-");
 
 		range = new VersionRange('[', version12, null, ')');
-		assertEquals("Wrong toString result", "2.3.4", range.toString());
+		assertThat(range.toString())
+				.as("Wrong toString result")
+				.isEqualTo("2.3.4");
 
 		range = new VersionRange("[2.3.4,5.6.7)");
-		assertEquals("Wrong toString result", "[2.3.4,5.6.7)",
-				range.toString());
+		assertThat(range.toString())
+				.as("Wrong toString result")
+				.isEqualTo("[2.3.4,5.6.7)");
 
 		range = new VersionRange("[2.3.4,5.6.7]");
-		assertEquals("Wrong toString result", "[2.3.4,5.6.7]",
-				range.toString());
+		assertThat(range.toString())
+				.as("Wrong toString result")
+				.isEqualTo("[2.3.4,5.6.7]");
 
 		range = new VersionRange("(2.3.4,5.6.7)");
-		assertEquals("Wrong toString result", "(2.3.4,5.6.7)",
-				range.toString());
+		assertThat(range.toString())
+				.as("Wrong toString result")
+				.isEqualTo("(2.3.4,5.6.7)");
 
 		range = new VersionRange("(2.3.4,5.6.7]");
-		assertEquals("Wrong toString result", "(2.3.4,5.6.7]",
-				range.toString());
+		assertThat(range.toString())
+				.as("Wrong toString result")
+				.isEqualTo("(2.3.4,5.6.7]");
 
 		range = new VersionRange("2.3.4");
-		assertEquals("Wrong toString result", "2.3.4", range.toString());
+		assertThat(range.toString())
+				.as("Wrong toString result")
+				.isEqualTo("2.3.4");
 
 		range = new VersionRange("2.3.4.-");
-		assertEquals("Wrong toString result", "2.3.4.-", range.toString());
+		assertThat(range.toString())
+				.as("Wrong toString result")
+				.isEqualTo("2.3.4.-");
 	}
 
+	@Test
 	public void testIncludes() {
 		Version version11 = new Version(2, 3, 4, "-");
 		Version version12 = new Version(2, 3, 4);
@@ -561,143 +738,335 @@ public class VersionRangeTests extends TestCase {
 		VersionRange range;
 
 		range = new VersionRange('[', version11, version22, ']');
-		assertTrue("not included", range.includes(version11));
-		assertFalse("included", range.includes(version12));
-		assertFalse("included", range.includes(version21));
-		assertTrue("not included", range.includes(version22));
-		assertTrue("not included", range.includes(version3));
-		assertFalse("included", range.includes(version4));
+		assertThat(range.includes(version11))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version12))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version21))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version22))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version3))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version4))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange('[', version11, version22, ')');
-		assertTrue("not included", range.includes(version11));
-		assertFalse("included", range.includes(version12));
-		assertFalse("included", range.includes(version21));
-		assertFalse("included", range.includes(version22));
-		assertTrue("not included", range.includes(version3));
-		assertFalse("included", range.includes(version4));
+		assertThat(range.includes(version11))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version12))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version21))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version22))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version3))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version4))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange('(', version11, version22, ']');
-		assertFalse("included", range.includes(version11));
-		assertFalse("included", range.includes(version12));
-		assertFalse("included", range.includes(version21));
-		assertTrue("not included", range.includes(version22));
-		assertTrue("not included", range.includes(version3));
-		assertFalse("included", range.includes(version4));
+		assertThat(range.includes(version11))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version12))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version21))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version22))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version3))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version4))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange('(', version11, version22, ')');
-		assertFalse("included", range.includes(version11));
-		assertFalse("included", range.includes(version12));
-		assertFalse("included", range.includes(version21));
-		assertFalse("included", range.includes(version22));
-		assertTrue("not included", range.includes(version3));
-		assertFalse("included", range.includes(version4));
+		assertThat(range.includes(version11))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version12))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version21))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version22))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version3))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version4))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange("[2.3.4,5.6.7)");
-		assertTrue("not included", range.includes(version11));
-		assertTrue("not included", range.includes(version12));
-		assertFalse("included", range.includes(version21));
-		assertFalse("included", range.includes(version22));
-		assertTrue("not included", range.includes(version3));
-		assertFalse("included", range.includes(version4));
+		assertThat(range.includes(version11))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version12))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version21))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version22))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version3))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version4))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange("[2.3.4,5.6.7]");
-		assertTrue("not included", range.includes(version11));
-		assertTrue("not included", range.includes(version12));
-		assertFalse("included", range.includes(version21));
-		assertTrue("not included", range.includes(version22));
-		assertTrue("not included", range.includes(version3));
-		assertFalse("included", range.includes(version4));
+		assertThat(range.includes(version11))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version12))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version21))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version22))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version3))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version4))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange("(2.3.4,5.6.7]");
-		assertTrue("not included", range.includes(version11));
-		assertFalse("included", range.includes(version12));
-		assertFalse("included", range.includes(version21));
-		assertTrue("not included", range.includes(version22));
-		assertTrue("not included", range.includes(version3));
-		assertFalse("included", range.includes(version4));
+		assertThat(range.includes(version11))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version12))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version21))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version22))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version3))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version4))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange("(2.3.4,5.6.7)");
-		assertTrue("not included", range.includes(version11));
-		assertFalse("included", range.includes(version12));
-		assertFalse("included", range.includes(version21));
-		assertFalse("included", range.includes(version22));
-		assertTrue("not included", range.includes(version3));
-		assertFalse("included", range.includes(version4));
+		assertThat(range.includes(version11))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version12))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version21))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version22))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version3))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version4))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange("[2.3.4.-,5.6.7.-)");
-		assertTrue("not included", range.includes(version11));
-		assertFalse("included", range.includes(version12));
-		assertFalse("included", range.includes(version21));
-		assertTrue("not included", range.includes(version22));
-		assertTrue("not included", range.includes(version3));
-		assertFalse("included", range.includes(version4));
+		assertThat(range.includes(version11))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version12))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version21))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version22))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version3))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version4))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange("(2.3.4.-,5.6.7.-]");
-		assertFalse("included", range.includes(version11));
-		assertFalse("included", range.includes(version12));
-		assertTrue("not included", range.includes(version21));
-		assertTrue("not included", range.includes(version22));
-		assertTrue("not included", range.includes(version3));
-		assertFalse("included", range.includes(version4));
+		assertThat(range.includes(version11))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version12))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version21))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version22))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version3))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version4))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange('[', version11, null, ')');
-		assertTrue("not included", range.includes(version11));
-		assertFalse("included", range.includes(version12));
-		assertTrue("not included", range.includes(version21));
-		assertTrue("not included", range.includes(version22));
-		assertTrue("not included", range.includes(version3));
-		assertTrue("not included", range.includes(version4));
+		assertThat(range.includes(version11))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version12))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version21))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version22))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version3))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version4))
+				.as("not included")
+				.isTrue();
 
 		range = new VersionRange('(', version12, null, ')');
-		assertTrue("not included", range.includes(version11));
-		assertFalse("included", range.includes(version12));
-		assertTrue("not included", range.includes(version21));
-		assertTrue("not included", range.includes(version22));
-		assertTrue("not included", range.includes(version3));
-		assertTrue("not included", range.includes(version4));
+		assertThat(range.includes(version11))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version12))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version21))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version22))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version3))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version4))
+				.as("not included")
+				.isTrue();
 
 		range = new VersionRange('[', version12, null, ')');
-		assertTrue("not included", range.includes(version11));
-		assertTrue("not included", range.includes(version12));
-		assertTrue("not included", range.includes(version21));
-		assertTrue("not included", range.includes(version22));
-		assertTrue("not included", range.includes(version3));
-		assertTrue("not included", range.includes(version4));
+		assertThat(range.includes(version11))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version12))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version21))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version22))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version3))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version4))
+				.as("not included")
+				.isTrue();
 
 		range = new VersionRange("2.3.4");
-		assertTrue("not included", range.includes(version11));
-		assertTrue("not included", range.includes(version12));
-		assertTrue("not included", range.includes(version21));
-		assertTrue("not included", range.includes(version22));
-		assertTrue("not included", range.includes(version3));
-		assertTrue("not included", range.includes(version4));
+		assertThat(range.includes(version11))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version12))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version21))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version22))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version3))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version4))
+				.as("not included")
+				.isTrue();
 
 		range = new VersionRange("2.3.4.-");
-		assertTrue("not included", range.includes(version11));
-		assertFalse("included", range.includes(version12));
-		assertTrue("not included", range.includes(version21));
-		assertTrue("not included", range.includes(version22));
-		assertTrue("not included", range.includes(version3));
-		assertTrue("not included", range.includes(version4));
+		assertThat(range.includes(version11))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version12))
+				.as("included")
+				.isFalse();
+		assertThat(range.includes(version21))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version22))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version3))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version4))
+				.as("not included")
+				.isTrue();
 
 		range = new VersionRange('[', Version.emptyVersion, null, ')');
-		assertTrue("not included", range.includes(version11));
-		assertTrue("not included", range.includes(version12));
-		assertTrue("not included", range.includes(version21));
-		assertTrue("not included", range.includes(version22));
-		assertTrue("not included", range.includes(version3));
-		assertTrue("not included", range.includes(version4));
-		assertTrue("not included", range.includes(Version.emptyVersion));
+		assertThat(range.includes(version11))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version12))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version21))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version22))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version3))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(version4))
+				.as("not included")
+				.isTrue();
+		assertThat(range.includes(Version.emptyVersion))
+				.as("not included")
+				.isTrue();
 
-		try {
-			range.includes(null);
-			fail("includes called with illegal argument");
-		}
-		catch (RuntimeException ex) {
-			// This is an expected exception and may be ignored
-		}
+		VersionRange lastRange = range; // range is reassigned above, the lambda needs a final copy
+		assertThatExceptionOfType(RuntimeException.class)
+				.as("includes called with illegal argument")
+				.isThrownBy(() -> lastRange.includes(null));
 	}
 
+	@Test
 	public void testFilterString() throws Exception {
 		Version version11 = new Version(2, 3, 4, "-");
 		Version version12 = new Version(2, 3, 4);
@@ -709,156 +1078,381 @@ public class VersionRangeTests extends TestCase {
 		VersionRange range;
 
 		range = new VersionRange('[', version11, version22, ']');
-		assertTrue("not included", includesByFilter(range, version11));
-		assertFalse("included", includesByFilter(range, version12));
-		assertFalse("included", includesByFilter(range, version21));
-		assertTrue("not included", includesByFilter(range, version22));
-		assertTrue("not included", includesByFilter(range, version3));
-		assertFalse("included", includesByFilter(range, version4));
-		assertFalse("included", includesByFilter(range, null));
+		assertThat(includesByFilter(range, version11))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version12))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version21))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version22))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version3))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version4))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, null))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange('[', version11, version22, ')');
-		assertTrue("not included", includesByFilter(range, version11));
-		assertFalse("included", includesByFilter(range, version12));
-		assertFalse("included", includesByFilter(range, version21));
-		assertFalse("included", includesByFilter(range, version22));
-		assertTrue("not included", includesByFilter(range, version3));
-		assertFalse("included", includesByFilter(range, version4));
-		assertFalse("included", includesByFilter(range, null));
+		assertThat(includesByFilter(range, version11))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version12))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version21))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version22))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version3))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version4))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, null))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange('(', version11, version22, ']');
-		assertFalse("included", includesByFilter(range, version11));
-		assertFalse("included", includesByFilter(range, version12));
-		assertFalse("included", includesByFilter(range, version21));
-		assertTrue("not included", includesByFilter(range, version22));
-		assertTrue("not included", includesByFilter(range, version3));
-		assertFalse("included", includesByFilter(range, version4));
-		assertFalse("included", includesByFilter(range, null));
+		assertThat(includesByFilter(range, version11))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version12))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version21))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version22))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version3))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version4))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, null))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange('(', version11, version22, ')');
-		assertFalse("included", includesByFilter(range, version11));
-		assertFalse("included", includesByFilter(range, version12));
-		assertFalse("included", includesByFilter(range, version21));
-		assertFalse("included", includesByFilter(range, version22));
-		assertTrue("not included", includesByFilter(range, version3));
-		assertFalse("included", includesByFilter(range, version4));
-		assertFalse("included", includesByFilter(range, null));
+		assertThat(includesByFilter(range, version11))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version12))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version21))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version22))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version3))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version4))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, null))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange("[2.3.4,5.6.7)");
-		assertTrue("not included", includesByFilter(range, version11));
-		assertTrue("not included", includesByFilter(range, version12));
-		assertFalse("included", includesByFilter(range, version21));
-		assertFalse("included", includesByFilter(range, version22));
-		assertTrue("not included", includesByFilter(range, version3));
-		assertFalse("included", includesByFilter(range, version4));
-		assertFalse("included", includesByFilter(range, null));
+		assertThat(includesByFilter(range, version11))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version12))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version21))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version22))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version3))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version4))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, null))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange("[2.3.4,5.6.7]");
-		assertTrue("not included", includesByFilter(range, version11));
-		assertTrue("not included", includesByFilter(range, version12));
-		assertFalse("included", includesByFilter(range, version21));
-		assertTrue("not included", includesByFilter(range, version22));
-		assertTrue("not included", includesByFilter(range, version3));
-		assertFalse("included", includesByFilter(range, version4));
-		assertFalse("included", includesByFilter(range, null));
+		assertThat(includesByFilter(range, version11))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version12))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version21))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version22))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version3))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version4))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, null))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange("(2.3.4,5.6.7]");
-		assertTrue("not included", includesByFilter(range, version11));
-		assertFalse("included", includesByFilter(range, version12));
-		assertFalse("included", includesByFilter(range, version21));
-		assertTrue("not included", includesByFilter(range, version22));
-		assertTrue("not included", includesByFilter(range, version3));
-		assertFalse("included", includesByFilter(range, version4));
-		assertFalse("included", includesByFilter(range, null));
+		assertThat(includesByFilter(range, version11))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version12))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version21))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version22))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version3))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version4))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, null))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange("(2.3.4,5.6.7)");
-		assertTrue("not included", includesByFilter(range, version11));
-		assertFalse("included", includesByFilter(range, version12));
-		assertFalse("included", includesByFilter(range, version21));
-		assertFalse("included", includesByFilter(range, version22));
-		assertTrue("not included", includesByFilter(range, version3));
-		assertFalse("included", includesByFilter(range, version4));
-		assertFalse("included", includesByFilter(range, null));
+		assertThat(includesByFilter(range, version11))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version12))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version21))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version22))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version3))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version4))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, null))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange("[2.3.4.-,5.6.7.-)");
-		assertTrue("not included", includesByFilter(range, version11));
-		assertFalse("included", includesByFilter(range, version12));
-		assertFalse("included", includesByFilter(range, version21));
-		assertTrue("not included", includesByFilter(range, version22));
-		assertTrue("not included", includesByFilter(range, version3));
-		assertFalse("included", includesByFilter(range, version4));
-		assertFalse("included", includesByFilter(range, null));
+		assertThat(includesByFilter(range, version11))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version12))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version21))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version22))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version3))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version4))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, null))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange("(2.3.4.-,5.6.7.-]");
-		assertFalse("included", includesByFilter(range, version11));
-		assertFalse("included", includesByFilter(range, version12));
-		assertTrue("not included", includesByFilter(range, version21));
-		assertTrue("not included", includesByFilter(range, version22));
-		assertTrue("not included", includesByFilter(range, version3));
-		assertFalse("included", includesByFilter(range, version4));
-		assertFalse("included", includesByFilter(range, null));
+		assertThat(includesByFilter(range, version11))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version12))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version21))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version22))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version3))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version4))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, null))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange('[', version11, null, ')');
-		assertTrue("not included", includesByFilter(range, version11));
-		assertFalse("included", includesByFilter(range, version12));
-		assertTrue("not included", includesByFilter(range, version21));
-		assertTrue("not included", includesByFilter(range, version22));
-		assertTrue("not included", includesByFilter(range, version3));
-		assertTrue("not included", includesByFilter(range, version4));
-		assertFalse("included", includesByFilter(range, null));
+		assertThat(includesByFilter(range, version11))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version12))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version21))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version22))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version3))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version4))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, null))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange('(', version12, null, ')');
-		assertTrue("not included", includesByFilter(range, version11));
-		assertFalse("included", includesByFilter(range, version12));
-		assertTrue("not included", includesByFilter(range, version21));
-		assertTrue("not included", includesByFilter(range, version22));
-		assertTrue("not included", includesByFilter(range, version3));
-		assertTrue("not included", includesByFilter(range, version4));
-		assertFalse("included", includesByFilter(range, null));
+		assertThat(includesByFilter(range, version11))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version12))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version21))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version22))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version3))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version4))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, null))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange('[', version12, null, ')');
-		assertTrue("not included", includesByFilter(range, version11));
-		assertTrue("not included", includesByFilter(range, version12));
-		assertTrue("not included", includesByFilter(range, version21));
-		assertTrue("not included", includesByFilter(range, version22));
-		assertTrue("not included", includesByFilter(range, version3));
-		assertTrue("not included", includesByFilter(range, version4));
-		assertFalse("included", includesByFilter(range, null));
+		assertThat(includesByFilter(range, version11))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version12))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version21))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version22))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version3))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version4))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, null))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange("2.3.4");
-		assertTrue("not included", includesByFilter(range, version11));
-		assertTrue("not included", includesByFilter(range, version12));
-		assertTrue("not included", includesByFilter(range, version21));
-		assertTrue("not included", includesByFilter(range, version22));
-		assertTrue("not included", includesByFilter(range, version3));
-		assertTrue("not included", includesByFilter(range, version4));
-		assertFalse("included", includesByFilter(range, null));
+		assertThat(includesByFilter(range, version11))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version12))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version21))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version22))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version3))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version4))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, null))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange("2.3.4.-");
-		assertTrue("not included", includesByFilter(range, version11));
-		assertFalse("included", includesByFilter(range, version12));
-		assertTrue("not included", includesByFilter(range, version21));
-		assertTrue("not included", includesByFilter(range, version22));
-		assertTrue("not included", includesByFilter(range, version3));
-		assertTrue("not included", includesByFilter(range, version4));
-		assertFalse("included", includesByFilter(range, null));
+		assertThat(includesByFilter(range, version11))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version12))
+				.as("included")
+				.isFalse();
+		assertThat(includesByFilter(range, version21))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version22))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version3))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version4))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, null))
+				.as("included")
+				.isFalse();
 
 		range = new VersionRange('[', Version.emptyVersion, null, ')');
-		assertTrue("not included", includesByFilter(range, version11));
-		assertTrue("not included", includesByFilter(range, version12));
-		assertTrue("not included", includesByFilter(range, version21));
-		assertTrue("not included", includesByFilter(range, version22));
-		assertTrue("not included", includesByFilter(range, version3));
-		assertTrue("not included", includesByFilter(range, version4));
-		assertTrue("not included",
-				includesByFilter(range, Version.emptyVersion));
-		assertFalse("included", includesByFilter(range, null));
+		assertThat(includesByFilter(range, version11))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version12))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version21))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version22))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version3))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, version4))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, Version.emptyVersion))
+				.as("not included")
+				.isTrue();
+		assertThat(includesByFilter(range, null))
+				.as("included")
+				.isFalse();
 
 	}
 
 	private boolean includesByFilter(VersionRange range, Version version)
 			throws Exception {
-		String attributeName = getName();
+		String attributeName = "includesByFilter";
 		String filterString = range.toFilterString(attributeName);
 		// System.out.println(range + " => " + filterString);
 		Filter filter = FrameworkUtil.createFilter(filterString);
@@ -869,6 +1463,7 @@ public class VersionRangeTests extends TestCase {
 		return filter.matches(map);
 	}
 
+	@Test
 	public void testFilterStringBadArguments() {
 		VersionRange range;
 
@@ -876,72 +1471,41 @@ public class VersionRangeTests extends TestCase {
 				Version.emptyVersion, ']');
 
 		// Bad characters '=', '>', '<', '~', '(' or ')'
-		try {
-			range.toFilterString(null);
-			fail("filter string created with illegal arguments");
-		}
-		catch (RuntimeException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(RuntimeException.class)
+				.as("filter string created with illegal arguments")
+				.isThrownBy(() -> range.toFilterString(null));
 
-		try {
-			range.toFilterString("");
-			fail("filter string created with illegal arguments");
-		}
-		catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("filter string created with illegal arguments")
+				.isThrownBy(() -> range.toFilterString(""));
 
-		try {
-			range.toFilterString("b~d");
-			fail("filter string created with illegal arguments");
-		}
-		catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("filter string created with illegal arguments")
+				.isThrownBy(() -> range.toFilterString("b~d"));
 
-		try {
-			range.toFilterString("ba)");
-			fail("filter string created with illegal arguments");
-		}
-		catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("filter string created with illegal arguments")
+				.isThrownBy(() -> range.toFilterString("ba)"));
 
-		try {
-			range.toFilterString("(ad");
-			fail("filter string created with illegal arguments");
-		}
-		catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("filter string created with illegal arguments")
+				.isThrownBy(() -> range.toFilterString("(ad"));
 
-		try {
-			range.toFilterString("b=d");
-			fail("filter string created with illegal arguments");
-		}
-		catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("filter string created with illegal arguments")
+				.isThrownBy(() -> range.toFilterString("b=d"));
 
-		try {
-			range.toFilterString("<ad");
-			fail("filter string created with illegal arguments");
-		}
-		catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("filter string created with illegal arguments")
+				.isThrownBy(() -> range.toFilterString("<ad"));
 
-		try {
-			range.toFilterString("ba>");
-			fail("filter string created with illegal arguments");
-		}
-		catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("filter string created with illegal arguments")
+				.isThrownBy(() -> range.toFilterString("ba>"));
 
 	}
 
+	@Test
 	public void testIntersection() {
 		Version version11 = new Version(2, 3, 4, "-");
 		Version version12 = new Version(2, 3, 4);
@@ -955,127 +1519,175 @@ public class VersionRangeTests extends TestCase {
 
 		range1 = new VersionRange('[', version11, version22, ']');
 		expected = range1;
-		assertEquals("wrong intersection", expected,
-				range1.intersection((VersionRange[]) null));
+		assertThat(range1.intersection((VersionRange[]) null))
+				.as("wrong intersection")
+				.isEqualTo(expected);
 
 		range1 = new VersionRange('[', version11, version22, ']');
 		expected = range1;
-		assertEquals("wrong intersection", expected, range1.intersection());
+		assertThat(range1.intersection())
+				.as("wrong intersection")
+				.isEqualTo(expected);
 
 		range1 = new VersionRange('[', version11, version22, ']');
 		range2 = range1;
 		expected = range1;
-		assertEquals("wrong intersection", expected,
-				range1.intersection(range2));
-		assertEquals("wrong intersection", expected,
-				range2.intersection(range1));
+		assertThat(range1.intersection(range2))
+				.as("wrong intersection")
+				.isEqualTo(expected);
+		assertThat(range2.intersection(range1))
+				.as("wrong intersection")
+				.isEqualTo(expected);
 
 		range1 = new VersionRange('[', version11, version22, ')');
 		range2 = range1;
 		expected = range1;
-		assertEquals("wrong intersection", expected,
-				range1.intersection(range2));
-		assertEquals("wrong intersection", expected,
-				range2.intersection(range1));
+		assertThat(range1.intersection(range2))
+				.as("wrong intersection")
+				.isEqualTo(expected);
+		assertThat(range2.intersection(range1))
+				.as("wrong intersection")
+				.isEqualTo(expected);
 
 		range1 = new VersionRange('(', version11, version22, ']');
 		range2 = range1;
 		expected = range1;
-		assertEquals("wrong intersection", expected,
-				range1.intersection(range2));
-		assertEquals("wrong intersection", expected,
-				range2.intersection(range1));
+		assertThat(range1.intersection(range2))
+				.as("wrong intersection")
+				.isEqualTo(expected);
+		assertThat(range2.intersection(range1))
+				.as("wrong intersection")
+				.isEqualTo(expected);
 
 		range1 = new VersionRange('(', version11, version22, ')');
 		range2 = range1;
 		expected = range1;
-		assertEquals("wrong intersection", expected,
-				range1.intersection(range2));
-		assertEquals("wrong intersection", expected,
-				range2.intersection(range1));
+		assertThat(range1.intersection(range2))
+				.as("wrong intersection")
+				.isEqualTo(expected);
+		assertThat(range2.intersection(range1))
+				.as("wrong intersection")
+				.isEqualTo(expected);
 
 		range1 = new VersionRange('[', version11, version22, ']');
 		range2 = new VersionRange('[', version11, version22, ')');
 		expected = range2;
-		assertEquals("wrong intersection", expected,
-				range1.intersection(range2));
-		assertEquals("wrong intersection", expected,
-				range2.intersection(range1));
+		assertThat(range1.intersection(range2))
+				.as("wrong intersection")
+				.isEqualTo(expected);
+		assertThat(range2.intersection(range1))
+				.as("wrong intersection")
+				.isEqualTo(expected);
 
 		range1 = new VersionRange('[', version11, version22, ']');
 		range2 = new VersionRange('(', version11, version22, ']');
 		expected = range2;
-		assertEquals("wrong intersection", expected,
-				range1.intersection(range2));
-		assertEquals("wrong intersection", expected,
-				range2.intersection(range1));
+		assertThat(range1.intersection(range2))
+				.as("wrong intersection")
+				.isEqualTo(expected);
+		assertThat(range2.intersection(range1))
+				.as("wrong intersection")
+				.isEqualTo(expected);
 
 		range1 = new VersionRange('[', version11, version22, ']');
 		range2 = new VersionRange('(', version11, version22, ')');
 		expected = range2;
-		assertEquals("wrong intersection", expected,
-				range1.intersection(range2));
-		assertEquals("wrong intersection", expected,
-				range2.intersection(range1));
+		assertThat(range1.intersection(range2))
+				.as("wrong intersection")
+				.isEqualTo(expected);
+		assertThat(range2.intersection(range1))
+				.as("wrong intersection")
+				.isEqualTo(expected);
 
 		range1 = new VersionRange('[', version11, version22, ']');
 		range2 = new VersionRange('[', version12, version21, ']');
 		expected = range1;
-		assertEquals("wrong intersection", expected,
-				range1.intersection(range2));
-		assertEquals("wrong intersection", expected,
-				range2.intersection(range1));
+		assertThat(range1.intersection(range2))
+				.as("wrong intersection")
+				.isEqualTo(expected);
+		assertThat(range2.intersection(range1))
+				.as("wrong intersection")
+				.isEqualTo(expected);
 
 		range1 = new VersionRange('[', version12, version22, ']');
 		range2 = new VersionRange('[', version11, version21, ']');
 		expected = new VersionRange('[', version11, version22, ']');
-		assertEquals("wrong intersection", expected,
-				range1.intersection(range2));
-		assertEquals("wrong intersection", expected,
-				range2.intersection(range1));
+		assertThat(range1.intersection(range2))
+				.as("wrong intersection")
+				.isEqualTo(expected);
+		assertThat(range2.intersection(range1))
+				.as("wrong intersection")
+				.isEqualTo(expected);
 
 		range1 = new VersionRange('[', version12, version22, ')');
 		range2 = new VersionRange('[', version11, null, ')');
 		expected = new VersionRange('[', version11, version22, ')');
-		assertEquals("wrong intersection", expected,
-				range1.intersection(range2));
-		assertEquals("wrong intersection", expected,
-				range2.intersection(range1));
+		assertThat(range1.intersection(range2))
+				.as("wrong intersection")
+				.isEqualTo(expected);
+		assertThat(range2.intersection(range1))
+				.as("wrong intersection")
+				.isEqualTo(expected);
 
 		range1 = new VersionRange('[', version22, version12, ')');
 		range2 = new VersionRange('[', version11, null, ')');
-		assertTrue("range is not empty", range1.isEmpty());
-		assertTrue("range is not empty", range1.intersection(range2).isEmpty());
-		assertTrue("range is not empty", range2.intersection(range1).isEmpty());
+		assertThat(range1.isEmpty())
+				.as("range is not empty")
+				.isTrue();
+		assertThat(range1.intersection(range2).isEmpty())
+				.as("range is not empty")
+				.isTrue();
+		assertThat(range2.intersection(range1).isEmpty())
+				.as("range is not empty")
+				.isTrue();
 
 		range1 = new VersionRange('[', version22, version12, ')');
 		range2 = new VersionRange('[', version11, version21, ')');
 		range3 = new VersionRange('(', version12, version3, ']');
-		assertTrue("range is not empty", range1.isEmpty());
-		assertTrue("range is not empty", range1.intersection(range2, range3)
-				.isEmpty());
-		assertTrue("range is not empty", range2.intersection(range1, range3)
-				.isEmpty());
-		assertTrue("range is not empty", range3.intersection(range1, range2)
-				.isEmpty());
+		assertThat(range1.isEmpty())
+				.as("range is not empty")
+				.isTrue();
+		assertThat(range1.intersection(range2, range3)
+				.isEmpty())
+				.as("range is not empty")
+				.isTrue();
+		assertThat(range2.intersection(range1, range3)
+				.isEmpty())
+				.as("range is not empty")
+				.isTrue();
+		assertThat(range3.intersection(range1, range2)
+				.isEmpty())
+				.as("range is not empty")
+				.isTrue();
 
 		range1 = new VersionRange('[', version12, version22, ')');
 		range2 = new VersionRange('[', version11, version21, ')');
 		range3 = new VersionRange('(', version12, version3, ']');
 		expected = new VersionRange('[', version11, version3, ']');
-		assertEquals("wrong intersection", expected,
-				range1.intersection(range2, range3));
-		assertEquals("wrong intersection", expected,
-				range2.intersection(range1, range3));
-		assertEquals("wrong intersection", expected,
-				range3.intersection(range1, range2));
+		assertThat(range1.intersection(range2, range3))
+				.as("wrong intersection")
+				.isEqualTo(expected);
+		assertThat(range2.intersection(range1, range3))
+				.as("wrong intersection")
+				.isEqualTo(expected);
+		assertThat(range3.intersection(range1, range2))
+				.as("wrong intersection")
+				.isEqualTo(expected);
 
 		range1 = new VersionRange('[', version12, version11, ']');
 		range2 = new VersionRange('[', version22, version21, ']');
-		assertFalse("range is empty", range1.isEmpty());
-		assertFalse("range is empty", range2.isEmpty());
-		assertTrue("range is not empty", range1.intersection(range2).isEmpty());
-		assertTrue("range is not empty", range2.intersection(range1).isEmpty());
+		assertThat(range1.isEmpty())
+				.as("range is empty")
+				.isFalse();
+		assertThat(range2.isEmpty())
+				.as("range is empty")
+				.isFalse();
+		assertThat(range1.intersection(range2).isEmpty())
+				.as("range is not empty")
+				.isTrue();
+		assertThat(range2.intersection(range1).isEmpty())
+				.as("range is not empty")
+				.isTrue();
 
 	}
 }

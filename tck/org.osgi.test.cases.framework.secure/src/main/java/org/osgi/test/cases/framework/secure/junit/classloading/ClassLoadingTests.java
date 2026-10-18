@@ -17,10 +17,21 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.secure.junit.classloading;
 
+
+
+import static org.assertj.core.api.Assertions.fail;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
-import org.osgi.test.support.compatibility.DefaultTestBundleControl;
-import org.osgi.test.support.wiring.Wiring;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.annotation.InjectInstalledBundle;
+import org.osgi.test.common.install.BundleInstaller;
+import org.osgi.test.common.wiring.FrameworkWirings;
 
 /**
  * This class contains tests related with the framework class loading policies.
@@ -28,10 +39,23 @@ import org.osgi.test.support.wiring.Wiring;
  * @author left
  * @author $Id$
  */
-public class ClassLoadingTests extends DefaultTestBundleControl {
-	
-	protected void tearDown() {
-		Wiring.synchronousRefreshBundles(getContext());
+public class ClassLoadingTests {
+
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
+
+	@BeforeEach
+	public void refreshBeforeTest() {
+		// injected bundles are uninstalled after @AfterEach: refresh before the next test
+		FrameworkWirings.refreshBundles(bundleContext);
+	}
+
+	@AfterEach
+	public void tearDown() {
+		FrameworkWirings.refreshBundles(bundleContext);
 	}
 
 	// Service Registry --------------------------
@@ -48,42 +72,21 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @throws Exception if there is any problem or an assert fails
 	 */
-	public void testPermissionChecking001() throws Exception {
-		Bundle tb1;
-		Bundle tb6a;
-		Bundle tb6b;
-		Bundle tb6c;
-		Bundle tb6d;
-
-		tb1 = installBundle("classloading.tb1.jar");
-		tb1.start();
-		tb6a = installBundle("classloading.tb6a.jar");
-		tb6a.start();
-		tb6b = installBundle("classloading.tb6b.jar");
-		tb6b.start();
-		tb6c = installBundle("classloading.tb6c.jar");
-		tb6c.start();
-
-		tb6d = installBundle("classloading.tb6d.jar", false);
+	@Test
+	public void testPermissionChecking001(
+			@InjectInstalledBundle(value = "classloading.tb1.jar", start = true) Bundle tb1,
+			@InjectInstalledBundle(value = "classloading.tb6a.jar", start = true) Bundle tb6a,
+			@InjectInstalledBundle(value = "classloading.tb6b.jar", start = true) Bundle tb6b,
+			@InjectInstalledBundle(value = "classloading.tb6c.jar", start = true) Bundle tb6c,
+			@InjectInstalledBundle(value = "classloading.tb6d.jar", start = false) Bundle tb6d
+			) throws Exception {
 		try {
-			trace("Changing a permission class to avoid authorization checking");
+			System.out.println("Changing a permission class to avoid authorization checking");
 			tb6d.start();
 			tb6d.stop();
 		}
 		catch (IllegalStateException ex) {
 			fail(ex.getMessage());
-		}
-		finally {
-			tb6d.uninstall();
-
-			tb6c.stop();
-			tb6c.uninstall();
-			tb6b.stop();
-			tb6b.uninstall();
-			tb6a.stop();
-			tb6a.uninstall();
-			tb1.stop();
-			tb1.uninstall();
 		}
 	}
 
@@ -101,11 +104,11 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 	 * @osgi.spec Bundle.start()
 	 * @throws Exception if any failure occurs or any assert fails
 	 */
-	public void testRequiredBundle003() throws Exception {
-		Bundle tb16b = getContext().installBundle(
-				getWebServer() + "classloading.tb16b.jar");
-		Bundle tb16d = getContext().installBundle(
-				getWebServer() + "classloading.tb16d.jar");
+	@Test
+	public void testRequiredBundle003(
+			@InjectInstalledBundle(value = "classloading.tb16b.jar", start = false) Bundle tb16b,
+			@InjectInstalledBundle(value = "classloading.tb16d.jar", start = false) Bundle tb16d
+			) throws Exception {
 		try {
 			tb16d.start();
 			tb16d.stop();
@@ -113,10 +116,6 @@ public class ClassLoadingTests extends DefaultTestBundleControl {
 		}
 		catch (BundleException e) {
 			// expected
-		}
-		finally {
-			uninstallBundle(tb16d);
-			uninstallBundle(tb16b);
 		}
 	}
 

@@ -17,33 +17,52 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.secure.junit.fragments;
 
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.osgi.test.assertj.bundle.BundleAssert.assertThat;
+
 import java.net.URL;
 import java.util.Hashtable;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
-import org.osgi.test.support.compatibility.DefaultTestBundleControl;
+import org.osgi.test.common.annotation.InjectBundleContext;
+import org.osgi.test.common.annotation.InjectBundleInstaller;
+import org.osgi.test.common.annotation.InjectInstalledBundle;
+import org.osgi.test.common.install.BundleInstaller;
 
 /**
  * Test cases for testing fragment bundles and extension bundles.
  * 
  * @author $Id$
  */
-public class TestControl extends DefaultTestBundleControl {
+public class TestControl {
+
+	@InjectBundleContext
+	BundleContext bundleContext;
+
+	@InjectBundleInstaller
+	BundleInstaller bundleInstaller;
 	private ServiceRegistration<?> bundleReg;
 
-	protected void setUp() throws Exception {
-		super.setUp();
-		assertNotNull("SecurityManager not installed", System
-				.getSecurityManager());
+	@BeforeEach
+	public void setUp() throws Exception {
+		assertThat(System
+				.getSecurityManager())
+				.as("SecurityManager not installed")
+				.isNotNull();
 		Hashtable<String, String> props = new Hashtable<String, String>();
 		props.put("bundle", "fragments.tests");
-		bundleReg = getContext().registerService(Bundle.class.getName(), getContext().getBundle(), props);
+		bundleReg = bundleContext.registerService(Bundle.class.getName(), bundleContext.getBundle(), props);
 	}
 
-	protected void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() throws Exception {
 		bundleReg.unregister();
-		super.tearDown();
 	}
 
 	/**
@@ -55,44 +74,36 @@ public class TestControl extends DefaultTestBundleControl {
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
-	public void testBundlePermission() throws Exception {
+	@Test
+	public void testBundlePermission(
+			@InjectInstalledBundle(value = "fragments.tb2b.jar", start = false) Bundle tb2b,
+			@InjectInstalledBundle(value = "fragments.tb2a.jar", start = true) Bundle tb2a
+			) throws Exception {
 		// Install fragment bundle with normal permissions
-		Bundle tb2b = getContext().installBundle(getWebServer() + "fragments.tb2b.jar");
 
 		// Install host without BundlePermission (host)
-		Bundle tb2a = getContext().installBundle(getWebServer() + "fragments.tb2a.jar");
-		tb2a.start();
 
-		try {
-			assertEquals("Expecting the state of host bundle to be ACTIVE",
-					Bundle.ACTIVE, tb2a.getState());
+		assertThat(tb2a)
+				.as("Expecting the state of host bundle to be ACTIVE").isInState(Bundle.ACTIVE);
 
-			// Test that state of fragment is INSTALLED (not attached to host)
-			assertEquals(
-					"Expecting the state of fragment bundle to be INSTALLED",
-					Bundle.INSTALLED, tb2b.getState());
-		}
-		finally {
-			tb2a.stop();
-			tb2a.uninstall();
-			tb2b.uninstall();
-		}
+		// Test that state of fragment is INSTALLED (not attached to host)
+		assertThat(tb2b)
+				.as("Expecting the state of fragment bundle to be INSTALLED").isInState(Bundle.INSTALLED);
 
 		// Install fragment bundle without BundlePermission (fragment)
-		Bundle tb2d = getContext().installBundle(getWebServer() + "fragments.tb2d.jar");
+		Bundle tb2d = bundleInstaller.installBundle("fragments.tb2d.jar", false);
 
 		// Install host with normal permissions
-		Bundle tb2c = getContext().installBundle(getWebServer() + "fragments.tb2c.jar");
+		Bundle tb2c = bundleInstaller.installBundle("fragments.tb2c.jar", false);
 		tb2c.start();
 
 		try {
-			assertEquals("Expecting the state of host bundle to be ACTIVE",
-					Bundle.ACTIVE, tb2c.getState());
+			assertThat(tb2c)
+					.as("Expecting the state of host bundle to be ACTIVE").isInState(Bundle.ACTIVE);
 
 			// Test that state of fragment is INSTALLED (not attached to host)
-			assertEquals(
-					"Expecting the state of fragment bundle to be INSTALLED",
-					Bundle.INSTALLED, tb2d.getState());
+			assertThat(tb2d)
+					.as("Expecting the state of fragment bundle to be INSTALLED").isInState(Bundle.INSTALLED);
 		}
 		finally {
 			tb2c.stop();
@@ -145,27 +156,19 @@ public class TestControl extends DefaultTestBundleControl {
 	 * @throws Exception if an error occurs or an assertion fails in the test.
 	 * @osgi.spec Bundle.installBundle(String)
 	 */
-	public void testResourceAccessPermission() throws Exception {
+	@Test
+	public void testResourceAccessPermission(
+			@InjectInstalledBundle(value = "fragments.tb7g.jar", start = true) Bundle tb7g,
+			@InjectInstalledBundle(value = "fragments.tb7f.jar", start = true) Bundle tb7f
+			) throws Exception {
 		// Install bundle that has the resource
-		Bundle tb7g = getContext().installBundle(getWebServer() + "fragments.tb7g.jar");
-		tb7g.start();
 		// Install bundle that will try to access the resource
-		Bundle tb7f = getContext().installBundle(getWebServer() + "fragments.tb7f.jar");
-		tb7f.start();
 		// Execute the method that will access the resource using reflection
-		try {
-			Class<?> classObj = tb7f
-					.loadClass("org.osgi.test.cases.framework.secure.fragments.tb7f.TestClass");
-			Object obj = classObj.getConstructor().newInstance();
-			URL resourceURL = tb7g.getResource("/resources/resource.txt");
-			classObj.getMethod("run", new Class[] {Bundle.class, URL.class})
-					.invoke(obj, new Object[] {tb7g, resourceURL});
-		}
-		finally {
-			tb7f.stop();
-			tb7f.uninstall();
-			tb7g.stop();
-			tb7g.uninstall();
-		}
+		Class<?> classObj = tb7f
+				.loadClass("org.osgi.test.cases.framework.secure.fragments.tb7f.TestClass");
+		Object obj = classObj.getConstructor().newInstance();
+		URL resourceURL = tb7g.getResource("/resources/resource.txt");
+		classObj.getMethod("run", new Class[] {Bundle.class, URL.class})
+				.invoke(obj, new Object[] {tb7g, resourceURL});
 	}
 }

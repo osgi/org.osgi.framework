@@ -16,20 +16,23 @@
  * SPDX-License-Identifier: Apache-2.0 
  *******************************************************************************/
 package org.osgi.test.cases.framework.junit.version;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.fail;
 
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Version;
-
-import junit.framework.TestCase;
 
 /**
  * Tests for the Version class.
  */
-public class VersionTests extends TestCase {
+public class VersionTests {
 	/**
 	 * Test the Version constructor with legal parameters
 	 *
 	 * @osgi.spec Version.<init>(int,int,int)
 	 */
+	@Test
 	public void testConstructors() {
 		/**
 		 * Test the Version constructor with legal parameters
@@ -51,63 +54,37 @@ public class VersionTests extends TestCase {
 
 	}
 
+	@Test
 	public void testConstructorsBadArguments() {
 		/**
 		 * Test the Version constructor with illegal parameters
 		 *
 		 * @osgi.spec Version.<init>(int,int,int)
 		 */
-		try {
-			new Version(-1, 2, 3);
-			fail("Version created with illegal arguments");
-		}
-		catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
-		try {
-			new Version(1, -2, 3);
-			fail("Version created with illegal arguments");
-		}
-		catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
-		try {
-			new Version(1, 2, -3);
-			fail("Version created with illegal arguments");
-		}
-		catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
-		try {
-			new Version(1, 2, 3, "4.5");
-			fail("Version created with illegal arguments");
-		}
-		catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("Version created with illegal arguments")
+				.isThrownBy(() -> new Version(-1, 2, 3));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("Version created with illegal arguments")
+				.isThrownBy(() -> new Version(1, -2, 3));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("Version created with illegal arguments")
+				.isThrownBy(() -> new Version(1, 2, -3));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("Version created with illegal arguments")
+				.isThrownBy(() -> new Version(1, 2, 3, "4.5"));
 
-		try {
-			new Version(null);
-			fail("Version created with illegal arguments");
-		}
-		catch (RuntimeException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(RuntimeException.class)
+				.as("Version created with illegal arguments")
+				.isThrownBy(() -> new Version(null));
 
-		try {
-			Version.valueOf(null);
-			fail("Version created with null argument");
-		} catch (RuntimeException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(RuntimeException.class)
+				.as("Version created with null argument")
+				.isThrownBy(() -> Version.valueOf(null));
 
-		try {
-			new Version("");
-			fail("Version created with illegal arguments");
-		}
-		catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("Version created with illegal arguments")
+				.isThrownBy(() -> new Version(""));
 
 		testConstructorsBadArguments("-1.2.3");
 		testConstructorsBadArguments("1.-2.3");
@@ -124,28 +101,21 @@ public class VersionTests extends TestCase {
 		testConstructorsBadArguments("1.2.");
 	}
 
+	@Test
 	private void testConstructorsBadArguments(String arg) {
-		try {
-			new Version(arg);
-			fail("Version created with illegal arguments");
-		} catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
-		try {
-			Version.parseVersion(arg);
-			fail("Version created with illegal arguments");
-		} catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
-		try {
-			Version.valueOf(arg);
-			fail("Version created with illegal arguments");
-		} catch (IllegalArgumentException ex) {
-			// This is an expected exception and may be ignored
-		}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("Version created with illegal arguments")
+				.isThrownBy(() -> new Version(arg));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("Version created with illegal arguments")
+				.isThrownBy(() -> Version.parseVersion(arg));
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.as("Version created with illegal arguments")
+				.isThrownBy(() -> Version.valueOf(arg));
 	}
 
 	@SuppressWarnings("unlikely-arg-type")
+	@Test
 	public void testEquals() {
 		Version version1;
 		Version version2;
@@ -153,8 +123,9 @@ public class VersionTests extends TestCase {
 		version1 = new Version(0, 0, 0);
 		version2 = new Version(0, 0, 0);
 
-		assertEquals("Testing the method equals() with the same versions",
-				version1, version2);
+		assertThat(version2)
+				.as("Testing the method equals() with the same versions")
+				.isEqualTo(version1);
 
 		/**
 		 * Test the method equals() with the same versions
@@ -165,14 +136,18 @@ public class VersionTests extends TestCase {
 		version1 = new Version(0, 0, 0, "a");
 		version2 = new Version(0, 0, 0, "a");
 
-		assertEquals("Testing the method equals() with the same versions",
-				version1, version1);
-		assertEquals("Testing the method equals() with the same versions",
-				version2, version2);
-		assertEquals("Testing the method equals() with the same versions",
-				version1, version2);
-		assertEquals("Testing the method equals() with the same versions",
-				version2, version1);
+		assertThat(version1)
+				.as("Testing the method equals() with the same versions")
+				.isEqualTo(version1);
+		assertThat(version2)
+				.as("Testing the method equals() with the same versions")
+				.isEqualTo(version2);
+		assertThat(version2)
+				.as("Testing the method equals() with the same versions")
+				.isEqualTo(version1);
+		assertThat(version1)
+				.as("Testing the method equals() with the same versions")
+				.isEqualTo(version2);
 
 		/**
 		 * Test the method equals() with different versions
@@ -183,10 +158,12 @@ public class VersionTests extends TestCase {
 		version1 = new Version(0, 0, 0);
 		version2 = new Version(1, 0, 0);
 
-		assertFalse("Testing the method equals() with different versions",
-				version1.equals(version2));
-		assertFalse("Testing the method equals() with different versions",
-				version2.equals(version1));
+		assertThat(version1.equals(version2))
+				.as("Testing the method equals() with different versions")
+				.isFalse();
+		assertThat(version2.equals(version1))
+				.as("Testing the method equals() with different versions")
+				.isFalse();
 
 		/**
 		 * Test the method equals() with different versions
@@ -197,10 +174,12 @@ public class VersionTests extends TestCase {
 		version1 = new Version(0, 0, 0);
 		version2 = new Version(0, 1, 0);
 
-		assertFalse("Testing the method equals() with different versions",
-				version1.equals(version2));
-		assertFalse("Testing the method equals() with different versions",
-				version2.equals(version1));
+		assertThat(version1.equals(version2))
+				.as("Testing the method equals() with different versions")
+				.isFalse();
+		assertThat(version2.equals(version1))
+				.as("Testing the method equals() with different versions")
+				.isFalse();
 
 		/**
 		 * Test the method equals() with different versions
@@ -211,10 +190,12 @@ public class VersionTests extends TestCase {
 		version1 = new Version(0, 0, 0);
 		version2 = new Version(0, 0, 1);
 
-		assertFalse("Testing the method equals() with different versions",
-				version1.equals(version2));
-		assertFalse("Testing the method equals() with different versions",
-				version2.equals(version1));
+		assertThat(version1.equals(version2))
+				.as("Testing the method equals() with different versions")
+				.isFalse();
+		assertThat(version2.equals(version1))
+				.as("Testing the method equals() with different versions")
+				.isFalse();
 
 		/**
 		 * Test the method equals() with different versions
@@ -225,10 +206,12 @@ public class VersionTests extends TestCase {
 		version1 = new Version(0, 0, 0, "a");
 		version2 = new Version(0, 0, 0, "b");
 
-		assertFalse("Testing the method equals() with different versions",
-				version1.equals(version2));
-		assertFalse("Testing the method equals() with different versions",
-				version2.equals(version1));
+		assertThat(version1.equals(version2))
+				.as("Testing the method equals() with different versions")
+				.isFalse();
+		assertThat(version2.equals(version1))
+				.as("Testing the method equals() with different versions")
+				.isFalse();
 
 		/**
 		 * Test the method equals() with different versions
@@ -239,24 +222,30 @@ public class VersionTests extends TestCase {
 		version1 = new Version(0, 0, 0, "a");
 		version2 = new Version(1, 1, 1, "b");
 
-		assertFalse("Testing the method equals() with different versions",
-				version1.equals(version2));
-		assertFalse("Testing the method equals() with different versions",
-				version2.equals(version1));
+		assertThat(version1.equals(version2))
+				.as("Testing the method equals() with different versions")
+				.isFalse();
+		assertThat(version2.equals(version1))
+				.as("Testing the method equals() with different versions")
+				.isFalse();
 
 		version1 = new Version("0.0.0.a");
 		version2 = Version.valueOf(" 0.0.0.a  ");
-		assertEquals("Testing the method equals() with the same versions",
-				version1, version2);
-		assertEquals("Testing the method equals() with the same versions",
-				version2, version1);
+		assertThat(version2)
+				.as("Testing the method equals() with the same versions")
+				.isEqualTo(version1);
+		assertThat(version1)
+				.as("Testing the method equals() with the same versions")
+				.isEqualTo(version2);
 
 		version1 = new Version("0.0.0.a");
 		version2 = null;
-		assertFalse("Testing the method equals() with null",
-				version1.equals(version2));
-		assertFalse("Testing the method equals() with null",
-				version1.equals(this));
+		assertThat(version1.equals(version2))
+				.as("Testing the method equals() with null")
+				.isFalse();
+		assertThat(version1.equals(this))
+				.as("Testing the method equals() with null")
+				.isFalse();
 
 	}
 
@@ -265,6 +254,7 @@ public class VersionTests extends TestCase {
 	 *
 	 * @osgi.spec Version.hashCode();
 	 */
+	@Test
 	public void testHashCode() throws Exception {
 		Version version1;
 		Version version2;
@@ -272,65 +262,66 @@ public class VersionTests extends TestCase {
 		version1 = new Version(0, 0, 0, "a");
 		version2 = new Version(0, 0, 0, "a");
 
-		assertEquals(
-				"The method hashCode() has different return values when the method equals() returns true for two Version instances",
-				version1.hashCode(), version2.hashCode());
+		assertThat(version2.hashCode())
+				.as("The method hashCode() has different return values when the method equals() returns true for two Version instances")
+				.isEqualTo(version1.hashCode());
 
 		version1 = new Version(0, 0, 0);
 		version2 = new Version(1, 0, 0);
 
-		assertFalse(
-				"The method hashCode() has the same return value when the method equals() returns false for two Version instances",
-				version1.hashCode() == version2.hashCode());
+		assertThat(version1.hashCode() == version2.hashCode())
+				.as("The method hashCode() has the same return value when the method equals() returns false for two Version instances")
+				.isFalse();
 
 	}
 
+	@Test
 	public void testGetMajor() {
 		Version version;
 
 		version = new Version(1, 2, 3);
 
-		assertEquals(
-				"Testing the method getMajor() using the constructor Version(int,int,int)",
-				1, version.getMajor());
+		assertThat(version.getMajor())
+				.as("Testing the method getMajor() using the constructor Version(int,int,int)").isOne();
 
 		version = new Version("1.2.3");
 
-		assertEquals(
-				"Testing the method getMajor() using the constructor Version(String)",
-				1, version.getMajor());
+		assertThat(version.getMajor())
+				.as("Testing the method getMajor() using the constructor Version(String)").isOne();
 	}
 
+	@Test
 	public void testGetMinor() {
 		Version version;
 
 		version = new Version(1, 2, 3);
 
-		assertEquals(
-				"Testing the method getMinor() using the constructor Version(int,int,int)",
-				2, version.getMinor());
+		assertThat(version.getMinor())
+				.as("Testing the method getMinor() using the constructor Version(int,int,int)")
+				.isEqualTo(2);
 
 		version = new Version("1.2.3");
 
-		assertEquals(
-				"Testing the method getMinor() using the constructor Version(String)",
-				2, version.getMinor());
+		assertThat(version.getMinor())
+				.as("Testing the method getMinor() using the constructor Version(String)")
+				.isEqualTo(2);
 	}
 
+	@Test
 	public void testGetMicro() {
 		Version version;
 
 		version = new Version(1, 2, 3);
 
-		assertEquals(
-				"Testing the method getMicro() using the constructor Version(int,int,int)",
-				3, version.getMicro());
+		assertThat(version.getMicro())
+				.as("Testing the method getMicro() using the constructor Version(int,int,int)")
+				.isEqualTo(3);
 
 		version = new Version("1.2.3");
 
-		assertEquals(
-				"Testing the method getMicro() using the constructor Version(String)",
-				3, version.getMicro());
+		assertThat(version.getMicro())
+				.as("Testing the method getMicro() using the constructor Version(String)")
+				.isEqualTo(3);
 	}
 
 	/**
@@ -339,35 +330,35 @@ public class VersionTests extends TestCase {
 	 *
 	 * @osgi.spec Version.getQualifier()
 	 */
+	@Test
 	public void testGetQualifier() throws Exception {
 		Version version;
 
 		version = new Version(1, 1, 1, "a");
 
-		assertEquals(
-				"Testing the method getQualifier() using the constructor Version(int,int,int,String)",
-				"a", version.getQualifier());
+		assertThat(version.getQualifier())
+				.as("Testing the method getQualifier() using the constructor Version(int,int,int,String)")
+				.isEqualTo("a");
 
 		version = new Version(1, 1, 1, null);
 
-		assertEquals(
-				"Testing the method getQualifier() using the constructor Version(int,int,int,String)",
-				"", version.getQualifier());
+		assertThat(version.getQualifier())
+				.as("Testing the method getQualifier() using the constructor Version(int,int,int,String)").isEmpty();
 
 		version = new Version("1.1.1.a");
 
-		assertEquals(
-				"Testing the method getQualifier() using the constructor Version(String)",
-				"a", version.getQualifier());
+		assertThat(version.getQualifier())
+				.as("Testing the method getQualifier() using the constructor Version(String)")
+				.isEqualTo("a");
 
 		version = new Version("1.1.1");
 
-		assertEquals(
-				"Testing the method getQualifier() using the constructor Version(String)",
-				"", version.getQualifier());
+		assertThat(version.getQualifier())
+				.as("Testing the method getQualifier() using the constructor Version(String)").isEmpty();
 	}
 
 	@SuppressWarnings("rawtypes")
+	@Test
 	public void testCompareTo() {
 		/**
 		 * Test the method compareTo() with first version number less than
@@ -381,12 +372,12 @@ public class VersionTests extends TestCase {
 		version1 = new Version(1, 1, 1);
 		version2 = new Version(2, 1, 1);
 
-		assertTrue(
-				"Testing the method compareTo() with first version number less than second version number",
-				version1.compareTo(version2) < 0);
-		assertTrue(
-				"Testing the method compareTo() with first version number less than second version number",
-				version2.compareTo(version1) > 0);
+		assertThat(version1.compareTo(version2) < 0)
+				.as("Testing the method compareTo() with first version number less than second version number")
+				.isTrue();
+		assertThat(version2.compareTo(version1) > 0)
+				.as("Testing the method compareTo() with first version number less than second version number")
+				.isTrue();
 
 		/**
 		 * Test the method compareTo() with first version number greater than
@@ -398,12 +389,12 @@ public class VersionTests extends TestCase {
 		version1 = new Version(2, 1, 1);
 		version2 = new Version(1, 1, 1);
 
-		assertTrue(
-				"Testing the method compareTo() with first version number greater than second version number",
-				version1.compareTo(version2) > 0);
-		assertTrue(
-				"Testing the method compareTo() with first version number greater than second version number",
-				version2.compareTo(version1) < 0);
+		assertThat(version1.compareTo(version2) > 0)
+				.as("Testing the method compareTo() with first version number greater than second version number")
+				.isTrue();
+		assertThat(version2.compareTo(version1) < 0)
+				.as("Testing the method compareTo() with first version number greater than second version number")
+				.isTrue();
 
 		/**
 		 * Test the method compareTo() with same version numbers
@@ -414,42 +405,52 @@ public class VersionTests extends TestCase {
 		version1 = new Version(1, 1, 1);
 		version2 = version1;
 
-		assertTrue("Testing the method compareTo() with same version numbers",
-				version1.compareTo(version2) == 0);
-		assertTrue("Testing the method compareTo() with same version numbers",
-				version2.compareTo(version1) == 0);
+		assertThat(version1.compareTo(version2) == 0)
+				.as("Testing the method compareTo() with same version numbers")
+				.isTrue();
+		assertThat(version2.compareTo(version1) == 0)
+				.as("Testing the method compareTo() with same version numbers")
+				.isTrue();
 
 		version1 = new Version(1, 1, 1);
 		version2 = new Version(1, 1, 1);
 
-		assertTrue("Testing the method compareTo() with same version numbers",
-				version1.compareTo(version2) == 0);
-		assertTrue("Testing the method compareTo() with same version numbers",
-				version2.compareTo(version1) == 0);
+		assertThat(version1.compareTo(version2) == 0)
+				.as("Testing the method compareTo() with same version numbers")
+				.isTrue();
+		assertThat(version2.compareTo(version1) == 0)
+				.as("Testing the method compareTo() with same version numbers")
+				.isTrue();
 
 		version1 = new Version(1, 1, 1, "a");
 		version2 = new Version(1, 1, 1, "a");
 
-		assertTrue("Testing the method compareTo() with same version numbers",
-				version1.compareTo(version2) == 0);
-		assertTrue("Testing the method compareTo() with same version numbers",
-				version2.compareTo(version1) == 0);
+		assertThat(version1.compareTo(version2) == 0)
+				.as("Testing the method compareTo() with same version numbers")
+				.isTrue();
+		assertThat(version2.compareTo(version1) == 0)
+				.as("Testing the method compareTo() with same version numbers")
+				.isTrue();
 
 		version1 = new Version(1, 1, 1, "");
 		version2 = new Version(1, 1, 1, "b");
 
-		assertTrue("Testing the method compareTo() with different qualifiers",
-				version1.compareTo(version2) < 0);
-		assertTrue("Testing the method compareTo() with different qualifiers",
-				version2.compareTo(version1) > 0);
+		assertThat(version1.compareTo(version2) < 0)
+				.as("Testing the method compareTo() with different qualifiers")
+				.isTrue();
+		assertThat(version2.compareTo(version1) > 0)
+				.as("Testing the method compareTo() with different qualifiers")
+				.isTrue();
 
 		version1 = new Version(1, 1, 1, null);
 		version2 = new Version(1, 1, 1, "a");
 
-		assertTrue("Testing the method compareTo() with different qualifiers",
-				version1.compareTo(version2) < 0);
-		assertTrue("Testing the method compareTo() with different qualifiers",
-				version2.compareTo(version1) > 0);
+		assertThat(version1.compareTo(version2) < 0)
+				.as("Testing the method compareTo() with different qualifiers")
+				.isTrue();
+		assertThat(version2.compareTo(version1) > 0)
+				.as("Testing the method compareTo() with different qualifiers")
+				.isTrue();
 
 		/**
 		 * Test the method compareTo() with an incorrect object
@@ -457,53 +458,65 @@ public class VersionTests extends TestCase {
 		 * @osgi.spec Version.compareTo(Version);
 		 */
 		Object incorrect = "";
-		version1 = new Version(1, 1, 1);
-		try {
-			@SuppressWarnings({
-					"unused", "unchecked"
-			})
-			int result = ((Comparable) version1).compareTo(incorrect);
-			fail("Testing the method compareTo() with an incorrect object");
-		}
-		catch (ClassCastException ex) {
-			// This is an expected exception and can be ignored
-		}
+		@SuppressWarnings("rawtypes")
+		Comparable lastVersion = new Version(1, 1, 1);
+		assertThatExceptionOfType(ClassCastException.class)
+				.as("Testing the method compareTo() with an incorrect object")
+				.isThrownBy(() -> lastVersion.compareTo(incorrect));
 	}
 
+	@Test
 	public void testConstantsValues() {
-		assertEquals("emptyVersion not equal to 0.0.0", new Version(0, 0, 0),
-				Version.emptyVersion);
-		assertEquals("emptyVersion has different hashCode than 0.0.0",
-				new Version(0, 0, 0).hashCode(),
-				Version.emptyVersion.hashCode());
-		assertSame("not emptyVersion", Version.parseVersion(null),
-				Version.emptyVersion);
-		assertSame("not emptyVersion", Version.parseVersion(""),
-				Version.emptyVersion);
-		assertSame("not emptyVersion", Version.parseVersion("	"),
-				Version.emptyVersion);
-		assertSame("not emptyVersion", Version.valueOf(""),
-				Version.emptyVersion);
-		assertSame("not emptyVersion", Version.valueOf("	"),
-				Version.emptyVersion);
+		assertThat(Version.emptyVersion)
+				.as("emptyVersion not equal to 0.0.0")
+				.isEqualTo(new Version(0, 0, 0));
+		assertThat(Version.emptyVersion.hashCode())
+				.as("emptyVersion has different hashCode than 0.0.0")
+				.isEqualTo(new Version(0, 0, 0).hashCode());
+		assertThat(Version.emptyVersion)
+				.as("not emptyVersion")
+				.isSameAs(Version.parseVersion(null));
+		assertThat(Version.emptyVersion)
+				.as("not emptyVersion")
+				.isSameAs(Version.parseVersion(""));
+		assertThat(Version.emptyVersion)
+				.as("not emptyVersion")
+				.isSameAs(Version.parseVersion("	"));
+		assertThat(Version.emptyVersion)
+				.as("not emptyVersion")
+				.isSameAs(Version.valueOf(""));
+		assertThat(Version.emptyVersion)
+				.as("not emptyVersion")
+				.isSameAs(Version.valueOf("	"));
 	}
 
+	@Test
 	public void testToString() {
 		Version version;
 
 		version = new Version(1, 2, 3);
-		assertEquals("Wrong toString result", "1.2.3", version.toString());
+		assertThat(version.toString())
+				.as("Wrong toString result")
+				.isEqualTo("1.2.3");
 
 		version = new Version(1, 2, 3, "a");
-		assertEquals("Wrong toString result", "1.2.3.a", version.toString());
+		assertThat(version.toString())
+				.as("Wrong toString result")
+				.isEqualTo("1.2.3.a");
 
 		version = new Version(1, 2, 3, null);
-		assertEquals("Wrong toString result", "1.2.3", version.toString());
+		assertThat(version.toString())
+				.as("Wrong toString result")
+				.isEqualTo("1.2.3");
 
 		version = new Version("1.2.3");
-		assertEquals("Wrong toString result", "1.2.3", version.toString());
+		assertThat(version.toString())
+				.as("Wrong toString result")
+				.isEqualTo("1.2.3");
 
 		version = new Version("1.2.3.a");
-		assertEquals("Wrong toString result", "1.2.3.a", version.toString());
+		assertThat(version.toString())
+				.as("Wrong toString result")
+				.isEqualTo("1.2.3.a");
 	}
 }

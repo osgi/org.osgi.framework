@@ -17,6 +17,9 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.junit.wiring;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -30,6 +33,9 @@ import java.util.jar.Attributes;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.Constants;
@@ -44,20 +50,19 @@ import org.osgi.resource.Requirement;
 import org.osgi.resource.Resource;
 
 public class ImportJavaPackagesTests extends WiringTest {
+
 	
 	private static final String	JAVA_LANG	= "java.lang";
 	private static final String	JAVA_UTIL	= "java.util";
 	private Bundle				testBundle;
-	
-	
-	
-	@Override
+
+	@BeforeEach
 	public void setUp() throws Exception {
 		super.setUp();
 
 	}
 
-	@Override
+	@AfterEach
 	public void tearDown() throws Exception {
 		if (testBundle != null) {
 			testBundle.uninstall();
@@ -73,13 +78,14 @@ public class ImportJavaPackagesTests extends WiringTest {
 		for (Map.Entry<String, String> entry : headers.entrySet()) {
 			attributes.putValue(entry.getKey(), entry.getValue());
 		}
-		File file = getContext().getDataFile(bundleName + ".jar");
+		File file = bundleContext.getDataFile(bundleName + ".jar");
 		JarOutputStream jos = new JarOutputStream(new FileOutputStream(file), m);
 		jos.flush();
 		jos.close();
 		return file;
 	}
 
+	@Test
 	public void testExportPackageCannotContainJavaPackages() throws Exception {
 		Map<String, String> headers = new HashMap<String, String>();
 		headers.put(Constants.BUNDLE_MANIFESTVERSION, "2");
@@ -87,16 +93,18 @@ public class ImportJavaPackagesTests extends WiringTest {
 		headers.put(Constants.EXPORT_PACKAGE, JAVA_LANG);
 		File bundle = createBundle(getName(), headers);
 		try {
-			testBundle = getContext().installBundle(bundle.toURI().toString());
+			testBundle = bundleContext.installBundle(bundle.toURI().toString());
 			testBundle.start();
 			fail("Failed to test Export-Package header");
 		} catch (BundleException e) {
-			assertEquals("It should throw a bundle exception of type manifest error", BundleException.MANIFEST_ERROR, e.getType());
+			assertThat(e.getType())
+					.as("It should throw a bundle exception of type manifest error")
+				.isEqualTo(BundleException.MANIFEST_ERROR);
 		}
 
 	}
-	
-	
+
+	@Test
 	public void testImportPackageCanContainJavaPackages() throws Exception {
 		Map<String, String> headers = new HashMap<String, String>();
 		headers.put(Constants.BUNDLE_MANIFESTVERSION, "2");
@@ -104,32 +112,48 @@ public class ImportJavaPackagesTests extends WiringTest {
 		headers.put(Constants.IMPORT_PACKAGE, JAVA_LANG);
 		File bundle = createBundle(getName(), headers);
 		try {
-			testBundle = getContext().installBundle(bundle.toURI().toString());
+			testBundle = bundleContext.installBundle(bundle.toURI().toString());
 			testBundle.start();
 			Dictionary<String, String> testHeaders = testBundle.getHeaders();
-			assertTrue(Constants.IMPORT_PACKAGE + " does not contain the java.* package", testHeaders.get(Constants.IMPORT_PACKAGE).contains(JAVA_LANG));
+			assertThat(testHeaders.get(Constants.IMPORT_PACKAGE).contains(JAVA_LANG))
+					.as(Constants.IMPORT_PACKAGE + " does not contain the java.* package")
+				.isTrue();
 			List<BundleWire> pkgWires = testBundle.adapt(BundleWiring.class).getRequiredWires(PackageNamespace.PACKAGE_NAMESPACE);
-			assertEquals("Wrong number of package requiremens: ", 1, pkgWires.size());
-			assertEquals("Wrong package found: " + pkgWires.get(0), JAVA_LANG, pkgWires.get(0).getCapability().getAttributes().get(PackageNamespace.PACKAGE_NAMESPACE));
-			assertEquals("Wrong exporter of java package.", getContext().getBundle(Constants.SYSTEM_BUNDLE_LOCATION).adapt(BundleRevision.class), pkgWires.get(0).getProvider());
+			assertThat(pkgWires.size())
+					.as("Wrong number of package requiremens: ")
+				.isEqualTo(1);
+			assertThat(pkgWires.get(0).getCapability().getAttributes().get(PackageNamespace.PACKAGE_NAMESPACE))
+					.as("Wrong package found: " + pkgWires.get(0))
+				.isEqualTo(JAVA_LANG);
+			assertThat(pkgWires.get(0).getProvider())
+					.as("Wrong exporter of java package.")
+				.isEqualTo(bundleContext.getBundle(Constants.SYSTEM_BUNDLE_LOCATION).adapt(BundleRevision.class));
 		} catch (BundleException e) {
 			fail("Failed to test Import-Package header");
 		} 
 	}
-	
-	
+
+	@Test
 	public void testSystemPackages() throws Exception {
 
-		Bundle systemBundle = getContext().getBundle(Constants.SYSTEM_BUNDLE_LOCATION);
+		Bundle systemBundle = bundleContext.getBundle(Constants.SYSTEM_BUNDLE_LOCATION);
 		BundleRevision br = systemBundle.adapt(BundleRevision.class);
 
 		Dictionary<String, String> testHeaders = systemBundle.getHeaders();
-		assertTrue(Constants.EXPORT_PACKAGE + " does not contain the java.* package", testHeaders.get(Constants.EXPORT_PACKAGE).contains(JAVA_LANG));
-		assertTrue(Constants.EXPORT_PACKAGE + " does not contain the java.* package", testHeaders.get(Constants.EXPORT_PACKAGE).contains(JAVA_UTIL));
+		assertThat(testHeaders.get(Constants.EXPORT_PACKAGE).contains(JAVA_LANG))
+				.as(Constants.EXPORT_PACKAGE + " does not contain the java.* package")
+				.isTrue();
+		assertThat(testHeaders.get(Constants.EXPORT_PACKAGE).contains(JAVA_UTIL))
+				.as(Constants.EXPORT_PACKAGE + " does not contain the java.* package")
+				.isTrue();
 
-		String systemPackages = getContext().getProperty(Constants.FRAMEWORK_SYSTEMPACKAGES);
-		assertTrue("System packages should include java.* packages", systemPackages.contains(JAVA_LANG));
-		assertTrue("System packages should include java.* packages", systemPackages.contains(JAVA_UTIL));
+		String systemPackages = bundleContext.getProperty(Constants.FRAMEWORK_SYSTEMPACKAGES);
+		assertThat(systemPackages.contains(JAVA_LANG))
+				.as("System packages should include java.* packages")
+				.isTrue();
+		assertThat(systemPackages.contains(JAVA_UTIL))
+				.as("System packages should include java.* packages")
+				.isTrue();
 
 		List<Capability> capabilities = br.getCapabilities(PackageNamespace.PACKAGE_NAMESPACE);
 		int count = 0;
@@ -139,7 +163,9 @@ public class ImportJavaPackagesTests extends WiringTest {
 			}
 		}
 		
-		assertTrue("No java.* packages found", count > 0);
+		assertThat(count > 0)
+				.as("No java.* packages found")
+				.isTrue();
 
 		Collection<BundleCapability> bundleCapabilities = frameworkWiring.findProviders(new Requirement() {
 			@Override
@@ -162,11 +188,14 @@ public class ImportJavaPackagesTests extends WiringTest {
 				return Collections.emptyMap();
 			}
 		});
-		
-		assertFalse("Capabities should be non empty",bundleCapabilities.isEmpty());
+
+		assertThat(bundleCapabilities)
+				.as("Capabities should be non empty").isNotEmpty();
 		
 		for(BundleCapability cap: bundleCapabilities) {
-			assertEquals("java.* capabilities should only come from system bundle", br, cap.getRevision());
+			assertThat(cap.getRevision())
+					.as("java.* capabilities should only come from system bundle")
+				.isEqualTo(br);
 		}
 	}
 }

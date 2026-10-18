@@ -18,6 +18,9 @@
 
 package org.osgi.test.cases.framework.junit.adaptations;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.launch.Framework;
@@ -27,48 +30,68 @@ import org.osgi.framework.wiring.BundleRevision;
 import org.osgi.framework.wiring.BundleRevisions;
 import org.osgi.framework.wiring.BundleWiring;
 import org.osgi.framework.wiring.FrameworkWiring;
-import org.osgi.test.support.OSGiTestCase;
+import org.osgi.test.common.annotation.InjectBundleContext;
 
-public class BundleAdaptTests extends OSGiTestCase {
+public class BundleAdaptTests {
 
+	@InjectBundleContext BundleContext bundleContext;
+
+	@Test
 	public void testBundleContextAdapt() {
-		doAdaptTest(BundleContext.class, getContext().getBundle());
+		doAdaptTest(BundleContext.class, bundleContext.getBundle());
 	}
 
+	@Test
 	public void testBundleRevisionAdapt() {
-		doAdaptTest(BundleRevision.class, getContext().getBundle());
+		doAdaptTest(BundleRevision.class, bundleContext.getBundle());
 	}
 
+	@Test
 	public void testBundleRevisionsAdapt() {
-		doAdaptTest(BundleRevisions.class, getContext().getBundle());
+		doAdaptTest(BundleRevisions.class, bundleContext.getBundle());
 	}
 
+	@Test
 	public void testBundleStartLevelAdapt() {
-		doAdaptTest(BundleStartLevel.class, getContext().getBundle());
+		doAdaptTest(BundleStartLevel.class, bundleContext.getBundle());
 	}
 
+	@Test
 	public void testBundleWiringAdapt() {
-		doAdaptTest(BundleWiring.class, getContext().getBundle());
+		doAdaptTest(BundleWiring.class, bundleContext.getBundle());
 	}
 
+	@Test
 	public void testFrameworktAdapt() {
-		doAdaptTest(Framework.class, getContext().getBundle(0));
-		assertNull("Expecting null adapt for Framework type.", getContext().getBundle().adapt(Framework.class));
+		doAdaptTest(Framework.class, bundleContext.getBundle(0));
+		assertThat(bundleContext.getBundle().adapt(Framework.class))
+				.as("Expecting null adapt for Framework type.")
+				.isNull();
 	}
 
+	@Test
 	public void testFrameworktStartLevel() {
-		doAdaptTest(FrameworkStartLevel.class, getContext().getBundle(0));
-		assertNull("Expecting null adapt for Framework type.", getContext().getBundle().adapt(FrameworkStartLevel.class));
+		doAdaptTest(FrameworkStartLevel.class, bundleContext.getBundle(0));
+		assertThat(bundleContext.getBundle().adapt(FrameworkStartLevel.class))
+				.as("Expecting null adapt for Framework type.")
+				.isNull();
 	}
 
+	@Test
 	public void testFrameworktWiring() {
-		doAdaptTest(FrameworkWiring.class, getContext().getBundle(0));
-		assertNull("Expecting null adapt for Framework type.", getContext().getBundle().adapt(FrameworkWiring.class));
+		doAdaptTest(FrameworkWiring.class, bundleContext.getBundle(0));
+		assertThat(bundleContext.getBundle().adapt(FrameworkWiring.class))
+				.as("Expecting null adapt for Framework type.")
+				.isNull();
 	}
 
 	private <T> void doAdaptTest(Class<T> clazz, Bundle b) {
 		T adapted = b.adapt(clazz);
-		assertNotNull("Adapted type is null: " + clazz.getName(), adapted);	
-		assertTrue("Wrong adapted type: " + adapted.getClass(), clazz.isAssignableFrom(adapted.getClass()));
+		assertThat(adapted)
+				.as("Adapted type is null: " + clazz.getName())
+				.isNotNull();
+		assertThat(clazz.isAssignableFrom(adapted.getClass()))
+				.as("Wrong adapted type: " + adapted.getClass())
+				.isTrue();
 	}
 }

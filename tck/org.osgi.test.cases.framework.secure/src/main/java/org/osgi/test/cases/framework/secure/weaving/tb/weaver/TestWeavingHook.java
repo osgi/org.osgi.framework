@@ -17,19 +17,20 @@
  *******************************************************************************/
 package org.osgi.test.cases.framework.secure.weaving.tb.weaver;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 
+import org.opentest4j.AssertionFailedError;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.hooks.weaving.WeavingHook;
 import org.osgi.framework.hooks.weaving.WovenClass;
 import org.osgi.test.cases.framework.secure.junit.hooks.weaving.export.TestConstants;
-
-import junit.framework.AssertionFailedError;
-import junit.framework.TestCase;
 
 public class TestWeavingHook implements WeavingHook {
 	private volatile boolean called;
@@ -44,11 +45,11 @@ public class TestWeavingHook implements WeavingHook {
 			try {
 				wovenClass.getBytes();
 				if (TestConstants.isExpectSecurityExceptionAll())
-					TestCase.fail("Expected security exception on getBytes");
+					fail("Expected security exception on getBytes");
 			} catch (SecurityException e) {
 				if (!TestConstants.isExpectSecurityExceptionAll()) {
 					e.printStackTrace();
-					TestCase.fail("Did not expect security exception on getBytes");
+					fail("Did not expect security exception on getBytes");
 				}
 			}
 			try {
@@ -56,11 +57,11 @@ public class TestWeavingHook implements WeavingHook {
 				if (!TestConstants.isInvalidSetBytes())
 					wovenClass.setBytes(getBytes(wovenClass.getBundleWiring().getBundle(), TestConstants.WOVEN_CLASS)); // set back to good bytes
 				if (TestConstants.isExpectSecurityExceptionAll())
-					TestCase.fail("Expected security exception on setBytes");
+					fail("Expected security exception on setBytes");
 			} catch (SecurityException e) {
 				if (!TestConstants.isExpectSecurityExceptionAll()) {
 					e.printStackTrace();
-					TestCase.fail("Did not expect security exception on setBytes");
+					fail("Did not expect security exception on setBytes");
 				}
 			}
 			rethrow = testDynamicImports(wovenClass);
@@ -77,7 +78,7 @@ public class TestWeavingHook implements WeavingHook {
 	private SecurityException testDynamicImports(WovenClass wovenClass) {
 		SecurityException result = null;
 		final List<String> dynamicImports = wovenClass.getDynamicImports();
-		TestCase.assertNotNull("Dynamic imports is null", dynamicImports);
+		assertNotNull(dynamicImports, "Dynamic imports is null");
 		result = testDynamicImports(new Runnable() {
 			public void run() {
 				dynamicImports.set(0, TestConstants.DYNAMIC_IMPORT_PACKAGE);
@@ -121,11 +122,11 @@ public class TestWeavingHook implements WeavingHook {
 		try {
 			runnable.run();
 			if (TestConstants.isExpectSecurityExceptionAll() || TestConstants.isExpectSecurityExceptionAddDynamicImport())
-				TestCase.fail("Expected security exception on dynamic imports modification");
+				fail("Expected security exception on dynamic imports modification");
 		} 
 		catch (SecurityException e) {
 			if (!TestConstants.isExpectSecurityExceptionAll() && !TestConstants.isExpectSecurityExceptionAddDynamicImport())
-				TestCase.fail("Did not expect security exception on dynamic imports modification");
+				fail("Did not expect security exception on dynamic imports modification");
 			return e;
 		}
 		catch (UnsupportedOperationException e) {
@@ -146,7 +147,7 @@ public class TestWeavingHook implements WeavingHook {
 		try {
 			String testClassPath = testName.replace('.', '/') + ".class";
 			URL url = source.getEntry(testClassPath);
-			TestCase.assertNotNull("Failed to find class resource: " + testClassPath, url);
+			assertNotNull(url, "Failed to find class resource: " + testClassPath);
 			InputStream in = url.openStream();
 			ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 			byte[] buffer = new byte[1024];

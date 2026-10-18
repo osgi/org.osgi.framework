@@ -18,42 +18,59 @@
 
 package org.osgi.test.cases.framework.junit.context;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
-import org.osgi.test.support.OSGiTestCase;
+import org.osgi.test.common.annotation.InjectBundleContext;
 
-public class GetBundleByLocationTests extends OSGiTestCase {
+public class GetBundleByLocationTests {
+
+	@InjectBundleContext
+	BundleContext bundleContext;
+	@Test
 	public void testLocation1() throws Exception {
-		BundleContext context = getContext();
+		BundleContext context = bundleContext;
 
 		Bundle bundle = context.getBundle();
-		assertSame("wrong bundle", bundle,
-				context.getBundle(bundle.getLocation()));
+		assertThat(context.getBundle(bundle.getLocation()))
+				.as("wrong bundle")
+				.isSameAs(bundle);
 	}
 
+	@Test
 	public void testSystemBundle1() throws Exception {
-		BundleContext context = getContext();
+		BundleContext context = bundleContext;
 
 		Bundle bundle = context.getBundle(0);
-		assertSame("wrong bundle", bundle,
-				context.getBundle(bundle.getLocation()));
+		assertThat(context.getBundle(bundle.getLocation()))
+				.as("wrong bundle")
+				.isSameAs(bundle);
 	}
 
+	@Test
 	public void testSystemBundle2() throws Exception {
-		BundleContext context = getContext();
+		BundleContext context = bundleContext;
 
 		Bundle bundle = context.getBundle(Constants.SYSTEM_BUNDLE_LOCATION);
-		assertEquals("wrong bundle", 0, bundle.getBundleId());
-		assertSame("wrong bundle", bundle, context.getBundle(0));
+		assertThat(bundle.getBundleId())
+				.as("wrong bundle").isZero();
+		assertThat(context.getBundle(0))
+				.as("wrong bundle")
+				.isSameAs(bundle);
 	}
 
+	@Test
 	public void testSystemBundle3() throws Exception {
-		BundleContext context = getContext();
+		BundleContext context = bundleContext;
 
 		Bundle bundle = context.getBundle(Constants.SYSTEM_BUNDLE_LOCATION);
-		assertEquals("wrong bundle", 0, bundle.getBundleId());
-		assertSame("wrong bundle", bundle,
-				context.getBundle(bundle.getLocation()));
+		assertThat(bundle.getBundleId())
+				.as("wrong bundle").isZero();
+		assertThat(context.getBundle(bundle.getLocation()))
+				.as("wrong bundle")
+				.isSameAs(bundle);
 	}
 }
