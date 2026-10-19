@@ -101,7 +101,6 @@ public class VersionTests {
 		testConstructorsBadArguments("1.2.");
 	}
 
-	@Test
 	private void testConstructorsBadArguments(String arg) {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.as("Version created with illegal arguments")
