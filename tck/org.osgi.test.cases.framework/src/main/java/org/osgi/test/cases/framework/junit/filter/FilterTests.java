@@ -61,7 +61,6 @@ public class FilterTests {
 		tb1.uninstall();
 	}
 
-	@Test
 	private void testFilter(String filter, String logtext, String[] ids)
 			throws Exception {
 		ServiceReference< ? >[] refs = bundleContext.getServiceReferences(
