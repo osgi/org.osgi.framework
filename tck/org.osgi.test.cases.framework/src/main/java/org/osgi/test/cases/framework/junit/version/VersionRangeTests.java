@@ -104,7 +104,6 @@ public class VersionRangeTests {
 		testConstructorsBadArguments("[2)");
 	}
 
-	@Test
 	private void testConstructorsBadArguments(String arg) {
 		assertThatExceptionOfType(IllegalArgumentException.class)
 				.as("VersionRange created with illegal arguments")
