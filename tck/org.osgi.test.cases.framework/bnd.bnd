@@ -299,11 +299,14 @@ Bundle-ClassPath: .,div.tb6.jar
     org.osgi.framework.startlevel.dto, \
     org.osgi.framework.wiring, \
     org.osgi.framework.wiring.dto, \
-    org.osgi.framework.connect, \
-    org.osgi.framework.launch, \
-    org.osgi.service.condition
+    org.osgi.framework.connect;resolution:=optional, \
+    org.osgi.framework.launch;resolution:=optional, \
+    org.osgi.service.condition;resolution:=optional
 # The last three came from the launch bundle: its suites now run as plain
 # JUnit tests outside a framework, where the signature test cannot run.
+# The specification does not require a framework to export them to bundles,
+# so Import-Package takes them as optional; the signature test skips a
+# package that is not wired.
 
 p: org.osgi.test.cases.framework
 
