@@ -18,15 +18,6 @@
 	     tck.bndrun files read the same properties: a bump here (by hand or
 	     by Dependabot) changes the poms and the runs together. -->
 	<properties>
-		<junit-jupiter.version>5.12.2</junit-jupiter.version>
-		<junit-platform.version>1.12.2</junit-platform.version>
-		<opentest4j.version>1.3.0</opentest4j.version>
-		<assertj.version>3.27.7</assertj.version>
-		<servicemix-junit.version>4.13.2_1</servicemix-junit.version>
-		<mockito.version>5.24.0</mockito.version>
-		<byte-buddy.version>1.18.14</byte-buddy.version>
-		<objenesis.version>3.6</objenesis.version>
-		<osgi-test.version>1.4.0-SNAPSHOT</osgi-test.version>
 		<equinox.version>3.24.300</equinox.version>
 		<osgi-tck-support.version>0.0.1-SNAPSHOT</osgi-tck-support.version>
 		<org.osgi.resource.version>1.0.1</org.osgi.resource.version>
@@ -46,12 +37,10 @@
 		<dependency>
 			<groupId>org.osgi</groupId>
 			<artifactId>org.osgi.test.assertj.framework</artifactId>
-			<version>${osgi-test.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.osgi</groupId>
 			<artifactId>org.osgi.test.junit5</artifactId>
-			<version>${osgi-test.version}</version>
 		</dependency>
 	</dependencies>
 
