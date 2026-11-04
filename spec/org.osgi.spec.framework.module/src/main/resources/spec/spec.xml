@@ -16,7 +16,7 @@
    
     SPDX-License-Identifier: Apache-2.0 
  -->
-<chapter label="3" revision="$Id$"
+<chapter label="3" revision="$Id: b1623604c74f525ac10087663f6941db6cd37052 $"
          version="5.0" xml:id="framework.module"
          xmlns="http://docbook.org/ns/docbook"
          xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -4605,9 +4605,9 @@ acme\ special\ header=user-defined Acme Data</programlisting>
 
     <para>The Framework supports a mechanism where bundles can be directly
     wired to other bundles. The following sections define the relevant headers
-    and then discuss the possible scenarios. At the end, some of the
-    (sometimes unexpected) consequences of using Require-Bundle are
-    discussed.</para>
+    and then discuss the possible scenarios. At the end, split packages,
+    re-exporting and the trade-offs of Require-Bundle compared to
+    Import-Package are discussed.</para>
 
     <section xml:id="framework.module.requirebundle">
       <title>Require-Bundle</title>
@@ -4758,44 +4758,89 @@ B:  Export-Package: p;partial=true;mandatory:=partial</programlisting>
       Protection Domain.</para>
     </section>
 
-    <section>
-      <title>Split Package Compatibility</title>
-
-      <para>A package is a split package whenever there are multiple
-      <emphasis>sources</emphasis> for the package; only bundles using the
-      Require-Bundle header can have split packages.</para>
-
-      <para>A source is a bundle that provides the given package. Both the
-      required bundles as well as the requiring bundle can act as a source.
-      The required bundles and the requiring bundle can only contribute their
-      exported packages.</para>
-
-      <para>Exported split packages from two bundles are compatible if the
-      package sources for one are a subset of the other.</para>
-    </section>
-
     <section xml:id="i3198951">
-      <title>Issues With Requiring Bundles</title>
+      <title>Split Packages</title>
 
-      <para>The preferred way of wiring bundles is to use the
-      <code>Import-Package</code> and <code>Export-Package</code> headers
-      because they couple the importer and exporter to a much lesser extent.
-      Bundles can be refactored to have a different package composition
-      without causing other bundles to fail.</para>
+      <para>Normally the classes and resources of a package come from exactly
+      one bundle. With Require-Bundle this can be different: a package is a
+      <emphasis>split package</emphasis> whenever its content is provided by
+      more than one bundle. Only bundles using the Require-Bundle header can
+      have split packages; a package that is imported with Import-Package is
+      always provided by a single exporter.</para>
 
-      <para>The Require-Bundle header provides a way for a bundle to bind to
-      all the exports of another bundle, regardless of what those exports are.
-      Though this can seem convenient at first, it has a number of
-      drawbacks:</para>
+      <para>A <emphasis>source</emphasis> is a bundle that contributes content
+      to a given package. For an exported package the sources are the
+      exporting bundle itself and the required bundles that also export the
+      package. All of them contribute only the packages they export.</para>
 
-      <itemizedlist>
-        <listitem>
-          <para><emphasis>Split Packages</emphasis> - Classes from the same
-          package can come from different bundles with Require bundle, such a
-          package is called a split package. Split packages have the following
-          drawbacks:</para>
+      <section>
+        <title>Compatible split packages</title>
 
-          <itemizedlist>
+        <para>The same package can be exported by more than one bundle, and
+        each of those exports can have a different set of sources. A bundle
+        must never see two different views of the same package, otherwise its
+        class space is inconsistent, see <xref
+        linkend="framework.module.requiringbundles"/>. Two such exports are
+        <emphasis>compatible</emphasis> when the sources of one are a subset
+        of the sources of the other. In other words, one export must show
+        everything the other shows, plus possibly more, so that no class can
+        be provided by two different class loaders.</para>
+
+        <para>For example:</para>
+
+        <programlisting>A:  Require-Bundle: B
+    Export-Package: p              // sources of p: A, B
+B:  Export-Package: p              // sources of p: B
+C:  Require-Bundle: D
+    Export-Package: p              // sources of p: C, D</programlisting>
+
+        <para>The exports of <code>p</code> from <code>A</code> and
+        <code>B</code> are compatible because {B} is a subset of {A, B}. The
+        exports from <code>A</code> and <code>C</code> are not compatible
+        because neither {A, B} nor {C, D} is a subset of the other.</para>
+      </section>
+
+      <section>
+        <title>Why split packages exist and what is recommended</title>
+
+        <para>Split packages are best avoided: a package should be owned by
+        one bundle, and clients should import it. There are nevertheless
+        legitimate reasons for a split package:</para>
+
+        <itemizedlist>
+          <listitem>
+            <para>A legacy code base that cannot be changed at once. When
+            refactoring, some classes can move to a new bundle while others
+            must stay behind, for example because they depend on code that
+            cannot easily be migrated or because they are deprecated and
+            should not be moved into a new home.</para>
+          </listitem>
+
+          <listitem>
+            <para>Code that needs package private access across bundle
+            boundaries, which is only possible if the classes are in the same
+            package and loaded together.</para>
+          </listitem>
+
+          <listitem>
+            <para>Code that is outside the control of the bundle author, for
+            example third party libraries that already distribute a package
+            over several JARs.</para>
+          </listitem>
+        </itemizedlist>
+
+        <para><emphasis>Recommended:</emphasis> Treat a split package as a
+        temporary migration state or an unavoidable property of legacy code,
+        not as a design goal. New designs should assign each package to exactly
+        one bundle. If a split package is necessary, mark the contributing
+        exports with a mandatory attribute (see the example in <xref
+        linkend="framework.module.requirebundle"/>) so they are not selected
+        by accident, and make sure that no class is contained in more than one
+        source.</para>
+
+        <para>Split packages have the following drawbacks:</para>
+
+        <itemizedlist>
             <listitem>
               <para><emphasis>Completeness</emphasis> - Split packages are
               open ended, it is difficult to guarantee that all the intended
@@ -4854,13 +4899,129 @@ B:  Export-Package: p;partial=true;mandatory:=partial</programlisting>
           cases there will be no problem. However, the consistency can be
           violated in the rare case when package <code>C.q</code> contains
           classes that are also in package <code>B.q</code>.</para>
+      </section>
+    </section>
+
+    <section xml:id="framework.module.reexport">
+      <title>Re-exporting Required Bundles</title>
+
+      <para>With <code>visibility:=reexport</code> a bundle passes the
+      packages of a required bundle on to the bundles that require it. It is
+      a consequence of the early days of OSGi, when requiring whole bundles
+      was a common practice (see <xref
+      linkend="framework.module.requirevsimport"/>). Today it is mainly a
+      compatibility mechanism.</para>
+
+      <para>Consider bundle <code>A</code> exporting packages <code>p1</code>
+      and <code>p2</code>. Over time <code>A</code> grows too large and
+      <code>p1</code> should move to a new bundle <code>B</code>. Existing
+      clients might have used <code>Require-Bundle: A</code>; without further
+      measures they would suddenly lose <code>p1</code> and fail to resolve,
+      although no API has changed. The solution is to let <code>A</code>
+      require <code>B</code> with <code>visibility:=reexport</code>:</para>
+
+      <programlisting>A:  Require-Bundle: B;visibility:=reexport
+    Export-Package: p2
+B:  Export-Package: p1</programlisting>
+
+      <para>For every pre-existing client of <code>A</code> nothing changes.
+      Clients that use <code>Import-Package</code> would not have needed this
+      help at all, since they do not care which bundle exports a package.</para>
+
+      <para>Re-exporting has its own drawbacks:</para>
+
+      <itemizedlist>
+        <listitem>
+          <para><emphasis>Mutable exports</emphasis> - The effective export
+          signature of the requiring bundle changes whenever the export
+          signature of a re-exported bundle changes, without any change to the
+          requiring bundle itself.</para>
         </listitem>
 
         <listitem>
-          <para><emphasis>Mutable Exports</emphasis> - The feature of
-          <code>visibility:=reexport</code> that the export signature of the
-          requiring bundle can unexpectedly change depending on the export
-          signature of the required bundle.</para>
+          <para><emphasis>Hidden dependencies</emphasis> - Clients cannot see
+          from their own manifest which bundles provide the packages they
+          actually use.</para>
+        </listitem>
+      </itemizedlist>
+
+      <para><emphasis>Recommended:</emphasis> Use re-export to keep existing
+      Require-Bundle clients working after a refactoring, and consider
+      it a temporary bridge. New bundles should not rely on it; clients should
+      be moved to Import-Package where possible.</para>
+    </section>
+
+    <section xml:id="framework.module.requirevsimport">
+      <title>Require-Bundle versus Import-Package</title>
+
+      <para>The preferred way of wiring bundles is to use the
+      <code>Import-Package</code> and <code>Export-Package</code> headers
+      because they couple the importer and exporter to a much lesser extent.
+      Bundles can be refactored to have a different package composition
+      without causing other bundles to fail, and an importer does not need to
+      know which bundle exports a package.</para>
+
+      <para>The Require-Bundle header binds a bundle to <emphasis>all</emphasis>
+      exports of another bundle, regardless of what those exports are. In the
+      early days of OSGi this was the usual way to consume an API, and a lot
+      of existing code still does so. It is not always replaceable, and there
+      can be good reasons to use it:</para>
+
+      <itemizedlist>
+        <listitem>
+          <para>A split package whose content is needed in full can only be
+          consumed by requiring all its contributing bundles.</para>
+        </listitem>
+
+        <listitem>
+          <para>A bundle that does not export its packages with a version
+          offers no reliable way to depend on a particular API through
+          Import-Package.</para>
+        </listitem>
+
+        <listitem>
+          <para>Legacy bundles, or chains of bundles, are often outside the
+          control of a single author.</para>
+        </listitem>
+      </itemizedlist>
+
+      <para>When these reasons do not apply, Require-Bundle has the following
+      drawbacks in addition to those of split packages and re-exporting:</para>
+
+      <itemizedlist>
+        <listitem>
+          <para><emphasis>Coupling</emphasis> - The requirement is on a
+          specific bundle, so moving a package to another bundle breaks all
+          clients unless the old bundle re-exports it.</para>
+        </listitem>
+
+        <listitem>
+          <para><emphasis>Coarse versioning</emphasis> - Packages evolve
+          independently. With Import-Package a client only depends on the
+          version of the packages it actually uses, so a major or minor
+          increase in an unrelated package of the same bundle does not affect
+          it. With Require-Bundle the only signal is the bundle version,
+          which (even with semantic versioning) tells that something changed
+          or broke but not whether the client is
+          affected. Upgrade paths are therefore harder to assess.</para>
+        </listitem>
+
+        <listitem>
+          <para><emphasis>Ordering</emphasis> - The order of the required
+          bundles is significant, which can make it hard to explain which
+          classes a bundle actually sees.</para>
+        </listitem>
+
+        <listitem>
+          <para><emphasis>Fixed provider</emphasis> - The requirement names
+          the providing bundle, so even a plain rename of that bundle breaks
+          its clients. Replacing the provider is also difficult: to ship an
+          enhanced or fixed implementation (for example for a security issue
+          or a bug that cannot be fixed upstream) one has to replicate the
+          exact symbolic name, which is laborious and can collide with the
+          namespace of another project. With Import-Package, a replacement
+          only needs to export the package in a compatible version
+          range.</para>
         </listitem>
 
         <listitem>
@@ -4871,7 +5032,19 @@ B:  Export-Package: p;partial=true;mandatory:=partial</programlisting>
           <code>resolution:=optional</code>, shadows whole packages regardless
           of the exporter.)</para>
         </listitem>
+        <listitem>
+          <para><emphasis>Open ended content</emphasis> - An import yields
+          exactly the named package. A requirement yields everything the
+          required bundle exports, and with <code>visibility:=reexport</code>
+          everything its required bundles re-export as well. New packages
+          can therefore enter the class space by accident.</para>
+        </listitem>
       </itemizedlist>
+
+      <para><emphasis>Recommended:</emphasis> Prefer Import-Package, and use
+      Require-Bundle only where it is really needed, for example for split
+      packages that must be consumed completely or for exporters that
+      provide no usable package versions.</para>
     </section>
   </section>
 
