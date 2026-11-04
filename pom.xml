@@ -72,6 +72,7 @@
 		<module>spec/org.osgi.spec.framework.bundlehooks</module>
 		<module>spec/org.osgi.spec.framework.servicehooks</module>
 		<module>spec/org.osgi.spec.framework.weavinghooks</module>
+		<module>spec/org.osgi.spec.framework.delegationhooks</module>
 		<module>spec/org.osgi.spec.framework.connect</module>
 		<module>spec/org.osgi.spec.framework.dto</module>
 	</modules>

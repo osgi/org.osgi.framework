@@ -3588,6 +3588,12 @@ boot-description    ::= package-name        // See <xref
       <para>When delegating to another bundle class loader, the delegated
       request enters this algorithm at step <xref linkend="i3187927"/>.</para>
 
+      <para>If the search above ends without a result, and the package of the
+      request is neither imported, required nor exported by the bundle, and
+      not in a <code>java.*</code> package, the framework must consult the
+      registered Delegation Hook services, as defined by the Delegation Hook Service
+      Specification. They can only add classes and resources.</para>
+
       <para>The following non-normative flow chart illustrates the search
       order described above:</para>
 
