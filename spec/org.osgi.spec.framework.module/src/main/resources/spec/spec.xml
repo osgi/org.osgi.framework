@@ -3125,6 +3125,49 @@ B: Bundle-SymbolicName: B
       </listitem>
     </itemizedlist>
 
+    <para>The preferences apply to every import of a bundle individually. If
+    the class space of a bundle is only consistent when one of its imports is
+    wired to a different exporter than the preferred one, other imports of
+    the same bundle that are not involved in the conflict may either stay with
+    their preferred exporter or be wired to the same exporter as the changed
+    import, if that exporter exports the package as well. For example, if a
+    bundle imports the packages <code>text</code>, <code>collections</code>
+    and <code>functions</code>, the preferred exporter <code>C</code> exports
+    <code>text</code> and <code>collections</code>, and a second exporter
+    <code>S</code> exports the same packages and also <code>functions</code>
+    with a <code>uses</code> constraint on <code>collections</code>, then the
+    bundle must be wired to <code>S</code> for <code>functions</code> and
+    <code>collections</code>. Both of the following wirings are valid for
+    <code>text</code>, see <xref
+    linkend="framework.module-import-preference-options"/>:</para>
+
+    <itemizedlist>
+      <listitem>
+        <para>Wired to <code>C</code>, because the preference is only
+        overridden where the consistency requires it.</para>
+      </listitem>
+
+      <listitem>
+        <para>Wired to <code>S</code>, because the imports of a bundle that
+        are offered by the same exporters are kept together.</para>
+      </listitem>
+    </itemizedlist>
+
+    <figure xml:id="framework.module-import-preference-options">
+      <title>Imports that are not part of a conflict</title>
+
+      <mediaobject>
+        <imageobject>
+          <imagedata align="center" contentdepth="3.900in"
+                     contentwidth="2.950in"
+                     fileref="import-preference-options.svg"/>
+        </imageobject>
+      </mediaobject>
+    </figure>
+
+    <para>A Framework may choose either behavior and should apply it
+    consistently. A bundle must not rely on one of them.</para>
+
     <section xml:id="framework.module-import.export.same.package">
       <title>Importing and Exporting the Same Package</title>
 
