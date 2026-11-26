@@ -16,7 +16,7 @@
    
     SPDX-License-Identifier: Apache-2.0 
  -->
-<chapter label="8" revision="$Id$"
+<chapter label="8" revision="$Id: 6c3175be6aaa5903b6b06526a9e2930f44a0acc2 $"
          version="5.0" xml:id="framework.namespaces"
          xmlns="http://docbook.org/ns/docbook"
          xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -659,6 +659,13 @@ Bundle B:
       </listitem>
     </itemizedlist>
 
+    <para>The <code>cardinality</code> directive has no effect on a
+    requirement in this namespace, however the requirement was created. A
+    requirement that does not have a resolution of <code>dynamic</code> is
+    wired to at most one capability, even if the <code>cardinality</code>
+    directive has the value <code>multiple</code> and several capabilities
+    match.</para>
+
     <para>The requirements and capabilities in the
     <code>osgi.wiring.package</code> namespace must never be used in the
     Require-Capability and Provide-Capability headers.</para>
@@ -837,6 +844,12 @@ Bundle B:
         <para><code>cardinality</code></para>
       </listitem>
     </itemizedlist>
+
+    <para>The <code>cardinality</code> directive has no effect on a
+    requirement in this namespace, however the requirement was created. The
+    requirement is wired to at most one capability, even if the
+    <code>cardinality</code> directive has the value <code>multiple</code>
+    and several capabilities match.</para>
 
     <para>The requirements and capabilities in the
     <code>osgi.wiring.bundle</code> namespace must not be used in the
